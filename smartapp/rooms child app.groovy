@@ -17,6 +17,7 @@
 *
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapp/rooms%20child%20app.groovy
+*  Version: 0.01
 *
 *****************************************************************************************************************/
 
