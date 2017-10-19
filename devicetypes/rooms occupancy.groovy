@@ -17,6 +17,7 @@
 *
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/rooms%20occupancy.groovy
+*  Version: 0.01
 *
 *****************************************************************************************************************/
 
