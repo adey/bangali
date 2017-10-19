@@ -17,6 +17,7 @@
 *
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapp/rooms%20manager.groovy
+*  Version: 0.01
 *
 *****************************************************************************************************************/
 
