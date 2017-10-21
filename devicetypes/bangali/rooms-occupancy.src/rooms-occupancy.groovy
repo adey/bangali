@@ -96,7 +96,10 @@ metadata {
 
 def parse(String description)	{}
 
-def installed()	{	initialize()	}
+def installed()		{
+	initialize()
+	vacant()
+}
 
 def updated()	{	initialize()	}
 
