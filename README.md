@@ -1,1 +1,1 @@
-# bangali's random code stuff
+# bangali's random code stuff for SmartThings.
