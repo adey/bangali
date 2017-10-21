@@ -17,7 +17,7 @@
 *
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/rooms%20occupancy.groovy
-*  Version: 0.01
+*  Version: 0.02
 *
 *****************************************************************************************************************/
 
@@ -26,6 +26,8 @@ metadata {
     	name: "rooms occupancy", 
         namespace: "bangali", 
         author: "bangali")		{
+		capability "Actuator"
+		capability "Button"
 		capability "Sensor"        
 		attribute "roomOccupancy", "string"
 		command "occupied"
@@ -85,7 +87,11 @@ metadata {
 
 def parse(String description)	{}
 
-def updated()	{}
+def installed()	{	initialize()	}
+
+def updated()	{	initialize()	}
+
+def	initialize()	{	sendEvent(name: "numberOfButtons", value: 6)	}
 
 def occupied()	{	stateUpdate('occupied')		}
 
@@ -100,8 +106,12 @@ def reserved()	{	stateUpdate('reserved')		}
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(state)	{
-	if (device.currentValue('roomOccupancy') != state)
+	def oldState = device.currentValue('roomOccupancy')
+	if (oldState != state)	{
 		updateRoomOccupancy(state)
+        if (parent)
+        	parent.handleSwitches(oldState, state)
+	}
 	resetTile(state)
 }
 
@@ -113,7 +123,10 @@ private updateRoomOccupancy(roomOccupancy = null) 	{
         return
     }
 	sendEvent(name: "roomOccupancy", value: roomOccupancy, descriptionText: "${device.displayName} changed to ${roomOccupancy}", isStateChange: true, displayed: true)
-    def statusMsg = msgTextMap[device.currentValue('roomOccupancy')] + formatLocalTime()
+	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6]
+    def button = buttonMap[roomOccupancy]
+	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+	def statusMsg = msgTextMap[device.currentValue('roomOccupancy')] + formatLocalTime()
 	sendEvent(name: "status", value: statusMsg, isStateChange: true, displayed: false)
 }
 
@@ -132,3 +145,5 @@ def generateEvent(state = null)		{
 		updateRoomOccupancy(state)
 	return null
 }
+
+def getRoomState()	{	return device.currentValue('roomOccupancy')		}
