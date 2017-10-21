@@ -17,7 +17,7 @@
 *
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapp/rooms%20manager.groovy
-*  Version: 0.01
+*  Version: 0.02
 *
 *****************************************************************************************************************/
 
@@ -41,9 +41,7 @@ preferences	{
 	}
 }
 
-def installed()		{
-	initialize()
-}
+def installed()		{	initialize()	}
 
 def updated()		{
 	unsubscribe()
@@ -51,8 +49,8 @@ def updated()		{
 }
 
 def initialize()	{
-log.debug "rooms manager: there are ${childApps.size()} rooms."
+	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
-		log.debug "room manager: room: ${child.label}"
+		log.info "room manager: room: ${child.label}"
 	}
 }
