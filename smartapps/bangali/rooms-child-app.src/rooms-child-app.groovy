@@ -25,7 +25,7 @@
 *   3) cleaned up settings display.
 *   4) changed roomOccupancy to occupancyStatus. sorry for the compatibility breaking change. by user demand.
 *   5) updated some interstitial text.
-*   6) if no motion sensor specified but there is a timeout value > 5 and turn off switches specified, those
+*   6) if no motion sensor specified but there is a timeout value >= 5 and turn off switches specified, those
 *            switches will be switched off after timeout seconds if room is vacant.
 *	7) added new engaged state, on user demand. this button has a button value of 9 respectively.
 *   8) if room state changes any pending actions are cancelled.
