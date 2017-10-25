@@ -17,16 +17,30 @@
 *
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+*  Version: 0.03
+*
+*   DONE:
+*   1) added new states do not disturb and asleep, on user demand. these have button value of 7 and 8 respectively.
+*	2) locked and kaput moved below the fold and replaced on-screen with do not disturb and asleep respectively.
+*   3) cleaned up settings display.
+*   4) changed roomOccupancy to occupancyStatus. sorry for the compatibility breaking change. by user demand.
+*   5) updated some interstitial text.
+*   6) if no motion sensor specified but there is a timeout value > 5 and turn off switches specified, those
+*            switches will be switched off after timeout seconds if room is vacant.
+*	7) added new engaged state, on user demand. this button has a button value of 9 respectively.
+*   8) if room state changes any pending actions are cancelled.
+*
 *  Version: 0.02
 *
-*  DONE:
+*   DONE:
+*	0) Initial commit.
 *   1) added support for multiple away modes. when home changes to any these modes room is set to vacant but
 *            only if room is in occupied or checking state.
 *   2) added subscription for motion devices so if room is vacant or checking move room state to occupied.
 *   3) added support for switches to be turned on when room is changed to occupied.
 *   4) added support for switches to be turned off when room is changed to vacant, different switches from #3.
 *   5) added button push events to tile commands, where occupied = button 1, ..., kaput = button 6 so it is
-*            supported by ST Smart Lighting smartapp.
+*           supported by ST Smart Lighting smartapp.
 *
 *****************************************************************************************************************/
 
@@ -38,28 +52,34 @@ metadata {
 		capability "Actuator"
 		capability "Button"
 		capability "Sensor"
-		attribute "roomOccupancy", "string"
+		attribute "occupancyStatus", "string"
 		command "occupied"
         command "checking"
 		command "vacant"
         command "locked"
 		command "reserved"
 		command "kaput"
-		command "updateRoomOccupancy", ["string"]
+		command "donotdisturb"
+		command "asleep"
+		command "engaged"
+		command "updateOccupancyStatus", ["string"]
 	}
 
 	simulator	{
 	}
 
 	tiles(scale: 2)		{
-    	multiAttributeTile(name: "roomOccupancy", width: 2, height: 2, canChangeBackground: true)		{
-			tileAttribute ("device.roomOccupancy", key: "PRIMARY_CONTROL")		{
+    	multiAttributeTile(name: "occupancyStatus", width: 2, height: 2, canChangeBackground: true)		{
+			tileAttribute ("device.occupancyStatus", key: "PRIMARY_CONTROL")		{
 				attributeState "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 				attributeState "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
-				attributeState "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#6879af"
+				attributeState "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
+				attributeState "donotdisturb", label: 'Do Not Disturb', icon:"st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
+				attributeState "reserved", label: 'Reserved', icon:"st.Office.office7", backgroundColor:"#ccac00"
+				attributeState "asleep", label: 'Asleep', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879af"
 				attributeState "locked", label: 'Locked', icon:"st.locks.lock.locked", backgroundColor:"#c079a3"
-				attributeState "reserved", label: 'Reserved', icon:"st.Office.office7", backgroundColor:"#b29600"
-				attributeState "kaput", label: 'Kaput', icon:"st.Outdoor.outdoor18", backgroundColor:"#8a5128"
+				attributeState "engaged", label: 'Engaged', icon:"st.locks.lock.unlocked", backgroundColor:"#ff6666"
+				attributeState "kaput", label: 'Kaput', icon:"st.Outdoor.outdoor18", backgroundColor:"#95623d"
             }
        		tileAttribute ("device.status", key: "SECONDARY_CONTROL")	{
 				attributeState "default", label:'${currentValue}'
@@ -67,43 +87,52 @@ metadata {
         }
         standardTile("occupied", "device.occupied", width: 2, height: 2, canChangeIcon: true) {
 			state "occupied", label:"Occupied", icon: "st.Health & Wellness.health12", action: "occupied", backgroundColor:"#ffffff", nextState:"toOccupied"
-            state "toOccupied", label:"Occupied", icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
+            state "toOccupied", label:"Updating", icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 		}
 		standardTile("checking", "device.checking", width: 2, height: 2, canChangeIcon: true) {
 			state "checking", label:"Checking", icon: "st.Health & Wellness.health9", action: "checking", backgroundColor:"#ffffff", nextState:"toChecking"
-			state "toChecking", label:"Checking", icon: "st.Health & Wellness.health9", backgroundColor:"#616969"
+			state "toChecking", label:"Updating", icon: "st.Health & Wellness.health9", backgroundColor:"#616969"
 		}
         standardTile("vacant", "device.vacant", width: 2, height: 2, canChangeIcon: true) {
 			state "vacant", label:"Vacant", icon: "st.Home.home18", action: "vacant", backgroundColor:"#ffffff", nextState:"toVacant"
-			state "toVacant", label:"Vacant", icon: "st.Home.home18", backgroundColor:"#6879af"
+			state "toVacant", label:"Updating", icon: "st.Home.home18", backgroundColor:"#32b399"
 		}
-        standardTile("locked", "device.locked", width: 2, height: 2, canChangeIcon: true) {
-			state "locked", label:"Locked", icon: "st.locks.lock.locked", action: "locked", backgroundColor:"#ffffff", nextState:"toLocked"
-			state "toLocked", label:"Locked", icon: "st.locks.lock.locked", backgroundColor:"#c079a3"
+		standardTile("donotdisturb", "device.donotdisturb", width: 2, height: 2, canChangeIcon: true) {
+			state "donotdisturb", label:"DnD", icon: "st.Seasonal Winter.seasonal-winter-011", action: "donotdisturb", backgroundColor:"#ffffff", nextState:"toDoNotDisturb"
+			state "toDoNotDisturb", label:"Updating", icon: "st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
 		}
         standardTile("reserved", "device.reserved", width: 2, height: 2, canChangeIcon: true) {
 			state "reserved", label:"Reserved", icon: "st.Office.office7", action: "reserved", backgroundColor:"#ffffff", nextState:"toReserved"
-			state "toReserved", label:"Reserved", icon: "st.Office.office7", backgroundColor:"#b29600"
+			state "toReserved", label:"Updating", icon: "st.Office.office7", backgroundColor:"#ccac00"
+		}
+		standardTile("asleep", "device.asleep", width: 2, height: 2, canChangeIcon: true) {
+			state "asleep", label:"Asleep", icon: "st.Bedroom.bedroom2", action: "asleep", backgroundColor:"#ffffff", nextState:"toAsleep"
+			state "toAsleep", label:"Updating", icon: "st.Bedroom.bedroom2", backgroundColor:"#6879af"
+		}
+		standardTile("locked", "device.locked", width: 2, height: 2, canChangeIcon: true) {
+			state "locked", label:"Locked", icon: "st.locks.lock.locked", action: "locked", backgroundColor:"#ffffff", nextState:"toLocked"
+			state "toLocked", label:"Updating", icon: "st.locks.lock.locked", backgroundColor:"#c079a3"
+		}
+		standardTile("engaged", "device.engaged", width: 2, height: 2, canChangeIcon: true) {
+			state "engaged", label:"Engaged", icon: "st.locks.lock.unlocked", action: "engaged", backgroundColor:"#ffffff", nextState:"toEngaged"
+			state "toEngaged", label:"Updating", icon: "st.locks.lock.unlocked", backgroundColor:"#ff6666"
 		}
         standardTile("kaput", "device.kaput", width: 2, height: 2, canChangeIcon: true) {
-			state "kaoput", label:"Kaput", icon: "st.Outdoor.outdoor18", action: "kaput", backgroundColor:"#ffffff", nextState:"toKaput"
-			state "toKaput", label:"Kaput", icon: "st.Outdoor.outdoor18", backgroundColor:"#8a5128"
+			state "kaput", label:"Kaput", icon: "st.Outdoor.outdoor18", action: "kaput", backgroundColor:"#ffffff", nextState:"toKaput"
+			state "toKaput", label:"Updating", icon: "st.Outdoor.outdoor18", backgroundColor:"#95623d"
 		}
-		main (["roomOccupancy"])
-		details (["roomOccupancy", "occupied", "checking", "vacant", "locked", "reserved", "kaput"])
+		main (["occupancyStatus"])
+		details (["occupancyStatus", "vacant", "checking", "occupied", "donotdisturb", "reserved", "asleep", "locked", "engaged", "kaput"])
 	}
 }
 
 def parse(String description)	{}
 
-def installed()		{
-	initialize()
-	vacant()
-}
+def installed()		{	initialize();	vacant()	}
 
 def updated()	{	initialize()	}
 
-def	initialize()	{	sendEvent(name: "numberOfButtons", value: 6)	}
+def	initialize()	{	sendEvent(name: "numberOfButtons", value: 8)	}
 
 def occupied()	{	stateUpdate('occupied')		}
 
@@ -111,34 +140,43 @@ def checking()	{	stateUpdate('checking')		}
 
 def vacant()	{	stateUpdate('vacant')		}
 
-def locked()	{	stateUpdate('locked')		}
+def donotdisturb()	{	stateUpdate('donotdisturb')		}
 
 def reserved()	{	stateUpdate('reserved')		}
+
+def asleep()	{	stateUpdate('asleep')		}
+
+def locked()	{	stateUpdate('locked')		}
+
+def engaged()	{	stateUpdate('engaged')		}
 
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(state)	{
-	def oldState = device.currentValue('roomOccupancy')
+	def oldState = device.currentValue('occupancyStatus')
 	if (oldState != state)	{
-		updateRoomOccupancy(state)
+		updateOccupancyStatus(state)
         if (parent)
         	parent.handleSwitches(oldState, state)
 	}
 	resetTile(state)
 }
 
-private updateRoomOccupancy(roomOccupancy = null) 	{
-	roomOccupancy = roomOccupancy?.toLowerCase()
-	def msgTextMap = ['occupied':'Room is occupied: ', 'locked':'Room is locked: ', 'vacant':'Room is vacant: ', 'reserved':'Room is reserved: ', 'checking':'Checking room status: ', 'kaput':'Room not in service: ']
-	if (!roomOccupancy || !(msgTextMap.containsKey(roomOccupancy))) {
+private updateOccupancyStatus(occupancyStatus = null) 	{
+	occupancyStatus = occupancyStatus?.toLowerCase()
+//	def msgTextMap = ['occupied':'Room is occupied: ', 'locked':'Room is locked: ', 'vacant':'Room is vacant: ', 'reserved':'Room is reserved: ', 'checking':'Checking room status: ', 'kaput':'Room not in service: ', 'donotdisturb':'Room is do not disturb: ', 'asleep':'Room is asleep: ']
+//	def msgTextMap = ['occupied', 'locked', 'vacant', 'reserved', 'checking', 'kaput', 'donotdisturb', 'asleep']
+	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
+//	if (!occupancyStatus || !(msgTextMap.containsKey(occupancyStatus))) {
+	if (!occupancyStatus || !(buttonMap.containsKey(occupancyStatus))) {
     	log.debug "${device.displayName}: Missing or invalid parameter room occupancy. Allowed values Occupied, Vacant, Locked, Reserved or Checking."
         return
     }
-	sendEvent(name: "roomOccupancy", value: roomOccupancy, descriptionText: "${device.displayName} changed to ${roomOccupancy}", isStateChange: true, displayed: true)
-	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6]
-    def button = buttonMap[roomOccupancy]
+	sendEvent(name: "occupancyStatus", value: occupancyStatus, descriptionText: "${device.displayName} changed to ${occupancyStatus}", isStateChange: true, displayed: true)
+    def button = buttonMap[occupancyStatus]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
-	def statusMsg = msgTextMap[device.currentValue('roomOccupancy')] + formatLocalTime()
+//	def statusMsg = msgTextMap[device.currentValue('occupancyStatus')] + formatLocalTime()
+	def statusMsg = "Since: " + formatLocalTime()
 	sendEvent(name: "status", value: statusMsg, isStateChange: true, displayed: false)
 }
 
@@ -148,14 +186,14 @@ private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now())	
 	return formatter.format(time)
 }
 
-private	resetTile(roomOccupancy)	{
-    sendEvent(name: roomOccupancy, value: roomOccupancy, descriptionText: "reset tile ${roomOccupancy} to ${roomOccupancy}", isStateChange: true, displayed: false)
+private	resetTile(occupancyStatus)	{
+    sendEvent(name: occupancyStatus, value: occupancyStatus, descriptionText: "reset tile ${occupancyStatus} to ${occupancyStatus}", isStateChange: true, displayed: false)
 }
 
 def generateEvent(state = null)		{
-	if	(state && device.currentValue('roomOccupancy') != state)
-		updateRoomOccupancy(state)
+	if	(state && device.currentValue('occupancyStatus') != state)
+		updateOccupancyStatus(state)
 	return null
 }
 
-def getRoomState()	{	return device.currentValue('roomOccupancy')		}
+def getRoomState()	{	return device.currentValue('occupancyStatus')		}
