@@ -17,6 +17,27 @@
 *
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
+*
+*  Version: 0.03.5
+*
+*   DONE:   10/29/2017
+*   1) added support for setting level and/or color temperature for turning on switches. these will be set for
+*           those devices in the turn on switchs list that support it.
+*   2) since motion inactive timeout can vary so widely amongst different brands of motion sensors chose not to
+*           use motion inactive event and instead timeout on motion active event for predictable user experience.
+*   3) added support for dimming before turning off light.
+*   4) added support for color setting which takes preference over color temperature if the switch supports it.
+*   5) fixed small bugs.
+*
+*  Version: 0.03.1
+*
+*   DONE:   10/27/2017
+*   1) added support for lux sensor and lux value. if these values are specified:
+*       a) if lux value falls <= that value and switches on are selected those switches will be turned on.
+*       b) if lux value rises > that value and switches off are selected those switches will be turned off.
+*       c) switches on with motion will be turned on only when lux value is <= that value.
+*   2) fixed small bugs.
+*
 *  Version: 0.03
 *
 *   DONE:
