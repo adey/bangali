@@ -4,11 +4,12 @@ while ST has a concept of rooms it seems to be more of a grouping mechanism. in 
 
 for example in settings:
 
-if away modes are selected, rooms will change to ‘vacant’ state if they are in either the ‘occupied’ or ‘checking’ state when location changes to any of the away modes.
-if motion sensors are selected, rooms will change to ‘occupied’ state on motion if they were previously ‘vacant’.
-if switches are selected, when room changes to ‘occupied’ the switches will be turned on.
-if motion timeout in seconds is selected the room will be changed to ‘vacant’ after last motion inactive + motion timeout seconds.
-if 2nd group of switches are selected, when room changes to ‘vacant’ the switches will be turned off.
+- if away modes are selected, rooms will change to ‘vacant’ state if they are in either the ‘occupied’ or ‘checking’ state when location changes to any of the away modes.
+- if motion sensors are selected, rooms will change to ‘occupied’ state on motion if they were previously ‘vacant’.
+- if switches are selected, when room changes to ‘occupied’ the switches will be turned on.
+- if motion timeout in seconds is selected the room will be changed to ‘vacant’ after last motion inactive + motion timeout seconds.
+- if 2nd group of switches are selected, when room changes to ‘vacant’ the switches will be turned off.
+
 these are very common tasks around rooms which most users go through automating at some point, so also posting here in case others find this useful.
 
 <br>
