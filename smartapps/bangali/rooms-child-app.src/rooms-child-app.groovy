@@ -143,10 +143,16 @@ def roomName()	{
             input "setColorTemperatureTo", "number", title: "Set Color Temperature When Turning ON? (if light supports color and color is specified this setting will be skipped for those light(s).)",
                                                                                     required: false, multiple: false, defaultValue: null, range: "1500..6500"
         }
-        section("Change Room to 'VACANT' after how many Seconds on No Motion?")		{
-            input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999"
+        section("When 'OCCUPIED' change Room to 'VACANT' after how many Seconds on No Motion?")		{
+            input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            if (noMotion)      {
+                input "whichNoMotion", "enum", title: "Use Last Motion Active or Motion Inacitve?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
+                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            }
+            else
+                paragraph "Use Last Motion Active or Motion Iavacitve?\nselect number of seconds above to set"
         }
-        section("Change Room to 'ENGAGED' State on?")		{
+        section("Change Room to 'ENGAGED' when?")		{
             input "personPresence", "capability.presenceSensor", title: "Which Presence Sensor?", required: false, multiple: false
             input "engagedButton", "capability.button", title: "Which Button?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)      {
@@ -158,7 +164,7 @@ def roomName()	{
             input "engagedSwitch", "capability.switch", title: "Which Switch?", required: false, multiple: false
             input "contactSensor", "capability.contactSensor", title: "Which Contact Sensor?", required: false, multiple: false
         }
-        section("Require Motion within how many Seconds when Room State is 'ENGAGED'?")		{
+        section("Require Motion within how many Seconds when Room is 'ENGAGED'?")		{
             input "noMotionEngaged", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999"
         }
         section("Turn OFF which Switches when Room changes to 'VACANT' or Lux Rises above Threshold or not Within Time Window?\n(these can be different from switches to turn on.)")		{
@@ -189,7 +195,7 @@ def roomName()	{
             else
                 paragraph "To Time?\nchange To Time Type to Time to select"
         }
-        section("Change Room State to 'VACANT' on Away Mode?")		{
+        section("Change Room to 'VACANT' on Away Mode?")		{
             input "awayModes", "mode", title: "Away Mode(s)?", required: false, multiple: true
         }
         section("Pause Automation when in these Mode(s)?")		{
@@ -208,8 +214,6 @@ def updated()	{
 	if (!childCreated())	{
 		spawnChildDevice(app.label)
 	}
-    state.child = getChildDevice(getRoom())
-    state.roomState = state.child.getRoomState()
 	if (awayModes)	{
 		subscribe(location, modeEventHandler)
 	}
@@ -298,15 +302,14 @@ def	motionActiveEventHandler(evt)	{
     if (contactSensor && contactSensor.currentValue("contact") == 'closed')     {
         if (roomState == 'checking')
             child.generateEvent('engaged')
+            roomState = 'engaged'
     }
     else    {
         if (['checking', 'vacant'].contains(roomState))
 		      child.generateEvent('occupied')
-        else    {
-            if (newState == 'engaged' && state.noMotionEngaged)
-                runIn(state.noMotionEngaged, roomVacant)
-        }
     }
+    if (roomState == 'engaged' && state.noMotionEngaged)
+        runIn(state.noMotionEngaged, roomVacant)
 }
 
 def	motionInactiveEventHandler(evt)     {
@@ -314,8 +317,13 @@ def	motionInactiveEventHandler(evt)     {
     	return
     def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
-    if (!(state.noMotion) && ['occupied', 'checking'].contains(roomState))
-        runIn(1, roomVacant)
+    if (['occupied', 'checking'].contains(roomState))       {
+        if (!(state.noMotion))
+            runIn(1, roomVacant)
+        else
+            if (whichNoMotion == '2')
+                runIn(state.noMotion, roomVacant)
+    }
 }
 
 def	switchOnEventHandler(evt)	{
@@ -470,8 +478,10 @@ log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
                     runIn(state.noMotionEngaged, roomVacant)
             }
             else
-                if (state.noMotion)
-                    runIn(state.noMotion, roomVacant)
+                if (state.noMotion) {
+                    if (whichNoMotion == '1')
+                        runIn(state.noMotion, roomVacant)
+                }
                 else
                     if (newState == 'checking')
                         runIn(1, roomVacant)
