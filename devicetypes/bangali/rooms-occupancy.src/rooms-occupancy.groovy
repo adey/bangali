@@ -18,6 +18,40 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.04.1
+*
+*   DONE:   11/3/2017
+*   1) added support for time window to turn on/off switches when between those times. this works with other settings
+*           as well. like if lux is specified both the lux setting and the time setting have to be true for switches
+*           to be turned on or off.
+*
+*  Version: 0.04
+*
+*   DONE:   11/3/2017
+*   1) added support for presence sensor to change room state to engaged when present. when presence sensor is not
+*           present the room automation should work normally.
+*   2) added support for modes which when set cause all automation to be bypassed if location is any of those modes.
+*
+*  Version: 0.03.7
+*
+*   DONE:   11/1/2017
+*   1) added support for contact sensor. when contact sensor changes to closed room will be set to checking state.
+*           if there is no motion afterwards room will be set to vacant. if there is motion, room will be set to
+*           engaged which stops room automation from kicking in till the contact is opened again.
+*           when contact sensor changes to open room will be set to checking state so automation can resume again.
+*           the only exception to this is home changing to away in which case room will be set to vacant.
+*   2) when contact sensor is specified but no motion sensor is specified room will be changed to engaged when
+*           contact sensor closes.
+*   3) if there is a motion sensor specified but no motion timeout value then room will be changed to vacant when
+*           motion sensor becomes inactive and room is in occupied or checking state.
+*   4) added engaged switch which when turned on will mark the room as engaged to stop automation. this gets a
+*           little tricky when both engaged switch and contact sensor is defined. the contact sensor changing to
+*           open will reset the state back to checking. but if there is subsequent motion in the room within the
+*           timeout period the room will be set to occupied. or if the door is closed again and there is subsequent
+*           motion in the room within the timeout period the room will be set to engaged stopping automation.
+*   5) added lights control with lux for engaged state.
+*   6) added button push to toogle room state between engaged and checking when room state is already engaged.
+*
 *  Version: 0.03.5
 *
 *   DONE:   10/29/2017

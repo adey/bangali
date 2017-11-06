@@ -18,6 +18,13 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.04.1
+*
+*   DONE:   11/3/2017
+*   1) added support for time window to turn on/off switches when between those times. this works with other settings
+*           as well. like if lux is specified both the lux setting and the time setting have to be true for switches
+*           to be turned on or off.
+*
 *  Version: 0.04
 *
 *   DONE:   11/3/2017
@@ -43,7 +50,7 @@
 *           timeout period the room will be set to occupied. or if the door is closed again and there is subsequent
 *           motion in the room within the timeout period the room will be set to engaged stopping automation.
 *   5) added lights control with lux for engaged state.
-*   6) added button push to toogle room state to engaged or checking when room state is already engaged.
+*   6) added button push to toogle room state between engaged and checking when room state is already engaged.
 *
 *  Version: 0.03.5
 *
@@ -123,7 +130,7 @@ def roomName()	{
         section("Change Room State to 'OCCUPIED' on Motion?")		{
             input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor(s)?", required: false, multiple: true
         }
-        section("Turn ON Which Switches When Room Changes to 'ENGAGED' or 'OCCUPIED' or Lux Falls Below Threshold?")		{
+        section("Turn ON which Switches when Room changes to 'ENGAGED' or 'OCCUPIED' or Lux Falls below Threshold or is within Time Window?")		{
             input "switches", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
             input "setLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
                                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
@@ -133,27 +140,28 @@ def roomName()	{
                         					                                         ["Daylight":"Daylight - Energize"],
                         					                                         ["Warm White":"Warm White - Relax"],
                         					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
-            input "setColorTemperatureTo", "number", title: "Set Color Temperature When Turning ON? (if light supports color and color is specified this setting will be skipped for those light(s).)", required: false, multiple: false, defaultValue: null, range: "1500..6500"
+            input "setColorTemperatureTo", "number", title: "Set Color Temperature When Turning ON? (if light supports color and color is specified this setting will be skipped for those light(s).)",
+                                                                                    required: false, multiple: false, defaultValue: null, range: "1500..6500"
         }
-        section("Change Room to 'VACANT' After How Many Seconds on No Motion?")		{
+        section("Change Room to 'VACANT' after how many Seconds on No Motion?")		{
             input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999"
         }
         section("Change Room to 'ENGAGED' State on?")		{
-            input "contactSensor", "capability.contactSensor", title: "Which Contact Sensor?", required: false, multiple: false
-            input "engagedSwitch", "capability.switch", title: "Which Switch?", required: false, multiple: false
+            input "personPresence", "capability.presenceSensor", title: "Which Presence Sensor?", required: false, multiple: false
             input "engagedButton", "capability.button", title: "Which Button?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)      {
                 input "buttonNumber", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, submitOnChange: true,
-                                                            options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
+                                                                                        options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
             }
             else
                 paragraph "Button Number?\nselect button to set"
-            input "personPresence", "capability.presenceSensor", title: "Which Presence Sensor?", required: false, multiple: false
+            input "engagedSwitch", "capability.switch", title: "Which Switch?", required: false, multiple: false
+            input "contactSensor", "capability.contactSensor", title: "Which Contact Sensor?", required: false, multiple: false
         }
-        section("Require Motion Within How Many Seconds When Room State is 'ENGAGED'?")		{
+        section("Require Motion within how many Seconds when Room State is 'ENGAGED'?")		{
             input "noMotionEngaged", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999"
         }
-        section("Turn OFF which Switches when Room changes to 'VACANT' or Lux Rises above Threshold?\n(these can be different from the switches to turn on above.)")		{
+        section("Turn OFF which Switches when Room changes to 'VACANT' or Lux Rises above Threshold or not Within Time Window?\n(these can be different from switches to turn on.)")		{
             input "switches2", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
             input "dimTimer", "number", title: "Dim Lights For How Many Seconds Before Turning Off?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "dimByLevel", "enum", title: "Dim Lights By What Level Before Turning Off?", required: false, multiple: false, defaultValue: null,
@@ -163,12 +171,31 @@ def roomName()	{
             input "luxDevice", "capability.illuminanceMeasurement", title: "Which Lux Sensor?", required: false, multiple: false
             input "luxThreshold", "number", title: "What Lux Value?", required: false, multiple: false, defaultValue: null, range: "0..*"
         }
+        section("Turn ON and OFF Switch(es) when Room changes to 'OCCUPIED' or 'ENGAGED' between what Times?")      {
+            if (toTimeType)
+                input "fromTimeType", "enum", title: "Choose From Time Type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+            else
+                input "fromTimeType", "enum", title: "Choose From Time Type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+            if (fromTimeType == '3')
+                input "fromTime", "time", title: "From Time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
+            else
+                paragraph "From Time?\nchange From Time Type to Time to select"
+            if (fromTimeType)
+                input "toTimeType", "enum", title: "Choose To Time Type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+            else
+                input "toTimeType", "enum", title: "Choose To Time Type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+            if (toTimeType == '3')
+                input "toTime", "time", title: "To Time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
+            else
+                paragraph "To Time?\nchange To Time Type to Time to select"
+        }
         section("Change Room State to 'VACANT' on Away Mode?")		{
             input "awayModes", "mode", title: "Away Mode(s)?", required: false, multiple: true
         }
         section("Pause Automation when in these Mode(s)?")		{
             input "pauseModes", "mode", title: "Pause Mode(s)?", required: false, multiple: true
         }
+        remove("Remove Room", "Remove Room ${app.label}")
 	}
 }
 
@@ -176,10 +203,13 @@ def installed()		{}
 
 def updated()	{
 	unsubscribe()
+    unschedule()
 	initialize()
 	if (!childCreated())	{
 		spawnChildDevice(app.label)
 	}
+    state.child = getChildDevice(getRoom())
+    state.roomState = state.child.getRoomState()
 	if (awayModes)	{
 		subscribe(location, modeEventHandler)
 	}
@@ -221,7 +251,7 @@ def updated()	{
     saveHueToState()
     state.setColorTemperatureTo = (setColorTemperatureTo ?: 0)
     state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 0)
-    state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel as Integer : 0)
+    state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel as Integer : null)
     if (engagedSwitch)      {
     	subscribe(engagedSwitch, "switch.on", engagedSwitchOnEventHandler)
     	subscribe(engagedSwitch, "switch.off", engagedSwitchOffEventHandler)
@@ -245,6 +275,8 @@ def updated()	{
         state.luxEnabled = false
         state.previousLux = null
     }
+    if (fromTimeType && toTimeType)
+        scheduleFromToTimes()
 }
 
 def	initialize()	{}
@@ -254,13 +286,13 @@ def	modeEventHandler(evt)	{
     	roomVacant()
     else
         if (pauseModes && pauseModes.contains(evt.value))
-            unschedule()
+            unscheduleAll("mode handler")
 }
 
 def	motionActiveEventHandler(evt)	{
     if (pauseModes && pauseModes.contains(location.mode))
     	return
-    unschedule()
+    unscheduleAll("motion active handler")
 	def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
     if (contactSensor && contactSensor.currentValue("contact") == 'closed')     {
@@ -289,11 +321,11 @@ def	motionInactiveEventHandler(evt)     {
 def	switchOnEventHandler(evt)	{
     if (pauseModes && pauseModes.contains(location.mode))
     	return
-	def child = getChildDevice(getRoom())
-	def roomState = child.getRoomState()
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
     if (roomState == 'vacant')      {
         if (state.noMotion)
-        	runIn(state.noMotion, dimLights)
+            runIn(state.noMotion, dimLights)
     }
 }
 
@@ -304,12 +336,43 @@ def	switchOffEventHandler(evt)  {
 //        unschedule()
 }
 
+def	buttonPushedEventHandler(evt)     {
+    if ((pauseModes && pauseModes.contains(location.mode)) || buttonNumber != evt.value)
+    	return
+    unscheduleAll("button pushed handler")
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (roomState == 'engaged')
+        child.generateEvent('checking')
+    else
+        child.generateEvent('engaged')
+}
+
+def	presencePresentEventHandler(evt)     {
+    if (pauseModes && pauseModes.contains(location.mode))
+    	return
+    unscheduleAll("presence present handler")
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['occupied', 'checking', 'vacant'].contains(roomState))
+        child.generateEvent('engaged')
+}
+
+def	presenceNotPresentEventHandler(evt)     {
+    if (pauseModes && pauseModes.contains(location.mode))
+    	return
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['engaged', 'occupied', 'vacant'].contains(roomState))
+    	child.generateEvent('checking')
+}
+
 def	engagedSwitchOnEventHandler(evt)     {
     if (pauseModes && pauseModes.contains(location.mode))
     	return
     if (personPresence && personPresence.currentValue("presence") == 'present')
         return
-    unschedule()
+    unscheduleAll("engaged switch on handler")
     def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
@@ -333,7 +396,9 @@ def	contactOpenEventHandler(evt)	{
     	return
     if (personPresence && personPresence.currentValue("presence") == 'present')
         return
-    unschedule()
+    if (engagedSwitch && engagedSwitch.currentValue("switch") == 'on')
+        return
+    unscheduleAll("conact open handler")
 	def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
     if (['engaged', 'occupied', 'vacant'].contains(roomState))
@@ -345,7 +410,9 @@ def	contactClosedEventHandler(evt)     {
     	return
     if (personPresence && personPresence.currentValue("presence") == 'present')
         return
-    unschedule()
+    if (engagedSwitch && engagedSwitch.currentValue("switch") == 'on')
+        return
+    unscheduleAll("contact closed handler")
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
     if (motionSensors)      {
@@ -356,37 +423,6 @@ def	contactClosedEventHandler(evt)     {
         if (['occupied', 'checking', 'vacant'].contains(roomState))
             child.generateEvent('engaged')
     }
-}
-
-def	buttonPushedEventHandler(evt)     {
-    if ((pauseModes && pauseModes.contains(location.mode)) || buttonNumber != evt.value)
-    	return
-    unschedule()
-    def child = getChildDevice(getRoom())
-    def roomState = child.getRoomState()
-    if (roomState == 'engaged')
-        child.generateEvent('checking')
-    else
-        child.generateEvent('engaged')
-}
-
-def	presencePresentEventHandler(evt)     {
-    if (pauseModes && pauseModes.contains(location.mode))
-    	return
-    unschedule()
-    def child = getChildDevice(getRoom())
-    def roomState = child.getRoomState()
-    if (['occupied', 'checking', 'vacant'].contains(roomState))
-        child.generateEvent('engaged')
-}
-
-def	presenceNotPresentEventHandler(evt)     {
-    if (pauseModes && pauseModes.contains(location.mode))
-    	return
-    def child = getChildDevice(getRoom())
-    def roomState = child.getRoomState()
-    if (['engaged', 'occupied', 'vacant'].contains(roomState))
-    	child.generateEvent('checking')
 }
 
 def luxEventHandler(evt)    {
@@ -412,19 +448,21 @@ private luxRose(currentLux)   {   return (currentLux > luxThreshold && state.pre
 def roomVacant()	{
 	def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
-	if (['occupied', 'checking'].contains(roomState))
+	if (['engaged', 'occupied', 'checking'].contains(roomState))
 		child.generateEvent('vacant')
 }
 
 def handleSwitches(oldState = null, newState = null)	{
-log.debug "room state old: ${oldState} new: ${newState}"
+log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
+//    state.roomState = newState
     if (pauseModes && pauseModes.contains(location.mode))
         return
 	if (newState && oldState != newState)      {
-//      unschedule()
+//        if (oldState != 'occupied' || newState != 'engaged')
+        unscheduleAll("handle switches")
         if (['engaged', 'occupied', 'checking'].contains(newState))     {
             if (['engaged', 'occupied'].contains(newState))     {
-                if (!state.luxEnabled || luxDevice.currentValue("illuminance") <= luxThreshold)
+//                if (!state.luxEnabled || luxDevice.currentValue("illuminance") <= luxThreshold)
                     switchesOn()
             }
             if (newState == 'engaged')      {
@@ -440,10 +478,8 @@ log.debug "room state old: ${oldState} new: ${newState}"
 //            }
         }
 		else
-			if (newState == 'vacant')    {
-                unschedule()
+			if (newState == 'vacant')
 				dimLights()
-            }
 		return true
 	}
     else
@@ -451,6 +487,22 @@ log.debug "room state old: ${oldState} new: ${newState}"
 }
 
 private switchesOn()	{
+    if (fromTimeType && toTimeType)     {
+        def nowTime	= now()
+        def nowDate = new Date(nowTime)
+        def sunriseAndSunset = getSunriseAndSunset()
+        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+        def fromDate = timeToday(fromTime, location.timeZone)
+        def toDate = timeToday(toTime, location.timeZone)
+        def fTime = (fromTimeType == '1' ? sunriseTime : ( fromTimeType == '2' ? sunsetTime : fromDate))
+        def tTime = (toTimeType == '1' ? sunriseTime : ( toTimeType == '2' ? sunsetTime : toDate))
+//log.debug "checking time from: $fTime | to: $tTime | date: $nowDate | ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}"
+        if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))
+            return
+    }
+    if (state.luxEnabled && luxDevice.currentValue("illuminance") > luxThreshold)
+        return
 	if (switches)
         switches.each      {
             it.on()
@@ -466,13 +518,15 @@ private switchesOn()	{
 }
 
 def dimLights()     {
-    if (state.dimTimer && state.dimByLevel)       {
-        switches2.each      {
-            if (it.currentValue("switch") == 'on')       {
-                if (state.switches2HasLevel[it.getId()])     {
-                    def currentLevel = it.currentValue("level")
-                    def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
-                    it.setLevel(newLevel)
+    if (state.dimTimer)       {
+        if (state.dimByLevel)      {
+            switches2.each      {
+                if (it.currentValue("switch") == 'on')       {
+                    if (state.switches2HasLevel[it.getId()])     {
+                        def currentLevel = it.currentValue("level")
+                        def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
+                        it.setLevel(newLevel)
+                    }
                 }
             }
         }
@@ -534,4 +588,42 @@ private saveHueToState()        {
     }
     else
         state.setColorTo = null
+}
+
+private unscheduleAll(classNameCalledFrom)		{
+log.debug "${app.label} unschedule calling class: $classNameCalledFrom"
+	unschedule(roomVacant)
+    unschedule(switchesOff)
+    unschedule(dimLights)
+}
+
+private scheduleFromToTimes()       {
+    if (!fromTimeType || !toTimeType)
+        return
+    if (fromTimeType == '3')
+        schedule(fromTime, timeFromHandler)
+    else
+        subscribe(location, (fromTimeType == '1' ? "sunrise" : "sunset"), timeFromHandler)
+    if (toTimeType == '3')
+        schedule(toTime, timeToHandler)
+    else
+        subscribe(location, (toTimeType == '1' ? "sunrise" : "sunset"), timeToHandler)
+}
+
+def timeFromHandler(evt = null)       {
+    if (pauseModes && pauseModes.contains(location.mode))
+        return
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['engaged', 'occupied', 'checking'].contains(roomState))
+        switchesOn()
+}
+
+def timeToHandler(evt = null)       {
+    if (pauseModes && pauseModes.contains(location.mode))
+        return
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['engaged', 'occupied', 'checking'].contains(roomState))
+        dimLights()
 }
