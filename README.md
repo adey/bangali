@@ -1,5 +1,16 @@
 # bangali's random code stuff for SmartThings.
 
+while ST has a concept of rooms it seems to be more of a grouping mechanism. in contrast rooms occupancy considers the room as a meta device and automates a few common tasks associated with a “room”. in keeping with that it has attributes, capabilities and commands which are useable in webcore or other smartapps like Smart Lighting. when adding a rooms occupancy device through the smartapp you are able to configure these devices that are associated with the room in settings for the room.
+
+for example in settings:
+
+if away modes are selected, rooms will change to ‘vacant’ state if they are in either the ‘occupied’ or ‘checking’ state when location changes to any of the away modes.
+if motion sensors are selected, rooms will change to ‘occupied’ state on motion if they were previously ‘vacant’.
+if switches are selected, when room changes to ‘occupied’ the switches will be turned on.
+if motion timeout in seconds is selected the room will be changed to ‘vacant’ after last motion inactive + motion timeout seconds.
+if 2nd group of switches are selected, when room changes to ‘vacant’ the switches will be turned off.
+these are very common tasks around rooms which most users go through automating at some point, so also posting here in case others find this useful.
+
 <br>
 <img height="400" src="https://user-images.githubusercontent.com/319291/32026136-d367e612-b997-11e7-885f-de855d9e444e.png">
 <img height="400" src="https://user-images.githubusercontent.com/319291/32026131-d23495ec-b997-11e7-8bb7-adc8aa1000b7.png">
