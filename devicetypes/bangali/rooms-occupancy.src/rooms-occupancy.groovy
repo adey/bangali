@@ -18,6 +18,13 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.04.2
+*
+*   DONE:   11/6/2017
+*   1) added setting option to allow timeout from last motion active or on motion inactive. if motion has a long timeout
+*           this will allow the lights to turn off quicker. but be aware motion sensor may show motion due to long
+*           timeout while room indicates its vacant.
+*
 *  Version: 0.04.1
 *
 *   DONE:   11/3/2017

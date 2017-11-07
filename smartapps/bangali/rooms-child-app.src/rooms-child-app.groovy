@@ -18,9 +18,16 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.04.2
+*
+*   DONE:   11/6/2017
+*   1) added setting option to allow timeout from last motion active or on motion inactive. if motion has a long timeout
+*           this will allow the lights to turn off quicker. but be aware motion sensor may show motion due to long
+*           timeout while room indicates its vacant.
+*
 *  Version: 0.04.1
 *
-*   DONE:   11/3/2017
+*   DONE:   11/5/2017
 *   1) added support for time window to turn on/off switches when between those times. this works with other settings
 *           as well. like if lux is specified both the lux setting and the time setting have to be true for switches
 *           to be turned on or off.
@@ -145,24 +152,22 @@ def roomName()	{
         }
         section("When 'OCCUPIED' change Room to 'VACANT' after how many Seconds on No Motion?")		{
             input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
-            if (noMotion)      {
+            if (noMotion)
                 input "whichNoMotion", "enum", title: "Use Last Motion Active or Motion Inacitve?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
                                                                                         options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
-            }
             else
                 paragraph "Use Last Motion Active or Motion Iavacitve?\nselect number of seconds above to set"
         }
         section("Change Room to 'ENGAGED' when?")		{
-            input "personPresence", "capability.presenceSensor", title: "Which Presence Sensor?", required: false, multiple: false
-            input "engagedButton", "capability.button", title: "Which Button?", required: false, multiple: false, submitOnChange: true
-            if (engagedButton)      {
+            input "engagedButton", "capability.button", title: "Button is Pushed?", required: false, multiple: false, submitOnChange: true
+            if (engagedButton)
                 input "buttonNumber", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, submitOnChange: true,
                                                                                         options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
-            }
             else
                 paragraph "Button Number?\nselect button to set"
-            input "engagedSwitch", "capability.switch", title: "Which Switch?", required: false, multiple: false
-            input "contactSensor", "capability.contactSensor", title: "Which Contact Sensor?", required: false, multiple: false
+            input "personPresence", "capability.presenceSensor", title: "Presence Sensor Present?", required: false, multiple: false
+            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: false
+            input "contactSensor", "capability.contactSensor", title: "Contact Sensor Closes?", required: false, multiple: false
         }
         section("Require Motion within how many Seconds when Room is 'ENGAGED'?")		{
             input "noMotionEngaged", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999"
