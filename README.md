@@ -12,7 +12,7 @@ for example in settings:
 - if motion timeout in seconds is selected the room will be changed to ‘vacant’ after last motion inactive + motion timeout seconds.
 - if 2nd group of switches are selected, when room changes to ‘vacant’ the switches will be turned off.
 
-this is only a part of what's possible. please take a look at the settings for a room in the child-app that captures all of these settings to get a sense of what else is possible.
+this is only a part of what's possible through various settings. please take a look at the settings for a room in the child-app that captures all of these settings to get a sense of what else is possible.
 
 these are very common tasks around rooms which most users go through automating at some point, so also posting here in case others find this useful.
 
