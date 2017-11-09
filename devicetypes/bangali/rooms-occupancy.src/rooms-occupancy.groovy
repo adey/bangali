@@ -15,8 +15,18 @@
 *  You should have received a copy of the GNU General Public License along with this program.
 *  If not, see <http://www.gnu.org/licenses/>.
 *
+*  Attribution:
+*	formatDuration(...) code by ady624 for webCoRE. adpated by me to work here. original code can be found at:
+*		https://github.com/ady624/webCoRE/blob/master/smartapps/ady624/webcore-piston.src/webcore-piston.groovy
+*
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+*
+*  Version: 0.04.3
+*
+*   DONE:   11/8/2017
+*   1) added last event to status message.
+*   2) added concept of adjacent rooms that you can select in room settings. setting does not do anything yet :-)
 *
 *  Version: 0.04.2
 *
@@ -231,21 +241,30 @@ private updateOccupancyStatus(occupancyStatus = null) 	{
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
 //	if (!occupancyStatus || !(msgTextMap.containsKey(occupancyStatus))) {
 	if (!occupancyStatus || !(buttonMap.containsKey(occupancyStatus))) {
-    	log.debug "${device.displayName}: Missing or invalid parameter room occupancy. Allowed values Occupied, Vacant, Locked, Reserved or Checking."
+    	log.debug "${device.displayName}: Missing or invalid parameter room occupancy: $occupancyStatus"
         return
     }
 	sendEvent(name: "occupancyStatus", value: occupancyStatus, descriptionText: "${device.displayName} changed to ${occupancyStatus}", isStateChange: true, displayed: true)
     def button = buttonMap[occupancyStatus]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 //	def statusMsg = msgTextMap[device.currentValue('occupancyStatus')] + formatLocalTime()
-	def statusMsg = "Since: " + formatLocalTime()
-	sendEvent(name: "status", value: statusMsg, isStateChange: true, displayed: false)
+	state.statusMsg = "Since: " + formatLocalTime()
+	updateRoomStatus()
 }
 
-private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now())		{
+private formatLocalTime(time = now(), format = "EEE, MMM d yyyy @ h:mm:ss a z")		{
 	def formatter = new java.text.SimpleDateFormat(format)
 	formatter.setTimeZone(location.timeZone)
 	return formatter.format(time)
+}
+
+def lastEventMsg(evt)	{
+	state.lastEventMsg = "Event: " + evt.device + " " + evt.value
+	updateRoomStatus()
+}
+
+private updateRoomStatus()		{
+	sendEvent(name: "status", value: (state.statusMsg + "\n" + state.lastEventMsg), isStateChange: true, displayed: false)
 }
 
 private	resetTile(occupancyStatus)	{
@@ -259,4 +278,63 @@ def generateEvent(state = null)		{
 	return null
 }
 
-def getRoomState()	{	return device.currentValue('occupancyStatus')		}
+def getRoomState()	{	return device.currentValue('occupancyStatus')	}
+
+/*
+not using yet but have plans to ...
+
+private formatduration(long value, boolean friendly = false, granularity = 's', boolean showAdverbs = false)		{
+	int sign = (value >= 0) ? 1 : -1
+    if (sign < 0) value = -value
+	int ms = value % 1000
+    value = Math.floor((value - ms) / 1000)
+	int s = value % 60
+    value = Math.floor((value - s) / 60)
+	int m = value % 60
+    value = Math.floor((value - m) / 60)
+	int h = value % 24
+    value = Math.floor((value - h) / 24)
+	int d = value
+
+    def parts = 0
+    def partName = ''
+    switch (granularity) {
+    	case 'd': parts = 1; partName = 'day'; break;
+    	case 'h': parts = 2; partName = 'hour'; break;
+    	case 'm': parts = 3; partName = 'minute'; break;
+    	case 'ms': parts = 5; partName = 'millisecond'; break;
+    	default: parts = 4; partName = 'second'; break;
+    }
+
+    parts = friendly ? parts : (parts < 3 ? 3 : parts)
+    def result = ''
+    if (friendly) {
+    	List p = []
+        if (d) p.push("$d day" + (d > 1 ? 's' : ''))
+        if ((parts > 1) && h) p.push("$h hour" + (h > 1 ? 's' : ''))
+        if ((parts > 2) && m) p.push("$m minute" + (m > 1 ? 's' : ''))
+        if ((parts > 3) && s) p.push("$s second" + (s > 1 ? 's' : ''))
+        if ((parts > 4) && ms) p.push("$ms millisecond" + (ms > 1 ? 's' : ''))
+        switch (p.size()) {
+        	case 0:
+            	result = showAdverbs ? 'now' : '0 ' + partName + 's'
+                break
+            case 1:
+            	result = p[0]
+                break
+			default:
+            	result = '';
+                int sz = p.size()
+                for (int i=0; i < sz; i++) {
+                	result += (i ? (sz > 2 ? ', ' : ' ') : '') + (i == sz - 1 ? 'and ' : '') + p[i]
+                }
+                result = (showAdverbs && (sign > 0) ? 'in ' : '') + result + (showAdverbs && (sign < 0) ? ' ago' : '')
+            	break
+		}
+    }
+	else
+    	result = (sign < 0 ? '-' : '') + (d > 0 ? sprintf("%dd ", d) : '') + sprintf("%02d:%02d", h, m) + (parts > 3 ? sprintf(":%02d", s) : '') + (parts > 4 ? sprintf(".%03d", ms) : '')
+
+    return result
+}
+*/

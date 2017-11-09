@@ -18,6 +18,12 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.04.3
+*
+*   DONE:   11/8/2017
+*   1) added last event to status message.
+*   2) added concept of adjacent rooms that you can select in room settings. setting does not do anything yet :-)
+*
 *  Version: 0.04.2
 *
 *   DONE:   11/6/2017
@@ -138,4 +144,22 @@ def initialize()	{
 	childApps.each	{ child ->
 		log.info "room manager: room: ${child.label}"
 	}
+}
+
+def getRoomNames(thisChild)    {
+    def roomNames = [:]
+    childApps.each	{ child ->
+        if (thisChild != child.label)
+            roomNames << [(child.id):(child.label)]
+	}
+    return (roomNames.sort { it.value })
+}
+
+def handleChildren(childrenID)  {
+/*    if (childrenID)
+        childApps.each	{ child ->
+            if (childrenID.contains(child.id))
+                log.debug "child true: $child.label"
+            }
+*/
 }

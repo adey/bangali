@@ -18,6 +18,12 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.04.3
+*
+*   DONE:   11/8/2017
+*   1) added last event to status message.
+*   2) added concept of adjacent rooms that you can select in room settings. setting does not do anything yet :-)
+*
 *  Version: 0.04.2
 *
 *   DONE:   11/6/2017
@@ -119,10 +125,11 @@ definition	(
 )
 
 preferences {
-	page(name: "roomName")
+	page(name: "roomName", title: "Room Name and Settings")
 }
 
 def roomName()	{
+    def roomNames = parent.getRoomNames(app.label)
 	dynamicPage(name: "roomName", title: "Room Name", install: true, uninstall: childCreated())		{
         section		{
             if (!childCreated())
@@ -133,6 +140,9 @@ def roomName()	{
         section		{
             paragraph "The following settings are optional. The corresponding actions will be skipped when the setting is left blank. When settings are specified they work in\
                             combination with other specified settings.\n(scroll down for more settings.)"
+        }
+        section("Adjacent Rooms?")		{
+            input "adjRooms", "enum", title: "Adjacent Rooms?", required: false, multiple: true, defaultValue: null, options: roomNames
         }
         section("Change Room State to 'OCCUPIED' on Motion?")		{
             input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor(s)?", required: false, multiple: true
@@ -219,6 +229,7 @@ def updated()	{
 	if (!childCreated())	{
 		spawnChildDevice(app.label)
 	}
+    parent.handleChildren(adjRooms)
 	if (awayModes)	{
 		subscribe(location, modeEventHandler)
 	}
@@ -296,6 +307,7 @@ def	modeEventHandler(evt)	{
     else
         if (pauseModes && pauseModes.contains(evt.value))
             unscheduleAll("mode handler")
+    updateRoomStatus(evt)
 }
 
 def	motionActiveEventHandler(evt)	{
@@ -315,6 +327,7 @@ def	motionActiveEventHandler(evt)	{
     }
     if (roomState == 'engaged' && state.noMotionEngaged)
         runIn(state.noMotionEngaged, roomVacant)
+    updateRoomStatus(evt)
 }
 
 def	motionInactiveEventHandler(evt)     {
@@ -329,6 +342,7 @@ def	motionInactiveEventHandler(evt)     {
             if (whichNoMotion == '2')
                 runIn(state.noMotion, roomVacant)
     }
+    updateRoomStatus(evt)
 }
 
 def	switchOnEventHandler(evt)	{
@@ -340,11 +354,13 @@ def	switchOnEventHandler(evt)	{
         if (state.noMotion)
             runIn(state.noMotion, dimLights)
     }
+    updateRoomStatus(evt)
 }
 
 def	switchOffEventHandler(evt)  {
     if (pauseModes && pauseModes.contains(location.mode))
     	return
+    updateRoomStatus(evt)
 //    if (!('on' in switches2.currentValue("switch")))
 //        unschedule()
 }
@@ -359,6 +375,7 @@ def	buttonPushedEventHandler(evt)     {
         child.generateEvent('checking')
     else
         child.generateEvent('engaged')
+    updateRoomStatus(evt)
 }
 
 def	presencePresentEventHandler(evt)     {
@@ -369,6 +386,7 @@ def	presencePresentEventHandler(evt)     {
     def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('engaged')
+    updateRoomStatus(evt)
 }
 
 def	presenceNotPresentEventHandler(evt)     {
@@ -378,6 +396,7 @@ def	presenceNotPresentEventHandler(evt)     {
     def roomState = child.getRoomState()
     if (['engaged', 'occupied', 'vacant'].contains(roomState))
     	child.generateEvent('checking')
+    updateRoomStatus(evt)
 }
 
 def	engagedSwitchOnEventHandler(evt)     {
@@ -390,6 +409,7 @@ def	engagedSwitchOnEventHandler(evt)     {
 	def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('engaged')
+    updateRoomStatus(evt)
 }
 
 def	engagedSwitchOffEventHandler(evt)	{
@@ -402,6 +422,7 @@ def	engagedSwitchOffEventHandler(evt)	{
 	def roomState = child.getRoomState()
     if (['engaged', 'occupied', 'vacant'].contains(roomState))
 		child.generateEvent('checking')
+    updateRoomStatus(evt)
 }
 
 def	contactOpenEventHandler(evt)	{
@@ -416,6 +437,7 @@ def	contactOpenEventHandler(evt)	{
 	def roomState = child.getRoomState()
     if (['engaged', 'occupied', 'vacant'].contains(roomState))
 		child.generateEvent('checking')
+    updateRoomStatus(evt)
 }
 
 def	contactClosedEventHandler(evt)     {
@@ -436,6 +458,7 @@ def	contactClosedEventHandler(evt)     {
         if (['occupied', 'checking', 'vacant'].contains(roomState))
             child.generateEvent('engaged')
     }
+    updateRoomStatus(evt)
 }
 
 def luxEventHandler(evt)    {
@@ -452,11 +475,20 @@ def luxEventHandler(evt)    {
                 dimLights()
     }
     state.previousLux = currentLux
+    updateRoomStatus(evt)
 }
 
 private luxFell(currentLux)   {   return (currentLux <= luxThreshold && state.previousLux > luxThreshold)  }
 
 private luxRose(currentLux)   {   return (currentLux > luxThreshold && state.previousLux <= luxThreshold)  }
+
+private updateRoomStatus(evt)    {
+    if (evt.id != app.id)   {
+log.debug "evt id: $evt.id | app id: $app.id"
+        def child = getChildDevice(getRoom())
+        child.lastEventMsg(evt)
+    }
+}
 
 def roomVacant()	{
 	def child = getChildDevice(getRoom())
@@ -545,13 +577,13 @@ def dimLights()     {
                 }
             }
         }
-        runIn(state.dimTimer, switchesOff)
+        runIn(state.dimTimer, switches2Off)
     }
     else
-        switchesOff()
+        switches2Off()
 }
 
-def switchesOff()   {
+def switches2Off()   {
 	if (switches2)
         switches2.off()
 }
@@ -572,7 +604,6 @@ private childCreated()		{
 private getRoom()	{	return "rm_${app.id}"	}
 
 def uninstalled() {
-	unsubscribe()
 	getChildDevices().each	{
 		deleteChildDevice(it.deviceNetworkId)
 	}
@@ -608,7 +639,7 @@ private saveHueToState()        {
 private unscheduleAll(classNameCalledFrom)		{
 log.debug "${app.label} unschedule calling class: $classNameCalledFrom"
 	unschedule(roomVacant)
-    unschedule(switchesOff)
+    unschedule(switches2Off)
     unschedule(dimLights)
 }
 
