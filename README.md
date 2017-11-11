@@ -2,7 +2,7 @@
 
 while ST has a concept of rooms it seems to be more of a grouping mechanism. in contrast rooms occupancy considers the room as a meta device and automates a few common tasks associated with a “room” physical or virtual. in keeping with that it has attributes, capabilities and commands which are useable in webcore or other smartapps like Smart Lighting.
 
-however, what makes it useful for me is not just the room's state but the abiloty to manage automation for room in one set of settings for the room. when adding a room device through the smartapp you are able to configure settings for the room which allow the various devices in the room to be automated based on these settings.
+however, what makes it useful for me is not just the room's state but the ability to manage automation for room in one set of settings for the room. when adding a room device through the smartapp you are able to configure settings for the room which allow the various devices in the room to be automated based on these settings.
 
 for example in settings:
 
