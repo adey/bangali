@@ -22,6 +22,15 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.04.5
+*
+*   DONE:   11/10/2017
+*   1) revamped device details screen. if users dont like it will revert back.
+*   2) when swiches are turned off because lux rose or is outside of time window added settings to turn off both
+*           group of switches instead of just switches off.
+*   3) added option to change state directly from engaged to vacant without moving to checking state.
+*	4) removed last event from status message.
+*
 *  Version: 0.04.3
 *
 *   DONE:   11/8/2017
@@ -141,7 +150,8 @@ metadata {
 	}
 
 	tiles(scale: 2)		{
-    	multiAttributeTile(name: "occupancyStatus", width: 2, height: 2, canChangeBackground: true)		{
+// old style display
+/*    	multiAttributeTile(name: "occupancyStatus", width: 2, height: 2, canChangeBackground: true)		{
 			tileAttribute ("device.occupancyStatus", key: "PRIMARY_CONTROL")		{
 				attributeState "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 				attributeState "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
@@ -157,17 +167,69 @@ metadata {
 				attributeState "default", label:'${currentValue}'
 			}
         }
-        standardTile("occupied", "device.occupied", width: 2, height: 2, canChangeIcon: true) {
-			state "occupied", label:"Occupied", icon: "st.Health & Wellness.health12", action: "occupied", backgroundColor:"#ffffff", nextState:"toOccupied"
-            state "toOccupied", label:"Updating", icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
+*/
+// new style display
+		standardTile("occupancyStatus", "device.occupancyStatus", width: 4, height: 4, inactiveLabel: true, canChangeBackground: true)		{
+			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
+			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
+			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
+			state "donotdisturb", label: 'Do Not Disturb', icon:"st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
+			state "reserved", label: 'Reserved', icon:"st.Office.office7", backgroundColor:"#ccac00"
+			state "asleep", label: 'Asleep', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879af"
+			state "locked", label: 'Locked', icon:"st.locks.lock.locked", backgroundColor:"#c079a3"
+			state "engaged", label: 'Engaged', icon:"st.locks.lock.unlocked", backgroundColor:"#ff6666"
+			state "kaput", label: 'Kaput', icon:"st.Outdoor.outdoor18", backgroundColor:"#95623d"
+        }
+		valueTile("status", "device.status", inactiveLabel: false, width: 5, height: 1, decoration: "flat", wordWrap: false)	{
+			state "status", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 		}
-		standardTile("checking", "device.checking", width: 2, height: 2, canChangeIcon: true) {
-			state "checking", label:"Checking", icon: "st.Health & Wellness.health9", action: "checking", backgroundColor:"#ffffff", nextState:"toChecking"
-			state "toChecking", label:"Updating", icon: "st.Health & Wellness.health9", backgroundColor:"#616969"
+
+		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList1", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
-        standardTile("vacant", "device.vacant", width: 2, height: 2, canChangeIcon: true) {
+		valueTile("deviceList2", "device.deviceList2", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList2", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList3", "device.deviceList3", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList3", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList4", "device.deviceList4", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList4", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList5", "device.deviceList5", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList5", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList6", "device.deviceList6", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList6", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList7", "device.deviceList7", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList7", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList8", "device.deviceList8", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList8", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList9", "device.deviceList9", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList9", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList10", "device.deviceList10", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList10", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+
+		standardTile("engaged", "device.engaged", width: 2, height: 2, canChangeIcon: true) {
+			state "engaged", label:"Engaged", icon: "st.locks.lock.unlocked", action: "engaged", backgroundColor:"#ffffff", nextState:"toEngaged"
+			state "toEngaged", label:"Updating", icon: "st.locks.lock.unlocked", backgroundColor:"#ff6666"
+		}
+		standardTile("vacant", "device.vacant", width: 2, height: 2, canChangeIcon: true) {
 			state "vacant", label:"Vacant", icon: "st.Home.home18", action: "vacant", backgroundColor:"#ffffff", nextState:"toVacant"
 			state "toVacant", label:"Updating", icon: "st.Home.home18", backgroundColor:"#32b399"
+		}
+/*		standardTile("checking", "device.checking", width: 2, height: 2, canChangeIcon: true) {
+			state "checking", label:"Checking", icon: "st.Health & Wellness.health9", action: "checking", backgroundColor:"#ffffff", nextState:"toChecking"
+			state "toChecking", label:"Updating", icon: "st.Health & Wellness.health9", backgroundColor:"#616969"
+		}*/
+		standardTile("occupied", "device.occupied", width: 2, height: 2, canChangeIcon: true) {
+			state "occupied", label:"Occupied", icon: "st.Health & Wellness.health12", action: "occupied", backgroundColor:"#ffffff", nextState:"toOccupied"
+            state "toOccupied", label:"Updating", icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 		}
 		standardTile("donotdisturb", "device.donotdisturb", width: 2, height: 2, canChangeIcon: true) {
 			state "donotdisturb", label:"DnD", icon: "st.Seasonal Winter.seasonal-winter-011", action: "donotdisturb", backgroundColor:"#ffffff", nextState:"toDoNotDisturb"
@@ -185,16 +247,22 @@ metadata {
 			state "locked", label:"Locked", icon: "st.locks.lock.locked", action: "locked", backgroundColor:"#ffffff", nextState:"toLocked"
 			state "toLocked", label:"Updating", icon: "st.locks.lock.locked", backgroundColor:"#c079a3"
 		}
-		standardTile("engaged", "device.engaged", width: 2, height: 2, canChangeIcon: true) {
-			state "engaged", label:"Engaged", icon: "st.locks.lock.unlocked", action: "engaged", backgroundColor:"#ffffff", nextState:"toEngaged"
-			state "toEngaged", label:"Updating", icon: "st.locks.lock.unlocked", backgroundColor:"#ff6666"
-		}
         standardTile("kaput", "device.kaput", width: 2, height: 2, canChangeIcon: true) {
 			state "kaput", label:"Kaput", icon: "st.Outdoor.outdoor18", action: "kaput", backgroundColor:"#ffffff", nextState:"toKaput"
 			state "toKaput", label:"Updating", icon: "st.Outdoor.outdoor18", backgroundColor:"#95623d"
 		}
+
 		main (["occupancyStatus"])
-		details (["occupancyStatus", "vacant", "checking", "occupied", "donotdisturb", "reserved", "asleep", "locked", "engaged", "kaput"])
+
+		// display all tiles
+		details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		// display main and other button tiles only
+		// details (["occupancyStatus", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		// display main tiles and devices list only
+		// details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10"])
+		// display main tiles only
+		// details (["occupancyStatus", "engaged", "vacant", "status"])
+
 	}
 }
 
@@ -258,13 +326,28 @@ private formatLocalTime(time = now(), format = "EEE, MMM d yyyy @ h:mm:ss a z")	
 	return formatter.format(time)
 }
 
-def lastEventMsg(evt)	{
-	state.lastEventMsg = "Event: " + evt.device + " " + evt.value
-	updateRoomStatus()
+private updateRoomStatus()		{
+	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
 }
 
-private updateRoomStatus()		{
-	sendEvent(name: "status", value: (state.statusMsg + "\n" + state.lastEventMsg), isStateChange: true, displayed: false)
+def deviceList(devicesMap)		{
+	def devicesTitle = ['engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
+						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor',
+						'awayModes':'Away Mode', 'pauseModes':'Pause Mode']
+	def deviceCount = 10
+	def i = 1
+	devicesMap.each	{ k, v ->
+		if (v)			{
+			v.each	{
+				if (i <= deviceCount)		{
+					sendEvent(name: "deviceList" + i, value: (devicesTitle[k] + ":\n" + (it.hasProperty('displayName') ? it.displayName : it)), isStateChange: true, displayed: false)
+					i = i +1
+				}
+			}
+		}
+	}
+	for (; i < deviceCount; i++)
+		sendEvent(name: "deviceList" + i, value: null, isStateChange: true, displayed: false)
 }
 
 private	resetTile(occupancyStatus)	{

@@ -18,6 +18,15 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.04.5
+*
+*   DONE:   11/10/2017
+*   1) revamped device details screen. if users dont like it will revert back.
+*   2) when swiches are turned off because lux rose or is outside of time window added settings to turn off both
+*           group of switches instead of just switches off.
+*   3) added option to change state directly from engaged to vacant without moving to checking state.
+*	4) removed last event from status message.
+*
 *  Version: 0.04.3
 *
 *   DONE:   11/8/2017
