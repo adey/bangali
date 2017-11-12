@@ -18,6 +18,11 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.04.6
+*
+*   DONE:   11/12/2017
+*   1) bug fixes around contact sensors..
+*
 *  Version: 0.04.5
 *
 *   DONE:   11/10/2017
@@ -164,11 +169,25 @@ def getRoomNames(thisChild)    {
     return (roomNames.sort { it.value })
 }
 
-def handleChildren(childrenID)  {
-/*    if (childrenID)
-        childApps.each	{ child ->
-            if (childrenID.contains(child.id))
-                log.debug "child true: $child.label"
+def handleAdjRooms(childID, adjRooms)    {
+    if (!childID || !adjRooms)
+        return null
+    def adjMotionSensors = []
+    def adjMotionSensorsNames = []
+    childApps.each	{ child ->
+        if (childID != child.id && adjRooms.contains(child.id))      {
+            def motionSensors = []
+            motionSensors = child.getAdjMotionSensors()
+            if (motionSensors)  {
+                motionSensors.each  {
+                    def motionsSensorName = it.getName()
+                    if (!(adjMotionSensorsNames.contains(motionsSensorName)))   {
+                        adjMotionSensors << it
+                        adjMotionSensorsNames << motionsSensorName
+                    }
+                }
             }
-*/
+        }
+    }
+    return adjMotionSensors
 }
