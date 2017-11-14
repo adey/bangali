@@ -379,9 +379,10 @@ def	motionActiveEventHandler(evt)	{
     else    {
         if (['checking', 'vacant'].contains(roomState))
 		      child.generateEvent('occupied')
-        else
+        else    {
             if (roomState == 'occupied' && whichNoMotion == lastMotionActive() && state.noMotion)
                 runIn(state.noMotion, roomVacant)
+        }
     }
 }
 
