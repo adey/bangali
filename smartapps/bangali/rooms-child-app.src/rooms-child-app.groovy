@@ -18,10 +18,20 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.05.0
+*
+*   DONE:   11/13/2017
+*   1) expanded the adjacent room settings. if you specify adjacent rooms you can choose 2 options:
+*       i) if there is motion in an adjacent room you can force the current room to check for motion and on no
+*           motion change room state to vacant.
+*      ii) if there is motion in an adjacent room you can turn on lights in this room if it is currently vacant.
+*           this allows for the adjacent rooms feature to be used as a light your pathway can kind of setup.
+*   2) some bug fixes.
+*
 *  Version: 0.04.6
 *
 *   DONE:   11/12/2017
-*   1) bug fixes around contact sensors..
+*   1) bug fixes around contact sensors.
 *
 *  Version: 0.04.5
 *
@@ -143,7 +153,8 @@ preferences {
 }
 
 def roomName()	{
-    def roomNames = parent.getRoomNames(app.label)
+    def roomNames = parent.getRoomNames(app.id)
+    def adjRoomSetting = (adjRooms ? false : true)
     def timeSettings = (fromTimeType || toTimeType) ^ true
     def modeSettings = (awayModes || pauseModes) ^ true
     def engagedSettings = (engagedButton || buttonNumber || personPresence || engagedSwitch || contactSensor || noMotionEngaged) ^ true
@@ -159,11 +170,8 @@ def roomName()	{
         section		{
             paragraph "Following settings are all optional. Corresponding actions will be skipped when setting is blank. When specified settings work in combination with others.\n(scroll down for more settings ...)"
         }
-        section("Adjacent Rooms?")		{
-            input "adjRooms", "enum", title: "Adjacent Rooms?", required: false, multiple: true, defaultValue: null, options: roomNames
-        }
         section("Change Room State to 'OCCUPIED' on Motion?")		{
-            input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor(s)?", required: false, multiple: true
+            input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor?", required: false, multiple: true
         }
         section("When 'OCCUPIED' change Room to 'VACANT' with No Motion?")		{
             input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
@@ -188,22 +196,12 @@ def roomName()	{
         }
         section("Turn OFF which Switches when Room changes to 'VACANT'?\n(works with lux threshold and/or time window settings below. these can be different from switches to turn on.)")		{
             input "switches2", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
-            input "dimTimer", "number", title: "Dim Lights For How Many Seconds Before Turning Off?", required: false, multiple: false, defaultValue: null, range: "5..99999"
-            input "dimByLevel", "enum", title: "Dim Lights By What Level Before Turning Off?", required: false, multiple: false, defaultValue: null,
+            input "dimTimer", "number", title: "Dim Lights For How Many Seconds Before Turning Off?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            if (dimTimer)
+                input "dimByLevel", "enum", title: "Dim Lights By What Level Before Turning Off?", required: false, multiple: false, defaultValue: null,
                                                                     options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
-        }
-        section("Change Room to 'ENGAGED' when?\n(if specified this will also reset room state to 'VACANT' when the button is pushed again or presence sensor changes to not present etc.)", hideable: true, hidden: engagedSettings)		{
-            input "engagedButton", "capability.button", title: "Button is Pushed?", required: false, multiple: false, submitOnChange: true
-            if (engagedButton)
-                input "buttonNumber", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, submitOnChange: true,
-                                                                                        options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
             else
-                paragraph "Button Number?\nselect button to set"
-            input "personPresence", "capability.presenceSensor", title: "Presence Sensor Present?", required: false, multiple: false
-            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: false
-            input "contactSensor", "capability.contactSensor", title: "Contact Sensor Closes?", required: false, multiple: false
-            input "noMotionEngaged", "number", title: "Require Motion within how many Seconds when Room is 'ENGAGED'?", required: false, multiple: false, defaultValue: null, range: "5..99999"
-            input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
+                paragraph "Dim Lights By What Level Before Turning Off?\nselect dim timer above to set"
         }
         section("Lux threshold to turn ON and OFF Switch(es) when Room is 'OCCUPIED' or 'ENGAGED'?", hideable: true, hidden: luxSettings)		{
             input "luxSensor", "capability.illuminanceMeasurement", title: "Which Lux Sensor?", required: false, multiple: false
@@ -230,6 +228,30 @@ def roomName()	{
         section("Turn OFF ALL switch(es) when Lux value rises or Time is outside of window?", hideable: true, hidden: luxAndTimeSettings)		{
             input "allSwitchesOff", "bool", title: "Turn OFF all switches?", required: false, multiple: false, defaultValue: false
         }
+        section("Change Room to 'ENGAGED' when?\n(if specified this will also reset room state to 'VACANT' when the button is pushed again or presence sensor changes to not present etc.)", hideable: true, hidden: engagedSettings)		{
+            input "engagedButton", "capability.button", title: "Button is Pushed?", required: false, multiple: false, submitOnChange: true
+            if (engagedButton)
+                input "buttonNumber", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, submitOnChange: true,
+                                                                                        options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
+            else
+                paragraph "Button Number?\nselect button to set"
+            input "personPresence", "capability.presenceSensor", title: "Presence Sensor Present?", required: false, multiple: false
+            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: false
+            input "contactSensor", "capability.contactSensor", title: "Contact Sensor Closes?", required: false, multiple: false
+            input "noMotionEngaged", "number", title: "Require Motion within how many Seconds when Room is 'ENGAGED'?", required: false, multiple: false, defaultValue: null, range: "5..99999"
+            input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
+        }
+        section("Adjacent Rooms?\n(this allows for action when there is motion in adjacent rooms.)", hideable: true, hidden: adjRoomSetting)		{
+            input "adjRooms", "enum", title: "Adjacent Rooms?", required: false, multiple: true, defaultValue: null, options: roomNames, submitOnChange: true
+            if (adjRooms)   {
+                input "adjRoomsMotion", "bool", title: "If motion in adjacent room check if person is still in this room?", required: false, multiple: false, defaultValue: false
+                input "adjRoomsPathway", "bool", title: "If moving through room turn on switches in adjacent rooms?", required: false, multiple: false, defaultValue: false
+            }
+            else    {
+                paragraph "If motion in adjacent room check if person still in this room?\nselect adjacent rooms above to set"
+                paragraph "If moving through room turn on switches in adjacent rooms?\nselect adjacent rooms above to set"
+            }
+        }
         section("Mode settings for Away and Pause mode(s)?", hideable: true, hidden: modeSettings)		{
             input "awayModes", "mode", title: "Away mode(s) to set Room to 'VACANT'?", required: false, multiple: true
             input "pauseModes", "mode", title: "Mode(s) in which to pause automation?", required: false, multiple: true
@@ -241,12 +263,22 @@ def roomName()	{
 def installed()		{}
 
 def updated()	{
+    if (!childCreated())	{
+		spawnChildDevice(app.label)
+	}
+    def adjMotionSensors = parent.handleAdjRooms()
+    def child = getChildDevice(getRoom())
+    def devicesMap = ['engagedButton':engagedButton, 'presence':personPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
+                  'motionSensors':motionSensors, 'switchesOn':switches, 'switchesOff':switches2, 'luxSensor':luxSensor,
+                  'awayModes':awayModes, 'pauseModes':pauseModes]
+    child.deviceList(devicesMap)
+//    child.deviceList(personPresence, engagedButton, engagedSwitch, contactSensor, motionSensors, switches, switches2, luxSensor)
+}
+
+def updateRoom(adjMotionSensors)     {
 	unsubscribe()
     unschedule()
 	initialize()
-	if (!childCreated())	{
-		spawnChildDevice(app.label)
-	}
 	if (awayModes)	{
 		subscribe(location, modeEventHandler)
 	}
@@ -256,7 +288,6 @@ def updated()	{
     	subscribe(motionSensors, "motion.active", motionActiveEventHandler)
     	subscribe(motionSensors, "motion.inactive", motionInactiveEventHandler)
 	}
-    def adjMotionSensors = parent.handleAdjRooms(app.id, adjRooms)
     if (adjMotionSensors)   {
         subscribe(adjMotionSensors, "motion.active", adjMotionActiveEventHandler)
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
@@ -319,12 +350,6 @@ def updated()	{
     }
     if (fromTimeType && toTimeType)
         scheduleFromToTimes()
-    def child = getChildDevice(getRoom())
-    def devicesMap = ['engagedButton':engagedButton, 'presence':personPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
-                      'motionSensors':motionSensors, 'switchesOn':switches, 'switchesOff':switches2, 'luxSensor':luxSensor,
-                      'awayModes':awayModes, 'pauseModes':pauseModes]
-    child.deviceList(devicesMap)
-//    child.deviceList(personPresence, engagedButton, engagedSwitch, contactSensor, motionSensors, switches, switches2, luxSensor)
 }
 
 def	initialize()	{}
@@ -335,7 +360,6 @@ def	modeEventHandler(evt)	{
     else
         if (pauseModes && pauseModes.contains(evt.value))
             unscheduleAll("mode handler")
-    updateRoomStatus(evt)
 }
 
 def	motionActiveEventHandler(evt)	{
@@ -347,7 +371,6 @@ def	motionActiveEventHandler(evt)	{
     if (contactSensor && contactSensor.currentValue("contact") == 'closed')     {
         if (['occupied', 'checking'].contains(roomState))   {
             child.generateEvent('engaged')
-            roomState = 'engaged'
         }
         else
             if (roomState == 'vacant')
@@ -356,10 +379,10 @@ def	motionActiveEventHandler(evt)	{
     else    {
         if (['checking', 'vacant'].contains(roomState))
 		      child.generateEvent('occupied')
+        else
+            if (roomState == 'occupied' && whichNoMotion == lastMotionActive() && state.noMotion)
+                runIn(state.noMotion, roomVacant)
     }
-    if (roomState == 'engaged' && state.noMotionEngaged)
-        runIn(state.noMotionEngaged, roomVacant)
-    updateRoomStatus(evt)
 }
 
 def	motionInactiveEventHandler(evt)     {
@@ -371,13 +394,39 @@ def	motionInactiveEventHandler(evt)     {
         if (!(state.noMotion))
             runIn(1, roomVacant)
         else
-            if (whichNoMotion == '2')
+            if (whichNoMotion == lastMotionInactive())
                 runIn(state.noMotion, roomVacant)
     }
-    updateRoomStatus(evt)
 }
 
 def adjMotionActiveEventHandler(evt)    {
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (adjRoomsMotion && roomState == 'occupied')      {
+        def motionValue = motionSensors.currentValue("motion")
+        def motionLastActivity = motionSensors.getLastActivity()
+        def mV = motionValue.contains('active')
+        def mD = motionLastActivity.max()
+        if (mV && mD > evt.date)
+            return
+        child.generateEvent('checking')
+        return
+    }
+    if (adjRoomsPathway && roomState == 'vacant')      {
+        adjRooms.each   {
+            def lastStateDate = parent.getLastStateDate(it)
+            if (lastStateDate['state'])     {
+                def evtDate = evt.date.getTime()
+                def lsDate = lastStateDate['date']
+                def dateDiff = (evtDate - lsDate) + 0
+                if (lastStateDate['state'] == 'vacant')    {
+                    switchesOn(true)
+                    child.generateEvent('checking')
+                    return
+                }
+            }
+        }
+    }
 }
 
 def adjMotionInactiveEventHandler(evt)    {
@@ -392,13 +441,11 @@ def	switchOnEventHandler(evt)	{
         if (state.noMotion)
             runIn(state.noMotion, dimLights)
     }
-    updateRoomStatus(evt)
 }
 
 def	switchOffEventHandler(evt)  {
     if (pauseModes && pauseModes.contains(location.mode))
     	return
-    updateRoomStatus(evt)
 //    if (!('on' in switches2.currentValue("switch")))
 //        unschedule()
 }
@@ -417,7 +464,6 @@ def	buttonPushedEventHandler(evt)     {
     }
     else
         child.generateEvent('engaged')
-    updateRoomStatus(evt)
 }
 
 def	presencePresentEventHandler(evt)     {
@@ -428,7 +474,6 @@ def	presencePresentEventHandler(evt)     {
     def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('engaged')
-    updateRoomStatus(evt)
 }
 
 def	presenceNotPresentEventHandler(evt)     {
@@ -439,10 +484,9 @@ def	presenceNotPresentEventHandler(evt)     {
     if (resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
     else    {
-        if (['engaged', 'occupied', 'vacant'].contains(roomState))
+        if (['engaged', 'occupied'].contains(roomState))
             child.generateEvent('checking')
     }
-    updateRoomStatus(evt)
 }
 
 def	engagedSwitchOnEventHandler(evt)     {
@@ -455,7 +499,6 @@ def	engagedSwitchOnEventHandler(evt)     {
 	def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('engaged')
-    updateRoomStatus(evt)
 }
 
 def	engagedSwitchOffEventHandler(evt)	{
@@ -468,11 +511,9 @@ def	engagedSwitchOffEventHandler(evt)	{
 	def roomState = child.getRoomState()
     if (resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
-    else    {
-        if (['engaged', 'occupied', 'vacant'].contains(roomState))
+    else
+        if (['engaged', 'occupied'].contains(roomState))
             child.generateEvent('checking')
-    }
-    updateRoomStatus(evt)
 }
 
 def	contactOpenEventHandler(evt)	{
@@ -487,11 +528,9 @@ def	contactOpenEventHandler(evt)	{
 	def roomState = child.getRoomState()
     if (resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
-    else    {
+    else
         if (['engaged', 'occupied', 'vacant'].contains(roomState))
             child.generateEvent('checking')
-    }
-    updateRoomStatus(evt)
 }
 
 def	contactClosedEventHandler(evt)     {
@@ -509,7 +548,6 @@ def	contactClosedEventHandler(evt)     {
     else
         if (motionSensors && roomState == 'vacant')
             child.generateEvent('checking')
-    updateRoomStatus(evt)
 }
 
 def luxEventHandler(evt)    {
@@ -526,63 +564,65 @@ def luxEventHandler(evt)    {
                 dimLights(true)
     }
     state.previousLux = currentLux
-    updateRoomStatus(evt)
 }
 
 private luxFell(currentLux)   {   return (currentLux <= luxThreshold && state.previousLux > luxThreshold)  }
 
 private luxRose(currentLux)   {   return (currentLux > luxThreshold && state.previousLux <= luxThreshold)  }
 
-private updateRoomStatus(evt)    {
-    if (evt.id != app.id)   {
-    }
-}
-
 // pass in child and roomState???
 def roomVacant()	  {
 	def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
-	if (['engaged', 'occupied', 'checking'].contains(roomState))
-		child.generateEvent('vacant')
+    if (['engaged', 'occupied'].contains(roomState))    {
+        if (state.dimTimer)
+            child.generateEvent('checking')
+        else
+            child.generateEvent('vacant')
+    }
+    else
+        if (roomState == 'checking')
+            child.generateEvent('vacant')
 }
 
 def handleSwitches(oldState = null, newState = null)	{
 log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
 //    state.roomState = newState
+//      "yyyy-MM-dd'T'HH:mm:ssZ" = 2017-11-13T23:32:45+0000
+    def nowDate = now()
+    state.previousState = ['state':newState, 'date':nowDate]
     if (pauseModes && pauseModes.contains(location.mode))
         return false
 	if (newState && oldState != newState)      {
-//        if (oldState != 'occupied' || newState != 'engaged')
         unscheduleAll("handle switches")
         if (['engaged', 'occupied', 'checking'].contains(newState))     {
             if (['engaged', 'occupied'].contains(newState))     {
-//                if (!state.luxEnabled || luxSensor.currentValue("illuminance") <= luxThreshold)
                     switchesOn()
             }
             if (newState == 'engaged')      {
                 if (state.noMotionEngaged)
                     runIn(state.noMotionEngaged, roomVacant)
             }
-            else
+            if (newState == 'occupied')
                 if (state.noMotion)     {
-                    if (whichNoMotion == '1' || (whichNoMotion == '2' && motionSensors.currentValue("motion") != 'active'))
+                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !(motionValue.contains('active'))))
                         runIn(state.noMotion, roomVacant)
                 }
-                else
-                    if (newState == 'checking')
-                        runIn(1, roomVacant)
-//            }
+            if (newState == 'checking')     {
+                dimLights()
+                runIn(state.dimTimer ?: 1, roomVacant)
+            }
         }
 		else
-			if (newState == 'vacant')
-				dimLights()
+			if (newState == 'vacant' && !state.dimTimer)
+                switches2Off()
 		return true
 	}
     else
     	return false
 }
 
-private switchesOn()	{
+private switchesOn(onlyLights = false)	{
     if (fromTimeType && toTimeType)     {
         def nowTime	= now()
         def nowDate = new Date(nowTime)
@@ -591,8 +631,8 @@ private switchesOn()	{
         def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         def fromDate = timeToday(fromTime, location.timeZone)
         def toDate = timeToday(toTime, location.timeZone)
-        def fTime = (fromTimeType == '1' ? sunriseTime : ( fromTimeType == '2' ? sunsetTime : fromDate))
-        def tTime = (toTimeType == '1' ? sunriseTime : ( toTimeType == '2' ? sunsetTime : toDate))
+        def fTime = (fromTimeType == timeSunrise() ? sunriseTime : ( fromTimeType == timeSunset() ? sunsetTime : fromDate))
+        def tTime = (toTimeType == timeSunrise() ? sunriseTime : ( toTimeType == timeSunset() ? sunsetTime : toDate))
 //log.debug "checking time from: $fTime | to: $tTime | date: $nowDate | ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}"
         if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))
             return
@@ -601,15 +641,17 @@ private switchesOn()	{
         return
 	if (switches)
         switches.each      {
-            it.on()
-            if (state.setColorTo && state.switchesHasColor[it.getId()])
-                it.setColor(state.setColorTo)
-            else    {
-                if (state.setColorTemperatureTo && state.switchesHasColorTemperature[it.getId()])
-                    it.setColorTemperature(state.setColorTemperatureTo)
-            }
-            if (state.setLevelTo && state.switchesHasLevel[it.getId()])
-                it.setLevel(state.setLevelTo)
+//            if (!onlyLights || it.hasCapability("bulb"))    {
+                it.on()
+                if (state.setColorTo && state.switchesHasColor[it.getId()])
+                    it.setColor(state.setColorTo)
+                else    {
+                    if (state.setColorTemperatureTo && state.switchesHasColorTemperature[it.getId()])
+                        it.setColorTemperature(state.setColorTemperatureTo)
+                }
+                if (state.setLevelTo && state.switchesHasLevel[it.getId()])
+                    it.setLevel(state.setLevelTo)
+//            }
         }
 }
 
@@ -700,9 +742,10 @@ private saveHueToState()        {
 
 private unscheduleAll(classNameCalledFrom)		{
 log.debug "${app.label} unschedule calling class: $classNameCalledFrom"
-	unschedule(roomVacant)
-    unschedule(switches2Off)
-    unschedule(dimLights)
+//	unschedule(roomVacant)
+//    unschedule(switches2Off)
+//    unschedule(dimLights)
+    unschedule()
 }
 
 private scheduleFromToTimes()       {
@@ -746,6 +789,34 @@ def getAdjMotionSensors()  {
         return null
 }
 
-def timeSunrise() {  return '1'  }
-def timeSunset() {  return '2'  }
-def timeTime() {  return '3'  }
+def getAdjRoomDetails()  {
+    def adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
+log.debug "childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}"
+/*    if (motionSensors)   {
+        def motionSensorsList = []
+        def motionSensorsNameList = []
+        motionSensors.each   {
+            motionSensorsList << it
+            motionsSensorName = it.getName()
+        }
+        adjRoomDetails << ['motionsensors':motionSensorsList]
+        adjRoomDetails << ['motionsensorsnames':motionSensorsNamesList]
+    }
+    else
+        adjRoomDetails << ['motionsensors':null,'motionsensorsnames':null]
+*/
+    return adjRoomDetails
+}
+
+def getLastStateChild()     {
+    def addRoom = state.previousState
+    addRoom << ['room':app.label]
+log.debug "getLastStateChild: $addRoom"
+    return addRoom  }
+
+def lastMotionActive()      {  return '1'  }
+def lastMotionInactive()    {  return '2'  }
+
+def timeSunrise()   {  return '1'  }
+def timeSunset()    {  return '2'  }
+def timeTime()      {  return '3'  }

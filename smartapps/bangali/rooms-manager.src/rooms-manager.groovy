@@ -18,6 +18,16 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.05.0
+*
+*   DONE:   11/13/2017
+*   1) expanded the adjacent room settings. if you specify adjacent rooms you can choose 2 options:
+*       i) if there is motion in an adjacent room you can force the current room to check for motion and on no
+*           motion change room state to vacant.
+*      ii) if there is motion in an adjacent room you can turn on lights in this room if it is currently vacant.
+*           this allows for the adjacent rooms feature to be used as a light your pathway can kind of setup.
+*   2) some bug fixes.
+*
 *  Version: 0.04.6
 *
 *   DONE:   11/12/2017
@@ -160,16 +170,17 @@ def initialize()	{
 	}
 }
 
-def getRoomNames(thisChild)    {
+def getRoomNames(childID)    {
     def roomNames = [:]
     childApps.each	{ child ->
-        if (thisChild != child.label)
+        if (childID != child.id)
             roomNames << [(child.id):(child.label)]
 	}
     return (roomNames.sort { it.value })
 }
 
-def handleAdjRooms(childID, adjRooms)    {
+/*
+def handleAdjRooms(fullUpdate, childID, adjRooms)    {
     if (!childID || !adjRooms)
         return null
     def adjMotionSensors = []
@@ -190,4 +201,47 @@ def handleAdjRooms(childID, adjRooms)    {
         }
     }
     return adjMotionSensors
+}
+*/
+
+def handleAdjRooms()    {
+    childApps.each	{ childAll ->
+        def adjRoomDetails = childAll.getAdjRoomDetails()
+        def childID = adjRoomDetails['childid']
+        def adjRooms = adjRoomDetails['adjrooms']
+        def adjMotionSensors = []
+        def adjMotionSensorsNames = []
+        if (childID && adjRooms)    {
+            childApps.each	{ child ->
+                if (childID != child.id && adjRooms.contains(child.id))      {
+                    def motionSensors = child.getAdjMotionSensors()
+                    if (motionSensors)  {
+                        motionSensors.each  {
+                            def motionSensorName = it.getName()
+                            if (!(adjMotionSensorsNames.contains(motionSensorName)))   {
+                                adjMotionSensors << it
+                                adjMotionSensorsNames << motionSensorName
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        childAll.updateRoom(adjMotionSensors)
+    }
+    return
+}
+
+def getLastStateDate(childID)      {
+    def nowDate = new Date()
+    def lastStateDate = [:]
+    if (childID)    {
+        childApps.each	{ child ->
+            if (childID == child.id)    {
+                def lastStateDateChild = child.getLastStateChild()
+                lastStateDate = lastStateDateChild
+            }
+        }
+    }
+    return lastStateDate
 }
