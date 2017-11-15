@@ -288,7 +288,7 @@ def updateRoom(adjMotionSensors)     {
     	subscribe(motionSensors, "motion.active", motionActiveEventHandler)
     	subscribe(motionSensors, "motion.inactive", motionInactiveEventHandler)
 	}
-    if (adjMotionSensors)   {
+    if (adjMotionSensors && (adjRoomsMotion || adjRoomsPathway))   {
         subscribe(adjMotionSensors, "motion.active", adjMotionActiveEventHandler)
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
@@ -557,13 +557,20 @@ def luxEventHandler(evt)    {
     def currentLux = evt.value.toInteger()
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
-    if (['engaged', 'occupied', 'checking'].contains(roomState))   {
-        if (luxFell(currentLux))
+    if (luxFell(currentLux))    {
+        if (['engaged', 'occupied', 'checking'].contains(roomState))
             switchesOn()
-        else
-            if (luxRose(currentLux))
-                dimLights(true)
     }
+    else
+        if (luxRose(currentLux))    {
+            if (['engaged', 'occupied', 'checking', 'vacant'].contains(roomState))      {
+                dimLights(true)
+                if (state.dimTimer)     {
+                    runOnce(new Date(now() + (state.dimTimer * 1000)), forceSwitches2Off)
+                    unschedule("switches2Off")
+                }
+            }
+        }
     state.previousLux = currentLux
 }
 
@@ -606,7 +613,9 @@ log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
             }
             if (newState == 'occupied')
                 if (state.noMotion)     {
-                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !(motionValue.contains('active'))))
+                    def motionValue = motionSensors.currentValue("motion")
+                    def mV = motionValue.contains('active')
+                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !mV))
                         runIn(state.noMotion, roomVacant)
                 }
             if (newState == 'checking')     {
@@ -680,16 +689,16 @@ def dimLights(allSwitches = false)     {
                 }
             }
         }
-        runIn(state.dimTimer, switches2Off)
     }
-    else
-        switches2Off()
+//    else
+//        switches2Off([data: [allSwitches: allSwitches]])
+    runIn(state.dimTimer ?: 1, switches2Off, [data: [allSwitches: allSwitches]])
 }
 
-def switches2Off()   {
+def switches2Off(data = null)   {
 	if (switches2)
         switches2.off()
-    if (allSwitchesOff && switches)
+    if (data && data.allSwitches && allSwitchesOff && switches)
         switches.off()
 }
 
@@ -743,10 +752,9 @@ private saveHueToState()        {
 
 private unscheduleAll(classNameCalledFrom)		{
 log.debug "${app.label} unschedule calling class: $classNameCalledFrom"
-//	unschedule(roomVacant)
-//    unschedule(switches2Off)
-//    unschedule(dimLights)
-    unschedule()
+    unschedule("roomVacant")
+    unschedule("dimLights")
+    unschedule("switches2Off")
 }
 
 private scheduleFromToTimes()       {
@@ -776,9 +784,16 @@ def timeToHandler(evt = null)       {
         return
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
-    if (['engaged', 'occupied', 'checking'].contains(roomState))
+    if (['engaged', 'occupied', 'checking', 'vacant'].contains(roomState))      {
         dimLights(true)
+        if (state.dimTimer)   {
+            runOnce(new Date(now() + (state.dimTimer * 1000)), forceSwitches2Off)
+            unschedule("switches2Off")
+        }
+    }
 }
+
+def forceSwitches2Off()     {  switches2Off([allSwitches: true])  }
 
 def getAdjMotionSensors()  {
     if (motionSensors)   {
