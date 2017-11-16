@@ -256,6 +256,14 @@ def roomName()	{
             input "awayModes", "mode", title: "Away mode(s) to set Room to 'VACANT'?", required: false, multiple: true
             input "pauseModes", "mode", title: "Mode(s) in which to pause automation?", required: false, multiple: true
         }
+	section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: true, hidden: modeSettings)		{
+            //input "nightmodeButton", "capability.button", title: "Button to turn toggle mode between asleep and occupied", required: false, multiple: false, submitOnChange: true
+            input "nightmotionSensors", "capability.motionSensor", title: "Which Motion Sensor(s)?", required: false, multiple: true
+            input "nightButton", "capability.button", title: "Button to turn off night switches", required: false, multiple: false, submitOnChange: true
+            input "nightSwitches", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
+            input "nightsetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
+                                                    options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]                                                   
+        }
         remove("Remove Room", "Remove Room ${app.label}")
 	}
 }
@@ -270,7 +278,7 @@ def updated()	{
     def child = getChildDevice(getRoom())
     def devicesMap = ['engagedButton':engagedButton, 'presence':personPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
                   'motionSensors':motionSensors, 'switchesOn':switches, 'switchesOff':switches2, 'luxSensor':luxSensor,
-                  'awayModes':awayModes, 'pauseModes':pauseModes]
+                  'awayModes':awayModes, 'pauseModes':pauseModes, 'nightmotionSensors':nightmotionSensors, 'nightButton':nightButton]
     child.deviceList(devicesMap)
 //    child.deviceList(personPresence, engagedButton, engagedSwitch, contactSensor, motionSensors, switches, switches2, luxSensor)
 }
@@ -350,6 +358,25 @@ def updateRoom(adjMotionSensors)     {
     }
     if (fromTimeType && toTimeType)
         scheduleFromToTimes()
+//------------------------------------------------------Night option------------------------------------------------------//
+    if (nightmotionSensors)				{
+    	subscribe(nightmotionSensors, "motion.active", nightMotionActiveEventHandler)
+        //subscribe(nightmotionSensors, "motion.inactive", nightMotionInactiveEventHandler)
+    }
+    if (nightButton)
+        subscribe(nightButton, "button.pushed", nightbuttonPushedEventHandler)
+    if (nightmodeButton)
+        subscribe(nightmodeButton, "button.pushed", nightmodebuttonPushedEventHandler)    
+    if (nightswitches)   {
+        state.nightswitchesHasLevel = [:]
+        nightswitches.each      {
+            if (it.hasCommand("setLevel"))      {
+                state.nightswitchesHasLevel << [(it.getId()):true]
+            }
+        }
+    }
+    state.nightsetLevelTo = (nightsetLevelTo ? nightsetLevelTo as Integer : 0)
+//------------------------------------------------------------------------------------------------------------------------//    
 }
 
 def	initialize()	{}
@@ -836,3 +863,46 @@ def lastMotionInactive()    {  return '2'  }
 def timeSunrise()   {  return '1'  }
 def timeSunset()    {  return '2'  }
 def timeTime()      {  return '3'  }
+
+//------------------------------------------------------Night option------------------------------------------------------//
+def	nightbuttonPushedEventHandler(evt)     {
+    if (pauseModes && pauseModes.contains(location.mode))
+    	return
+    unscheduleAll("button pushed handler")
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (nightSwitches && ['asleep'].contains(roomState))
+        nightSwitches.off()
+}
+
+def	nightmodebuttonPushedEventHandler(evt)     {
+    if (pauseModes && pauseModes.contains(location.mode))
+    	return
+    unscheduleAll("button pushed handler")
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['occupied'].contains(roomState))
+    	child.generateEvent('asleep')
+    else
+    	child.generateEvent('occupied')
+        
+    updateRoomStatus(evt)
+}
+
+def nightMotionActiveEventHandler(evt)		{
+	if (pauseModes && pauseModes.contains(location.mode))
+    	return
+    def child = getChildDevice(getRoom())
+	def roomState = child.getRoomState()
+    log.debug "${app.label} ${roomState}: nightMotionActiveEventHandler"
+    if (['asleep'].contains(roomState))
+        dimnightLights()       
+}
+
+def dimnightLights()     {
+       	nightSwitches.each      {
+        if (state.nightsetLevelTo)//&& state.nightswitchesHasLevel[it.getId()])
+                it.setLevel(state.nightsetLevelTo)
+         } 
+}
+//------------------------------------------------------------------------------------------------------------------------//   
