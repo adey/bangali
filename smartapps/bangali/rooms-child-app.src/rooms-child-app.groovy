@@ -25,6 +25,7 @@
 *
 *   DONE:   11/19/2017
 *   1) added sleepSensor feature and corresponding settings by https://github.com/Johnwillliam.
+*   2) some bug fixes.
 *
 *  Version: 0.05.1
 *
@@ -274,12 +275,15 @@ def roomName()	{
             input "awayModes", "mode", title: "Away mode(s) to set Room to 'VACANT'?", required: false, multiple: true
             input "pauseModes", "mode", title: "Mode(s) in which to pause automation?", required: false, multiple: true
         }
-	 section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: true, hidden: (!motionSensors))		{
-	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state", required: false, multiple: false
-            input "nightButton", "capability.button", title: "Button to turn off night switches", required: false, multiple: false, submitOnChange: true
-            input "nightSwitches", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
+	 section("ASLEEP state settings", hideable: true, hidden: (!motionSensors))		{
+	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
+            input "nightSwitches", "capability.switch", title: "Turn ON which Switches when room state is ASLEEP and there is Motion?", required: false, multiple: true, submitOnChange: true
             input "nightsetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
                                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+            if (nightSwitches)
+                input "nightButton", "capability.button", title: "Button to toggle Night Switches?", required: false, multiple: false, defaultValue:null
+            else
+                paragraph "Button to toggle Night Switches?\nselect adjacent rooms above to set"
         }
         remove("Remove Room", "Remove Room ${app.label}")
 	}
@@ -374,6 +378,8 @@ def updateRoom(adjMotionSensors)     {
         state.previousLux = null
     }
 //------------------------------------------------------Night option------------------------------------------------------//
+    if (asleepSensor)
+        subscribe(asleepSensor, "sleeping", sleepEventHandler)
     if (nightButton)
         subscribe(nightButton, "button.pushed", nightbuttonPushedEventHandler)
     if (nightswitches)   {
@@ -385,8 +391,6 @@ def updateRoom(adjMotionSensors)     {
         }
     }
     state.nightsetLevelTo = (nightsetLevelTo ? nightsetLevelTo as Integer : 0)
-    if (asleepSensor)
-    	subscribe(asleepSensor, "sleeping", sleepEventHandler)
 //------------------------------------------------------------------------------------------------------------------------//
     if (fromTimeType && toTimeType)
         scheduleFromToTimes()
@@ -423,8 +427,12 @@ def	motionActiveEventHandler(evt)	{
         return
 	def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
-    if (['asleep'].contains(roomState))		{
-        dimnightLights()
+    if (roomState == 'asleep')		{
+        if (nightSwitches)      {
+            dimNightLights()
+            if (state.noMotion && whichNoMotion == lastMotionActive())
+                runIn(state.noMotion, nightSwitchesOff)
+        }
 		return
     }
     unscheduleAll("motion active handler")
@@ -459,6 +467,15 @@ def	motionInactiveEventHandler(evt)     {
         else
             if (whichNoMotion == lastMotionInactive())
                 runIn(state.noMotion, roomVacant)
+    }
+    else    {
+        if (roomState == 'asleep' && nightSwitches)     {
+            if (!(state.noMotion))
+                nightSwitchesOff()
+            else
+                if (whichNoMotion == lastMotionInactive())
+                    runIn(state.noMotion, nightSwitchesOff)
+        }
     }
 }
 
@@ -711,9 +728,13 @@ log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
                 runIn(state.dimTimer ?: 1, roomVacant)
             }
         }
-		else
+		else      {
 			if (newState == 'vacant' && !state.dimTimer)
                 switches2Off()
+            else
+                if (newState == 'asleep')
+                    forceSwitches2Off()
+        }
 		return true
 	}
     else
@@ -935,33 +956,38 @@ private timeSunset()    {  return '2'  }
 private timeTime()      {  return '3'  }
 
 //------------------------------------------------------Night option------------------------------------------------------//
-def	nightbuttonPushedEventHandler(evt)     {
-    if (pauseModes && pauseModes.contains(location.mode))
-    	return
-    unscheduleAll("button pushed handler")
+def	nightbuttonPushedEventHandler(evt = null)     {
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
-    if (nightSwitches && ['asleep'].contains(roomState))
-        nightSwitches.off()
+    if (nightSwitches && roomState == 'asleep')     {
+        unscheduleAll("night button pushed handler")
+        def switchValue = nightSwitches.currentValue("switch")
+        if (switchValue.contains('on'))
+            nightSwitchesOff()
+        else
+            dimNightLights()
+    }
 }
 
-def dimnightLights()     {
-       	nightSwitches.each      {
+def dimNightLights()     {
+    nightSwitches.each      {
+        it.on()
         if (state.nightsetLevelTo)//&& state.nightswitchesHasLevel[it.getId()])
-                it.setLevel(state.nightsetLevelTo)
-         }
+            it.setLevel(state.nightsetLevelTo)
+    }
 }
+
+def nightSwitchesOff()      {  nightSwitches.off()  }
 
 def sleepEventHandler(evt)		{
 log.debug "sleepEventHandler: ${asleepSensor} - ${evt.value}"
 	def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
     if (evt.value == "not sleeping")	{
-    	child.generateEvent('occupied')
+    	child.generateEvent('checking')
     }
     else if (evt.value == "sleeping")	{
     	child.generateEvent('asleep')
     }
 }
-
 //------------------------------------------------------------------------------------------------------------------------//
