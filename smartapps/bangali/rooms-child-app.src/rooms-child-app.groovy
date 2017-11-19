@@ -385,9 +385,8 @@ def updateRoom(adjMotionSensors)     {
     if (nightswitches)   {
         state.nightswitchesHasLevel = [:]
         nightswitches.each      {
-            if (it.hasCommand("setLevel"))      {
+            if (it.hasCommand("setLevel"))
                 state.nightswitchesHasLevel << [(it.getId()):true]
-            }
         }
     }
     state.nightsetLevelTo = (nightsetLevelTo ? nightsetLevelTo as Integer : 0)
@@ -430,7 +429,7 @@ def	motionActiveEventHandler(evt)	{
     if (roomState == 'asleep')		{
         if (nightSwitches)      {
             dimNightLights()
-            if (state.noMotion && whichNoMotion == lastMotionActive())
+            if (state.noMotion && whichNoMotion != lastMotionInactive())
                 runIn(state.noMotion, nightSwitchesOff)
         }
 		return
@@ -470,11 +469,8 @@ def	motionInactiveEventHandler(evt)     {
     }
     else    {
         if (roomState == 'asleep' && nightSwitches)     {
-            if (!(state.noMotion))
-                nightSwitchesOff()
-            else
-                if (whichNoMotion == lastMotionInactive())
-                    runIn(state.noMotion, nightSwitchesOff)
+            if (whichNoMotion == lastMotionInactive())
+                runIn((state.noMotion ?: 1), nightSwitchesOff)
         }
     }
 }
@@ -977,7 +973,10 @@ def dimNightLights()     {
     }
 }
 
-def nightSwitchesOff()      {  nightSwitches.off()  }
+def nightSwitchesOff()      {
+    unscheduleAll("night switches off")
+    nightSwitches.off()
+}
 
 def sleepEventHandler(evt)		{
 log.debug "sleepEventHandler: ${asleepSensor} - ${evt.value}"
