@@ -22,6 +22,45 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.05.7
+*
+*   DONE:   11/20/2017
+*   1) added support for room busy check.
+*   2) added support for arrival and/or departure action when using presence sensor.
+*   3) some bug fixes.
+*
+*  Version: 0.05.5
+*
+*   DONE:   11/19/2017
+*   1) added sleepSensor feature and corresponding settings by https://github.com/Johnwillliam.
+*   2) some bug fixes.
+*
+*  Version: 0.05.2
+*
+*   DONE:   11/16/2017
+*   1) changed from 10 to 12 device settings and added adjacent rooms to devices display.
+*   2) some bug fixes.
+*
+*  Version: 0.05.1
+*
+*   DONE:   11/15/2017
+*   1) added setting to select which days of week this rooms automation should run.
+*
+*  Version: 0.05.0
+*
+*   DONE:   11/13/2017
+*   1) expanded the adjacent room settings. if you specify adjacent rooms you can choose 2 options:
+*       i) if there is motion in an adjacent room you can force the current room to check for motion and on no
+*           motion change room state to vacant.
+*      ii) if there is motion in an adjacent room you can turn on lights in this room if it is currently vacant.
+*           this allows for the adjacent rooms feature to be used as a light your pathway can kind of setup.
+*   2) some bug fixes.
+*
+*  Version: 0.04.6
+*
+*   DONE:   11/12/2017
+*   1) bug fixes around contact sensors.
+*
 *  Version: 0.04.5
 *
 *   DONE:   11/10/2017
@@ -214,6 +253,12 @@ metadata {
 		valueTile("deviceList10", "device.deviceList10", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state "deviceList10", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
+		valueTile("deviceList11", "device.deviceList11", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList11", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
+		valueTile("deviceList12", "device.deviceList12", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
+			state "deviceList12", label:'${currentValue}', backgroundColor:"#ffffff"
+		}
 
 		standardTile("engaged", "device.engaged", width: 2, height: 2, canChangeIcon: true) {
 			state "engaged", label:"Engaged", icon: "st.locks.lock.unlocked", action: "engaged", backgroundColor:"#ffffff", nextState:"toEngaged"
@@ -255,11 +300,11 @@ metadata {
 		main (["occupancyStatus"])
 
 		// display all tiles
-		details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
 		// details (["occupancyStatus", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main tiles and devices list only
-		// details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10"])
+		// details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12")
 		// display main tiles only
 		// details (["occupancyStatus", "engaged", "vacant", "status"])
 
@@ -294,20 +339,22 @@ def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(state)	{
 	def oldState = device.currentValue('occupancyStatus')
-	if (oldState != state)	{
-		updateOccupancyStatus(state)
+	def newState = state
+	def moveToEngaged = false
+	if (oldState != newState)	{
+		updateOccupancyStatus(newState)
         if (parent)
-        	parent.handleSwitches(oldState, state)
+        	moveToEngaged = parent.handleSwitches(oldState, newState)
 	}
 	resetTile(state)
+log.debug "moveToEngaged: $moveToEngaged"
+	if (moveToEngaged)
+		runIn(1, engaged)
 }
 
 private updateOccupancyStatus(occupancyStatus = null) 	{
 	occupancyStatus = occupancyStatus?.toLowerCase()
-//	def msgTextMap = ['occupied':'Room is occupied: ', 'locked':'Room is locked: ', 'vacant':'Room is vacant: ', 'reserved':'Room is reserved: ', 'checking':'Checking room status: ', 'kaput':'Room not in service: ', 'donotdisturb':'Room is do not disturb: ', 'asleep':'Room is asleep: ']
-//	def msgTextMap = ['occupied', 'locked', 'vacant', 'reserved', 'checking', 'kaput', 'donotdisturb', 'asleep']
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
-//	if (!occupancyStatus || !(msgTextMap.containsKey(occupancyStatus))) {
 	if (!occupancyStatus || !(buttonMap.containsKey(occupancyStatus))) {
     	log.debug "${device.displayName}: Missing or invalid parameter room occupancy: $occupancyStatus"
         return
@@ -315,7 +362,6 @@ private updateOccupancyStatus(occupancyStatus = null) 	{
 	sendEvent(name: "occupancyStatus", value: occupancyStatus, descriptionText: "${device.displayName} changed to ${occupancyStatus}", isStateChange: true, displayed: true)
     def button = buttonMap[occupancyStatus]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
-//	def statusMsg = msgTextMap[device.currentValue('occupancyStatus')] + formatLocalTime()
 	state.statusMsg = "Since: " + formatLocalTime()
 	updateRoomStatus()
 }
@@ -332,21 +378,21 @@ private updateRoomStatus()		{
 
 def deviceList(devicesMap)		{
 	def devicesTitle = ['engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
-						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor',
-						'awayModes':'Away Mode', 'pauseModes':'Pause Mode']
-	def deviceCount = 10
+						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor', 'adjRoomNames':'Adjacent Room',
+						'awayModes':'Away Mode', 'pauseModes':'Pause Mode', 'sleepSensor':'Sleep Sensor', 'nightButton':'Night Button', 'nightSwitches':'Night Switch']
+	def deviceCount = 12
 	def i = 1
 	devicesMap.each	{ k, v ->
 		if (v)			{
 			v.each	{
-				if (i <= deviceCount)		{
+				if (it && i <= deviceCount)		{
 					sendEvent(name: "deviceList" + i, value: (devicesTitle[k] + ":\n" + (it.hasProperty('displayName') ? it.displayName : it)), isStateChange: true, displayed: false)
 					i = i +1
 				}
 			}
 		}
 	}
-	for (; i < deviceCount; i++)
+	for (; i <= deviceCount; i++)
 		sendEvent(name: "deviceList" + i, value: null, isStateChange: true, displayed: false)
 }
 

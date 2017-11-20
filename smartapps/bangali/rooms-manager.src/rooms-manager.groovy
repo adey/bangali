@@ -18,6 +18,30 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.05.7
+*
+*   DONE:   11/20/2017
+*   1) added support for room busy check.
+*   2) added support for arrival and/or departure action when using presence sensor.
+*   3) some bug fixes.
+*
+*  Version: 0.05.5
+*
+*   DONE:   11/19/2017
+*   1) added sleepSensor feature and corresponding settings by https://github.com/Johnwillliam.
+*   2) some bug fixes.
+*
+*  Version: 0.05.2
+*
+*   DONE:   11/16/2017
+*   1) changed from 10 to 12 device settings and added adjacent rooms to devices display.
+*   2) some bug fixes.
+*
+*  Version: 0.05.1
+*
+*   DONE:   11/15/2017
+*   1) added setting to select which days of week this rooms automation should run.
+*
 *  Version: 0.05.0
 *
 *   DONE:   11/13/2017
@@ -151,7 +175,7 @@ definition (
 preferences	{
 	page(name: "mainPage", title: "Installed Rooms", install: true, uninstall: true, submitOnChange: true) {
 		section {
-            app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
+            app(name: "Rooms Manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
 	}
 }
@@ -166,7 +190,7 @@ def updated()		{
 def initialize()	{
 	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
-		log.info "room manager: room: ${child.label}"
+		log.info "rooms manager: room: ${child.label}"
 	}
 }
 
@@ -179,30 +203,14 @@ def getRoomNames(childID)    {
     return (roomNames.sort { it.value })
 }
 
-/*
-def handleAdjRooms(fullUpdate, childID, adjRooms)    {
-    if (!childID || !adjRooms)
-        return null
-    def adjMotionSensors = []
-    def adjMotionSensorsNames = []
+def getARoomName(childID)    {
+    def roomName = null
     childApps.each	{ child ->
-        if (childID != child.id && adjRooms.contains(child.id))      {
-            def motionSensors = []
-            motionSensors = child.getAdjMotionSensors()
-            if (motionSensors)  {
-                motionSensors.each  {
-                    def motionsSensorName = it.getName()
-                    if (!(adjMotionSensorsNames.contains(motionsSensorName)))   {
-                        adjMotionSensors << it
-                        adjMotionSensorsNames << motionsSensorName
-                    }
-                }
-            }
-        }
-    }
-    return adjMotionSensors
+        if (childID == child.id)
+            roomName = child.label
+	}
+    return roomName
 }
-*/
 
 def handleAdjRooms()    {
     childApps.each	{ childAll ->
@@ -227,6 +235,8 @@ def handleAdjRooms()    {
                 }
             }
         }
+log.debug "rooms manager: updating room $childAll.label"
+log.debug "$adjMotionSensors"
         childAll.updateRoom(adjMotionSensors)
     }
     return
