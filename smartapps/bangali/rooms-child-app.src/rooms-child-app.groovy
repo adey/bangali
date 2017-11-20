@@ -1071,7 +1071,7 @@ private ifDebug(msg = null)     {
         log.debug msg
 }
 
-private isDebug()   {  return true  }
+private isDebug()   {  return false  }
 
 //------------------------------------------------------Night option------------------------------------------------------//
 def	nightButtonPushedEventHandler(evt = null)     {

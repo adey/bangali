@@ -347,7 +347,6 @@ private	stateUpdate(state)	{
         	moveToEngaged = parent.handleSwitches(oldState, newState)
 	}
 	resetTile(state)
-log.debug "moveToEngaged: $moveToEngaged"
 	if (moveToEngaged)
 		runIn(1, engaged)
 }
