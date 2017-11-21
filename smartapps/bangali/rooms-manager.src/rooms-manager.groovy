@@ -21,7 +21,7 @@
 *  Version: 0.05.7
 *
 *   DONE:   11/20/2017
-*   1) added support for room busy check.
+*   1) added support for room busy check and setting ENGAGED state based on how busy room is.
 *   2) added support for arrival and/or departure action when using presence sensor.
 *   3) some bug fixes.
 *
