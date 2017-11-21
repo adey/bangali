@@ -21,6 +21,14 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.05.9
+*
+*   DONE:   11/21/2017
+*   1) changed name of 'occupancyStatus' to just 'occupancy' to be consistent with ST.
+*   2) added switches to turn on and off when room chnages to asleep. switches set to turn on are also turned off
+*           when room changes away from asleep.
+*   2) some bug fixes.
+*
 *  Version: 0.05.8
 *
 *   DONE:   11/20/2017
@@ -332,9 +340,9 @@ private pageLuxTimeSettings() {
 
 private pageNightMode() {
 	dynamicPage(name: "pageNightMode", title: "", install: false, uninstall: false) {
-		section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: false)		{
-            input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room changes to ASLEEP?", required: false, multiple: true
-            input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room changes to ASLEEP?", required: false, multiple: true
+        input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room changes to ASLEEP?", required: false, multiple: true
+        input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room changes to ASLEEP?", required: false, multiple: true
+        section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: false)		{
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
             if (motionSensors)
                 input "nightSwitches", "capability.switch", title: "Turn ON which Switches when room state is ASLEEP and there is Motion?", required: false, multiple: true, submitOnChange: true

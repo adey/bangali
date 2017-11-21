@@ -22,6 +22,19 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.05.9
+*
+*   DONE:   11/21/2017
+*   1) changed name of 'occupancyStatus' to just 'occupancy' to be consistent with ST.
+*   2) added switches to turn on and off when room chnages to asleep. switches set to turn on are also turned off
+*           when room changes away from asleep.
+*   2) some bug fixes.
+*
+*  Version: 0.05.8
+*
+*   DONE:   11/20/2017
+*   1) Changed configuration pages
+*
 *  Version: 0.05.7
 *
 *   DONE:   11/20/2017
