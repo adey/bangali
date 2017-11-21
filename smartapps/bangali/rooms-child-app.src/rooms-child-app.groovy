@@ -285,11 +285,22 @@ private pageEngagedSettings() {
     def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def engagedButtonOptions = [:]
     if (engagedButton)      {
-        def numberOfButtons = engagedButton.currentValue("numberOfButtons") + 0
-        def i = 0
-        for (; i < numberOfButtons; i++)
-            engagedButtonOptions << buttonNames[i]
+        def engagedButtonAttributes = engagedButton.supportedAttributes
+        def attributeNameFound = false
+        engagedButtonAttributes.each  { att ->
+            if (att.name == 'numberOfButtons')
+                attributeNameFound = true
+        }
+        if (attributeNameFound)      {
+            def numberOfButtons = engagedButton.currentValue("numberOfButtons") + 0
+            def i = 0
+            for (; i < numberOfButtons; i++)
+                engagedButtonOptions << buttonNames[i]
+        }
+        else
+            engagedButtonOptions << [null:"No buttons"]
     }
+
 	dynamicPage(name: "pageEngagedSettings", title: "", install: false, uninstall: false) {
 		section("Change Room to 'ENGAGED' when?\n(if specified this will also reset room state to 'VACANT' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
             if (motionSensors)
@@ -350,10 +361,20 @@ private pageNightMode() {
     def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def nightButtonOptions = [:]
     if (nightButton)      {
-        def numberOfButtons = nightButton.currentValue("numberOfButtons") + 0
-        def i = 0
-        for (; i < numberOfButtons; i++)
-            nightButtonOptions << buttonNames[i]
+        def nightButtonAttributes = nightButton.supportedAttributes
+        def attributeNameFound = false
+        nightButtonAttributes.each  { att ->
+            if (att.name == 'numberOfButtons')
+                attributeNameFound = true
+        }
+        if (attributeNameFound)      {
+            def numberOfButtons = nightButton.currentValue("numberOfButtons") + 0
+            def i = 0
+            for (; i < numberOfButtons; i++)
+                nightButtonOptions << buttonNames[i]
+        }
+        else
+            nightButtonOptions << [null:"No buttons"]
     }
 	dynamicPage(name: "pageNightMode", title: "", install: false, uninstall: false) {
         section("Settings for ASLEEP state including switches to turn on and off, motion detected night lights and button to turn on and off night lights.", hideable: false)		{
@@ -670,7 +691,7 @@ def	buttonPushedEventHandler(evt)     {
     	return
     def eD = new groovy.json.JsonSlurper().parseText(evt.data)
     assert eD instanceof Map
-    if (!eD || eD['buttonNumber'] != buttonIs as Integer)
+    if (!eD || (buttonIs && eD['buttonNumber'] != buttonIs as Integer))
     	return
 //    unscheduleAll("button pushed handler")
     def child = getChildDevice(getRoom())
@@ -1178,7 +1199,7 @@ def	nightButtonPushedEventHandler(evt)     {
         return
     def nM = new groovy.json.JsonSlurper().parseText(evt.data)
     assert nM instanceof Map
-    if (!nM || nM['buttonNumber'] != nightButtonIs as Integer)
+    if (!nM || (nightButtonIs && nM['buttonNumber'] != nightButtonIs as Integer))
         return
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
