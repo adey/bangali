@@ -24,7 +24,7 @@
 *  Version: 0.05.7
 *
 *   DONE:   11/20/2017
-*   1) added support for room busy check.
+*   1) added support for room busy check and setting ENGAGED state based on how busy room is.
 *   2) added support for arrival and/or departure action when using presence sensor.
 *   3) some bug fixes.
 *
@@ -188,6 +188,21 @@ def roomName()	{
     def luxSettings = (luxSensor || luxThreshold) ^ true
     def luxAndTimeSettings = (luxSettings && timeSettings)
     def asleepSettings = (asleepSensor || nightSwitches) ^ true
+    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    def engagedButtonOptions = [:]
+    if (engagedButton)      {
+        def numberOfButtons = engagedButton.currentValue("numberOfButtons") + 0
+        def i = 0
+        for (; i < numberOfButtons; i++)
+            engagedButtonOptions << buttonNames[i]
+    }
+    def nightButtonOptions = [:]
+    if (nightButton)      {
+        def numberOfButtons = nightButton.currentValue("numberOfButtons") + 0
+        def i = 0
+        for (; i < numberOfButtons; i++)
+            nightButtonOptions << buttonNames[i]
+    }
 	dynamicPage(name: "roomName", title: "Room Name", install: true, uninstall: childCreated())		{
         section		{
             if (!childCreated())
@@ -269,8 +284,7 @@ def roomName()	{
                 paragraph "Auto ENGAGED state when room is busy?\nselect motion sensor(s) above to set."
             input "engagedButton", "capability.button", title: "Button is Pushed?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)
-                input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, submitOnChange: true,
-                                                    options: [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"]]
+                input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
             else
                 paragraph "Button Number?\nselect button to set"
             input "personPresence", "capability.presenceSensor", title: "Presence Sensor Present?", required: false, multiple: false, submitOnChange: true
@@ -285,6 +299,8 @@ def roomName()	{
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
         }
         section("ASLEEP state settings", hideable: true, hidden: asleepSettings)		{
+            input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room state changes to ASLEEP?", required: false, multiple: true
+            input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room state changes to ASLEEP?", required: false, multiple: true
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
             if (motionSensors)
                 input "nightSwitches", "capability.switch", title: "Turn ON which Switches when room state is ASLEEP and there is Motion?", required: false, multiple: true, submitOnChange: true
@@ -293,11 +309,16 @@ def roomName()	{
             if (nightSwitches)      {
                 input "nightSetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
                                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
-                input "nightButton", "capability.button", title: "Button to toggle Night Switches?", required: false, multiple: false, defaultValue: null
+                input "nightButton", "capability.button", title: "Button to toggle ASLEEP state Switches?", required: false, multiple: false, submitOnChange: true
+                if (nightButton)
+                    input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
+                else
+                    paragraph "Button Number?\nselect button above to set"
             }
             else        {
                 paragraph "Set Level When Turning ON?\nselect adjacent rooms above to set"
                 paragraph "Button to toggle Night Switches?\nselect adjacent rooms above to set"
+                paragraph "Button Number?\nselect button above to set"
             }
         }
         section("Adjacent Rooms?\n(this allows for action when there is motion in adjacent rooms.)", hideable: true, hidden: adjRoomSettings)		{
@@ -329,9 +350,10 @@ def updated()	{
     def child = getChildDevice(getRoom())
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
-    def devicesMap = ['engagedButton':engagedButton, 'presence':personPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
-                  'motionSensors':motionSensors, 'switchesOn':switches, 'switchesOff':switches2, 'luxSensor':luxSensor, 'adjRoomNames':adjRoomNames,
-                  'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
+    def busyCheckDisplay = (state.busyCheck == 3 ? ['Light traffic'] : (state.busyCheck == 5 ? ['Medium traffic'] : (state.busyCheck == 7 ? ['Heavy traffic'] : [])))
+    def devicesMap = ['busyCheck':busyCheckDisplay, 'engagedButton':engagedButton, 'presence':personPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
+                      'motionSensors':motionSensors, 'switchesOn':switches, 'switchesOff':switches2, 'luxSensor':luxSensor, 'adjRoomNames':adjRoomNames,
+                      'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
 
     child.deviceList(devicesMap)
 //    child.deviceList(personPresence, engagedButton, engagedSwitch, contactSensor, motionSensors, switches, switches2, luxSensor)
@@ -750,6 +772,7 @@ log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
         return true
 	if (newState && oldState != newState)      {
         if (oldState == 'asleep')       {
+            asleepOnSwitches.off()
             nightSwitchesOff()
         }
         else
@@ -779,8 +802,11 @@ log.debug "${app.label} room state - old: ${oldState} new: ${newState}"
             if (newState == 'vacant')
                 switches2Off()
             else
-                if (newState == 'asleep')
-                    forceSwitches2Off()
+                if (newState == 'asleep')   {
+                    asleepOnSwitches.on()
+                    asleepOffSwitches.off()
+                    nightSwitchesOff()
+                }
         }
 		return false
 	}
@@ -1063,15 +1089,15 @@ private timeSunrise()   {  return '1'  }
 private timeSunset()    {  return '2'  }
 private timeTime()      {  return '3'  }
 
-private presenceActionArrival()       {  return (presenceAction == 1 || presenceAction == 3)  }
-private presenceActionDeparture()     {  return (presenceAction == 1 || presenceAction == 3)  }
+private presenceActionArrival()       {  return (presenceAction == '1' || presenceAction == '3')  }
+private presenceActionDeparture()     {  return (presenceAction == '1' || presenceAction == '3')  }
 
 private ifDebug(msg = null)     {
     if (msg && isDebug())
         log.debug msg
 }
 
-private isDebug()   {  return false  }
+private isDebug()   {  return true  }
 
 //------------------------------------------------------Night option------------------------------------------------------//
 def	nightButtonPushedEventHandler(evt = null)     {

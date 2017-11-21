@@ -25,7 +25,7 @@
 *  Version: 0.05.7
 *
 *   DONE:   11/20/2017
-*   1) added support for room busy check.
+*   1) added support for room busy check and setting ENGAGED state based on how busy room is.
 *   2) added support for arrival and/or departure action when using presence sensor.
 *   3) some bug fixes.
 *
@@ -172,7 +172,7 @@ metadata {
 		capability "Actuator"
 		capability "Button"
 		capability "Sensor"
-		attribute "occupancyStatus", "string"
+		attribute "occupancy", "string"
 		command "occupied"
         command "checking"
 		command "vacant"
@@ -182,7 +182,7 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
-		command "updateOccupancyStatus", ["string"]
+		command "updateOccupancy", ["string"]
 	}
 
 	simulator	{
@@ -190,8 +190,8 @@ metadata {
 
 	tiles(scale: 2)		{
 // old style display
-/*    	multiAttributeTile(name: "occupancyStatus", width: 2, height: 2, canChangeBackground: true)		{
-			tileAttribute ("device.occupancyStatus", key: "PRIMARY_CONTROL")		{
+/*    	multiAttributeTile(name: "occupancy", width: 2, height: 2, canChangeBackground: true)		{
+			tileAttribute ("device.occupancy", key: "PRIMARY_CONTROL")		{
 				attributeState "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 				attributeState "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 				attributeState "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
@@ -208,7 +208,7 @@ metadata {
         }
 */
 // new style display
-		standardTile("occupancyStatus", "device.occupancyStatus", width: 4, height: 4, inactiveLabel: true, canChangeBackground: true)		{
+		standardTile("occupancy", "device.occupancy", width: 4, height: 4, inactiveLabel: true, canChangeBackground: true)		{
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
@@ -222,7 +222,7 @@ metadata {
 		valueTile("status", "device.status", inactiveLabel: false, width: 5, height: 1, decoration: "flat", wordWrap: false)	{
 			state "status", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 		}
-
+//
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state "deviceList1", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
@@ -297,16 +297,16 @@ metadata {
 			state "toKaput", label:"Updating", icon: "st.Outdoor.outdoor18", backgroundColor:"#95623d"
 		}
 
-		main (["occupancyStatus"])
+		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		details (["occupancy", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
-		// details (["occupancyStatus", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		// details (["occupancy", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main tiles and devices list only
-		// details (["occupancyStatus", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12")
+		// details (["occupancy", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12")
 		// display main tiles only
-		// details (["occupancyStatus", "engaged", "vacant", "status"])
+		// details (["occupancy", "engaged", "vacant", "status"])
 
 	}
 }
@@ -317,7 +317,7 @@ def installed()		{	initialize();	vacant()	}
 
 def updated()	{	initialize()	}
 
-def	initialize()	{	sendEvent(name: "numberOfButtons", value: 8)	}
+def	initialize()	{	sendEvent(name: "numberOfButtons", value: 9)	}
 
 def occupied()	{	stateUpdate('occupied')		}
 
@@ -338,11 +338,11 @@ def engaged()	{	stateUpdate('engaged')		}
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(state)	{
-	def oldState = device.currentValue('occupancyStatus')
+	def oldState = device.currentValue('occupancy')
 	def newState = state
 	def moveToEngaged = false
 	if (oldState != newState)	{
-		updateOccupancyStatus(newState)
+		updateOccupancy(newState)
         if (parent)
         	moveToEngaged = parent.handleSwitches(oldState, newState)
 	}
@@ -351,15 +351,15 @@ private	stateUpdate(state)	{
 		runIn(1, engaged)
 }
 
-private updateOccupancyStatus(occupancyStatus = null) 	{
-	occupancyStatus = occupancyStatus?.toLowerCase()
+private updateOccupancy(occupancy = null) 	{
+	occupancy = occupancy?.toLowerCase()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
-	if (!occupancyStatus || !(buttonMap.containsKey(occupancyStatus))) {
-    	log.debug "${device.displayName}: Missing or invalid parameter room occupancy: $occupancyStatus"
+	if (!occupancy || !(buttonMap.containsKey(occupancy))) {
+    	log.debug "${device.displayName}: Missing or invalid parameter room occupancy: $occupancy"
         return
     }
-	sendEvent(name: "occupancyStatus", value: occupancyStatus, descriptionText: "${device.displayName} changed to ${occupancyStatus}", isStateChange: true, displayed: true)
-    def button = buttonMap[occupancyStatus]
+	sendEvent(name: "occupancy", value: occupancy, descriptionText: "${device.displayName} changed to ${occupancy}", isStateChange: true, displayed: true)
+    def button = buttonMap[occupancy]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 	state.statusMsg = "Since: " + formatLocalTime()
 	updateRoomStatus()
@@ -376,7 +376,7 @@ private updateRoomStatus()		{
 }
 
 def deviceList(devicesMap)		{
-	def devicesTitle = ['engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
+	def devicesTitle = ['busyCheck':'Busy Check', 'engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
 						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor', 'adjRoomNames':'Adjacent Room',
 						'awayModes':'Away Mode', 'pauseModes':'Pause Mode', 'sleepSensor':'Sleep Sensor', 'nightButton':'Night Button', 'nightSwitches':'Night Switch']
 	def deviceCount = 12
@@ -395,18 +395,18 @@ def deviceList(devicesMap)		{
 		sendEvent(name: "deviceList" + i, value: null, isStateChange: true, displayed: false)
 }
 
-private	resetTile(occupancyStatus)	{
-    sendEvent(name: occupancyStatus, value: occupancyStatus, descriptionText: "reset tile ${occupancyStatus} to ${occupancyStatus}", isStateChange: true, displayed: false)
+private	resetTile(occupancy)	{
+    sendEvent(name: occupancy, value: occupancy, descriptionText: "reset tile ${occupancy} to ${occupancy}", isStateChange: true, displayed: false)
 }
 
 def generateEvent(state = null)		{
-//	if	(state && device.currentValue('occupancyStatus') != state)
+//	if	(state && device.currentValue('occupancy') != state)
 	if	(state)
 		stateUpdate(state)
 	return null
 }
 
-def getRoomState()	{	return device.currentValue('occupancyStatus')	}
+def getRoomState()	{	return device.currentValue('occupancy')	}
 
 /*
 not using yet but have plans to ...
