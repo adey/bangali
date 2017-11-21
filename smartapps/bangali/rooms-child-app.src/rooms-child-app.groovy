@@ -282,6 +282,14 @@ def roomName()	{
 	}
 }
 private pageEngagedSettings() {
+    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    def engagedButtonOptions = [:]
+    if (engagedButton)      {
+        def numberOfButtons = engagedButton.currentValue("numberOfButtons") + 0
+        def i = 0
+        for (; i < numberOfButtons; i++)
+            engagedButtonOptions << buttonNames[i]
+    }
 	dynamicPage(name: "pageEngagedSettings", title: "", install: false, uninstall: false) {
 		section("Change Room to 'ENGAGED' when?\n(if specified this will also reset room state to 'VACANT' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
             if (motionSensors)
@@ -339,10 +347,18 @@ private pageLuxTimeSettings() {
 }
 
 private pageNightMode() {
+    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    def nightButtonOptions = [:]
+    if (nightButton)      {
+        def numberOfButtons = nightButton.currentValue("numberOfButtons") + 0
+        def i = 0
+        for (; i < numberOfButtons; i++)
+            nightButtonOptions << buttonNames[i]
+    }
 	dynamicPage(name: "pageNightMode", title: "", install: false, uninstall: false) {
-        input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room changes to ASLEEP?", required: false, multiple: true
-        input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room changes to ASLEEP?", required: false, multiple: true
-        section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: false)		{
+        section("Settings for ASLEEP state including switches to turn on and off, motion detected night lights and button to turn on and off night lights.", hideable: false)		{
+            input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room changes to ASLEEP?", required: false, multiple: true
+            input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room changes to ASLEEP?", required: false, multiple: true
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
             if (motionSensors)
                 input "nightSwitches", "capability.switch", title: "Turn ON which Switches when room state is ASLEEP and there is Motion?", required: false, multiple: true, submitOnChange: true
