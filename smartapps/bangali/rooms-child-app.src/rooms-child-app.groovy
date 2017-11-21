@@ -209,7 +209,7 @@ def roomName()	{
         section		{
             paragraph "Following settings are all optional. Corresponding actions will be skipped when setting is blank. When specified settings work in combination with others.\n(scroll down for more settings ...)"
         }
-        section("Motion Sensor configuration\nSelect sensor, seconds after event, which event", hideable: true, hidden: true)		{
+        section("Motion Sensor configuration\nSelect sensor, seconds after event, which event", hideable: true, hidden: (!motionSensors))		{
             input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor?", required: false, multiple: true, submitOnChange: true
             input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             if (noMotion)
@@ -218,7 +218,7 @@ def roomName()	{
             else
                 paragraph "Use which Motion event?\nselect number of seconds above to set"
         }
-        section("Turn ON Switches when Room changes to 'ENGAGED' or 'OCCUPIED'?\n(works with lux and/or time settings below.)", hideable: true, hidden: true)		{
+        section("Turn ON Switches when Room changes to 'ENGAGED' or 'OCCUPIED'?\n(works with lux and/or time settings below.)", hideable: true, hidden: (!switches))		{
             input "switches", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
             input "setLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
                                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
@@ -231,7 +231,7 @@ def roomName()	{
             input "setColorTemperatureTo", "number", title: "Set Color Temperature When Turning ON? (if light supports color and color is specified this setting will be skipped for those light(s).)",
                                                                                     required: false, multiple: false, defaultValue: null, range: "1500..6500"
         }
-        section("Turn OFF Switches when Room changes to 'VACANT'?\n(works with lux and/or time settings below. these can be different from switches to turn on.)", hideable: true, hidden: true)		{
+        section("Turn OFF Switches when Room changes to 'VACANT'?\n(works with lux and/or time settings below. these can be different from switches to turn on.)", hideable: true, hidden: (!switches2))		{
             input "switches2", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
             input "dimTimer", "number", title: "Dim Lights For How Many Seconds Before Turning Off?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             if (dimTimer)
@@ -244,7 +244,7 @@ def roomName()	{
 				href "pageLuxTimeSettings", title: "Lux & Time Settings", description: "Tap here to configure"
 		}
         section("") {
-				href "pageEngagedSettingss", title: "Engaged Settings", description: "Tap here to configure"
+				href "pageEngagedSettings", title: "Engaged Settings", description: "Tap here to configure"
 		}
         section("") {
 				href "pageAdjacentRooms", title: "Adjacent Rooms Settings", description: "Tap here to configure"
@@ -319,7 +319,7 @@ private pageLuxTimeSettings() {
 private pageNightMode() {
 	dynamicPage(name: "pageNightMode", title: "", install: false, uninstall: false) {
 		section("Turn ON Switches when Room is in asleep mode and motion is detected", hideable: false)		{
-	    	nput "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
+	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
             if (motionSensors)
                 input "nightSwitches", "capability.switch", title: "Turn ON which Switches when room state is ASLEEP and there is Motion?", required: false, multiple: true, submitOnChange: true
             else
@@ -331,13 +331,14 @@ private pageNightMode() {
             }
             else        {
                 paragraph "Set Level When Turning ON?\nselect adjacent rooms above to set"
-                paragraph "Button to toggle Night Switches?\nselect adjacent rooms above to set"
+                paragraph "Button to toggle Night Switches?\nselect switches above to set"
             }                                                   
         }
 	}
 }
 
 private pageAdjacentRooms() {
+	def roomNames = parent.getRoomNames(app.id)
 	dynamicPage(name: "pageAdjacentRooms", title: "", install: false, uninstall: false) {
 		section("Adjacent Rooms?\n(this allows for action when there is motion in adjacent rooms.)", hideable: false)		{
             input "adjRooms", "enum", title: "Adjacent Rooms?", required: false, multiple: true, options: roomNames, submitOnChange: true
