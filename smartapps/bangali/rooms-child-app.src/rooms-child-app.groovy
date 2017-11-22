@@ -230,7 +230,7 @@ def roomName()	{
                 paragraph "Room Name:\n${app.label}"
 		}
         section		{
-            paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WITH OTHERS, WHEN THAT MAKESE SENSE."
+            paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WHEN THAT MAKES SENSE."
         }
         section("MOTION SENSOR CONFIGURATION", hideable: true, hidden: (!motionSensors))		{
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
