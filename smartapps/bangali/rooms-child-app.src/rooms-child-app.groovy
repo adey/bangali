@@ -396,8 +396,8 @@ private pageNightMode() {
                     paragraph "Button Number?\nselect button above to set"
             }
             else        {
-                paragraph "Set Level When Turning ON?\nselect adjacent rooms above to set"
-                paragraph "Button to toggle Night Switches?\nselect adjacent rooms above to set"
+                paragraph "Set Level When Turning ON?\nselect switches above to set"
+                paragraph "Button to toggle Night Switches?\nselect switches rooms above to set"
                 paragraph "Button Number?\nselect button above to set"
             }
         }
@@ -726,15 +726,15 @@ def	presenceNotPresentEventHandler(evt)     {
     	return
     if (state.dayOfWeek && !(checkRunDay()))
         return
-    if (presenceActionDeparture())        {
+    if (presenceActionDeparture())      {
         def child = getChildDevice(getRoom())
         def roomState = child.getRoomState()
-        if (resetEngagedDirectly && roomState == 'engaged')
-            child.generateEvent('vacant')
-        else    {
-            if (['engaged', 'occupied'].contains(roomState))
+        if (['asleep', 'engaged', 'occupied'].contains(roomState))      {
+            if (resetEngagedDirectly)
+                child.generateEvent('vacant')
+            else
                 child.generateEvent('checking')
-            }
+        }
     }
 }
 
