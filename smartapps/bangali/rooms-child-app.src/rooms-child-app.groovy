@@ -200,13 +200,13 @@ preferences {
 
 def roomName()	{
     def roomNames = parent.getRoomNames(app.id)
-    def timeSettings = (fromTimeType || toTimeType) ^ true
-    def adjRoomSettings = (adjRooms ? false : true)
-    def modeSettings = (awayModes || pauseModes) ^ true
-//    def engagedSettings = (busyCheck || engagedButton || buttonIs || personPresence || engagedSwitch || contactSensor || noMotionEngaged) ^ true
-    def luxSettings = (luxSensor || luxThreshold) ^ true
-    def luxAndTimeSettings = (luxSettings && timeSettings)
-    def asleepSettings = (asleepSensor || nightSwitches) ^ true
+    def timeSettings = (fromTimeType || toTimeType)
+    def adjRoomSettings = (adjRooms ? true : false)
+    def miscSettings = (awayModes || pauseModes || dayOfWeek)
+    def engagedSettings = (busyCheck || engagedButton || buttonIs || personPresence || engagedSwitch || contactSensor || noMotionEngaged)
+    def luxSettings = (luxSensor || luxThreshold)
+    def luxAndTimeSettings = (luxSettings || timeSettings)
+    def asleepSettings = (asleepOnSwitches || asleepOffSwitches || asleepSensor || nightSwitches)
     def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def engagedButtonOptions = [:]
     if (engagedButton)      {
@@ -230,57 +230,58 @@ def roomName()	{
                 paragraph "Room Name:\n${app.label}"
 		}
         section		{
-            paragraph "Following settings are all optional. Corresponding actions will be skipped when setting is blank. When specified settings work in combination with others.\n(scroll down for more settings ...)"
+            paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WITH OTHERS, WHEN THAT MAKESE SENSE."
         }
-        section("Motion Sensor configuration\nSelect sensor, seconds after event, which event", hideable: true, hidden: (!motionSensors))		{
-            input "motionSensors", "capability.motionSensor", title: "Which Motion Sensor?", required: false, multiple: true, submitOnChange: true
-            input "noMotion", "number", title: "After How Many Seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+        section("MOTION SENSOR CONFIGURATION", hideable: true, hidden: (!motionSensors))		{
+            input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
+            input "noMotion", "number", title: "After how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             if (noMotion)
-                input "whichNoMotion", "enum", title: "Use which Motion event?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
+                input "whichNoMotion", "enum", title: "Use which motion event?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
                                                                                         options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
             else
-                paragraph "Use which Motion event?\nselect number of seconds above to set"
+                paragraph "Use which motion event?\nselect number of seconds above to set"
         }
-        section("Turn ON Switches when Room changes to 'ENGAGED' or 'OCCUPIED'?\n(works with lux and/or time settings below.)", hideable: true, hidden: (!switches))		{
-            input "switches", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
-            input "setLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
+        section("TURN ON SWITCHES WHEN ROOM CHANGES TO 'ENGAGED' OR 'OCCUPIED'?\n(works with lux and/or time settings below.)", hideable: true, hidden: (!switches))		{
+            input "switches", "capability.switch", title: "Which switches?", required: false, multiple: true
+            input "setLevelTo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null,
                                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
-            input "setColorTo", "enum", title: "Set Color When Turning ON?", required: false, multiple:false, defaultValue: null, options: [
+            input "setColorTo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null, options: [
                         			                                                 ["Soft White":"Soft White - Default"],
                         					                                         ["White":"White - Concentrate"],
                         					                                         ["Daylight":"Daylight - Energize"],
                         					                                         ["Warm White":"Warm White - Relax"],
                         					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
-            input "setColorTemperatureTo", "number", title: "Set Color Temperature When Turning ON? (if light supports color and color is specified this setting will be skipped for those light(s).)",
+            input "setColorTemperatureTo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
                                                                                     required: false, multiple: false, defaultValue: null, range: "1500..6500"
         }
-        section("Turn OFF Switches when Room changes to 'VACANT'?\n(works with lux and/or time settings below. these can be different from switches to turn on.)", hideable: true, hidden: (!switches2))		{
-            input "switches2", "capability.switch", title: "Which Switch(es)?", required: false, multiple: true
-            input "dimTimer", "number", title: "Dim Lights For How Many Seconds Before Turning Off?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+        section("TURN OFF SWITCHES WHEN ROOM CHANGES TO 'VACANT'?\n(works with lux and/or time settings below. these can be different from switches to turn on.)", hideable: true, hidden: (!switches2))		{
+            input "switches2", "capability.switch", title: "Which switches?", required: false, multiple: true
+            input "dimTimer", "number", title: "Dim lights for how many seconds before turning OFF?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             if (dimTimer)
-                input "dimByLevel", "enum", title: "Dim Lights By What Level Before Turning Off?", required: false, multiple: false, defaultValue: null,
+                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
                                                                     options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
             else
-                paragraph "Dim Lights By What Level Before Turning Off?\nselect dim timer above to set"
+                paragraph "Dim lights by what level?\nselect dim timer above to set"
         }
 		section("") {
-				href "pageLuxTimeSettings", title: "Lux & Time Settings", description: "Tap here to configure"
+				href "pageLuxTimeSettings", title: "LUX & TIME SETTINGS", description: (luxAndTimeSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
-				href "pageEngagedSettings", title: "Engaged Settings", description: "Tap here to configure"
+				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
-				href "pageAdjacentRooms", title: "Adjacent Rooms Settings", description: "Tap here to configure"
+				href "pageAdjacentRooms", title: "ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
-				href "pageNightMode", title: "Night Mode Settings", description: "Tap here to configure"
+				href "pageNightMode", title: "ASLEEP STATE SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
-				href "pageGeneralSettings", title: "General Automation Settings", description: "Tap here to configure"
+				href "pageGeneralSettings", title: "MODE AND DAY OF WEEK SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         remove("Remove Room", "Remove Room ${app.label}")
 	}
 }
+
 private pageEngagedSettings() {
     def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def engagedButtonOptions = [:]
@@ -302,26 +303,26 @@ private pageEngagedSettings() {
     }
 
 	dynamicPage(name: "pageEngagedSettings", title: "", install: false, uninstall: false) {
-		section("Change Room to 'ENGAGED' when?\n(if specified this will also reset room state to 'VACANT' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
+		section("CHANGE ROOM TO 'ENGAGED' WHEN?\n(if specified this will also reset room state to 'vacant' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
             if (motionSensors)
                 input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
                                                                             options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
             else
-                paragraph "Auto ENGAGED state when room is busy?\nselect motion sensor(s) above to set."
-            input "engagedButton", "capability.button", title: "Button is Pushed?", required: false, multiple: false, submitOnChange: true
+                paragraph "When room is busy?\nselect motion sensor(s) above to set."
+            input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)
                 input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
             else
                 paragraph "Button Number?\nselect button to set"
-            input "personPresence", "capability.presenceSensor", title: "Presence Sensor Present?", required: false, multiple: false, submitOnChange: true
+            input "personPresence", "capability.presenceSensor", title: "Presence sensor?", required: false, multiple: false, submitOnChange: true
             if (personPresence)
                 input "presenceAction", "enum", title: "Arrival or Departure or Both?", required: true, multiple: false, defaultValue: 3,
                                                     options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"]]
             else
                 paragraph "Arrival or Departure or Both??\nselect presence sensor above to set"
             input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: false
-            input "contactSensor", "capability.contactSensor", title: "Contact Sensor Closes?", required: false, multiple: false
-            input "noMotionEngaged", "number", title: "Require Motion within how many Seconds when Room is 'ENGAGED'?", required: false, multiple: false, defaultValue: null, range: "5..99999"
+            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false
+            input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is 'ENGAGED'?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
         }
 	}
@@ -329,29 +330,29 @@ private pageEngagedSettings() {
 
 private pageLuxTimeSettings() {
 	dynamicPage(name: "pageLuxTimeSettings", title: "", install: false, uninstall: false) {
-		section("Lux threshold to turn ON and OFF Switch(es) when Room is 'OCCUPIED' or 'ENGAGED'?", hideable: false)		{
-            input "luxSensor", "capability.illuminanceMeasurement", title: "Which Lux Sensor?", required: false, multiple: false
-            input "luxThreshold", "number", title: "What Lux Value?", required: false, multiple: false, defaultValue: null, range: "0..*"
+		section("LUX THRESHOLD TO TURN ON AND OFF SWITCHES WHEN ROOM IS 'OCCUPIED' OR 'ENGAGED'?", hideable: false)		{
+            input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
+            input "luxThreshold", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..*"
         }
-        section("Time range to turn ON and OFF Switch(es) when Room is 'OCCUPIED' or 'ENGAGED'?", hideable: false)      {
+        section("TIME RANGE TO TURN ON AND OFF SWITCHES WHEN ROOM IS 'OCCUPIED' OR 'ENGAGED'?", hideable: false)      {
             if (toTimeType)
-                input "fromTimeType", "enum", title: "Choose From Time Type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+                input "fromTimeType", "enum", title: "Choose from time type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             else
-                input "fromTimeType", "enum", title: "Choose From Time Type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+                input "fromTimeType", "enum", title: "Choose from time type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             if (fromTimeType == '3')
-                input "fromTime", "time", title: "From Time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
+                input "fromTime", "time", title: "From time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
             else
-                paragraph "From Time?\nchange From Time Type to Time to select"
+                paragraph "From time?\nchange from time type to time to select"
             if (fromTimeType)
-                input "toTimeType", "enum", title: "Choose To Time Type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+                input "toTimeType", "enum", title: "Choose to time type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             else
-                input "toTimeType", "enum", title: "Choose To Time Type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
+                input "toTimeType", "enum", title: "Choose to time type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             if (toTimeType == '3')
-                input "toTime", "time", title: "To Time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
+                input "toTime", "time", title: "To time?", required: true, multiple: false, defaultValue: null, submitOnChange: true
             else
-                paragraph "To Time?\nchange To Time Type to Time to select"
+                paragraph "To time?\nchange to time type to time to select"
         }
-        section("Turn OFF ALL switch(es) when Lux value rises or Time is outside of window?", hideable: false)		{
+        section("TURN OFF ALL SWITCHES WHEN LUX VALUE RISES OR TIME IS OUTSIDE OF WINDOW?", hideable: false)		{
             input "allSwitchesOff", "bool", title: "Turn OFF all switches?", required: false, multiple: false, defaultValue: false
         }
 	}
@@ -377,7 +378,7 @@ private pageNightMode() {
             nightButtonOptions << [null:"No buttons"]
     }
 	dynamicPage(name: "pageNightMode", title: "", install: false, uninstall: false) {
-        section("Settings for ASLEEP state including switches to turn on and off, motion detected night lights and button to turn on and off night lights.", hideable: false)		{
+        section("SETTINGS FOR 'ASLEEP' STATE INCLUDING SWITCHES TO TURN ON AND OFF, MOTION DETECTED NIGHT LIGHTS AND BUTTON TO TURN ON AND OFF NIGHT LIGHTS.", hideable: false)		{
             input "asleepOnSwitches", "capability.switch", title: "Turn ON which Switches when room changes to ASLEEP?", required: false, multiple: true
             input "asleepOffSwitches", "capability.switch", title: "Turn OFF which Switches when room changes to ASLEEP?", required: false, multiple: true
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to change room state to ASLEEP?", required: false, multiple: false
@@ -406,7 +407,7 @@ private pageNightMode() {
 private pageAdjacentRooms() {
 	def roomNames = parent.getRoomNames(app.id)
 	dynamicPage(name: "pageAdjacentRooms", title: "", install: false, uninstall: false) {
-		section("Adjacent Rooms?\n(this allows for action when there is motion in adjacent rooms.)", hideable: false)		{
+		section("ADJACENT ROOMS ALLOWS FOR ACTION WHEN THERE IS MOTION IN ADJACENT ROOMS.", hideable: false)		{
             input "adjRooms", "enum", title: "Adjacent Rooms?", required: false, multiple: true, options: roomNames, submitOnChange: true
             if (adjRooms)   {
                 input "adjRoomsMotion", "bool", title: "If motion in adjacent room check if person is still in this room?", required: false, multiple: false, defaultValue: false
@@ -422,12 +423,12 @@ private pageAdjacentRooms() {
 
 private pageGeneralSettings() {
 	dynamicPage(name: "pageGeneralSettings", title: "", install: false0, uninstall: false) {
-		section("Mode settings for Away and Pause mode(s)?", hideable: false)		{
-            input "awayModes", "mode", title: "Away mode(s) to set Room to 'VACANT'?", required: false, multiple: true
-            input "pauseModes", "mode", title: "Mode(s) in which to pause automation?", required: false, multiple: true
+		section("MODE SETTINGS FOR AWAY AND PAUSE MODES?", hideable: false)		{
+            input "awayModes", "mode", title: "Away modes to set Room to 'VACANT'?", required: false, multiple: true
+            input "pauseModes", "mode", title: "Modes in which to pause automation?", required: false, multiple: true
         }
-        section("Run rooms automation on which days of the week.\n(when blank runs on all days.)", hideable: false)		{
-            	input "dayOfWeek", "enum", title: "Which day of the week?", required: false, multiple: false, defaultValue: null,
+        section("RUN ROOMS AUTOMATION ON WHICH DAYS OF THE WEEK.\n(WHEN BLANK RUNS ON ALL DAYS.)", hideable: false)		{
+            	input "dayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
 						                                                    options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                                                       [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
 		}
