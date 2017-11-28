@@ -1426,7 +1426,7 @@ def uninstalled() {
 }
 
 def childUninstalled()  {
-log.debug "uninstalled room ${app.label}"
+ifDebug("uninstalled room ${app.label}")
 }
 
 private saveHueToState()        {
@@ -1478,7 +1478,7 @@ private returnHueAndSaturation(setColorTo)        {
 }
 
 private unscheduleAll(classNameCalledFrom)		{
-log.debug "${app.label} unschedule calling class: $classNameCalledFrom"
+ifDebug("${app.label} unschedule calling class: $classNameCalledFrom")
     unschedule("roomVacant")
 //    unschedule("dimLights")
 //    unschedule("switches2Off")
@@ -1714,7 +1714,7 @@ def getAdjMotionSensors()  {
 
 def getAdjRoomDetails()  {
     def adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-log.debug "childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}"
+ifDebug("childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
 /*    if (motionSensors)   {
         def motionSensorsList = []
         def motionSensorsNameList = []
@@ -1777,17 +1777,17 @@ def	nightButtonPushedEventHandler(evt)     {
         def switchValue = nightSwitches.currentValue("switch")
         if (nightButtonAction == "1")
         {
-        	log.debug "action 1"
+        	ifDebug("action 1")
         	dimNightLights()
         }
         else if (nightButtonAction == "2" && switchValue.contains('on')) 
         {
-        	log.debug "action 2"
+        	ifDebug("action 2")
         	nightSwitchesOff()
         }
         else if (nightButtonAction == "3")
         {
-        	log.debug "action 3"
+        	ifDebug("action 3")
         	if (switchValue.contains('on'))
             	nightSwitchesOff()
         	else
@@ -1811,7 +1811,7 @@ def nightSwitchesOff()      {
 }
 
 def sleepEventHandler(evt)		{
-log.debug "sleepEventHandler: ${asleepSensor} - ${evt.value}"
+ifDebug("sleepEventHandler: ${asleepSensor} - ${evt.value}")
 	def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
     if (evt.value == "not sleeping")	{
