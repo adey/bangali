@@ -291,7 +291,6 @@ private pageRules()     {
             def emptyRule = null
             if (!state.rules)   {
                 emptyRule = 1
-//                state.rules = [:]
             }
             else    {
                 def i = 1
@@ -717,10 +716,10 @@ def updateRulesToState()    {
 //            state.rules << ["$ruleNo":[ruleNo:i, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek, luxThreshold:ruleLuxThreshold,
 //                                       fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime,
 //                                       level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo, colorTemperature:ruleSetColorTemperatureTo]]
-//            if (!state.rules) state.rules = [:]
-//            rulesMap << ["$ruleNo":[isRule:true]]
+            if (!state.rules)   state.rules = [:]
+            state.rules << ["$ruleNo":[isRule:true]]
 //            if (thisRule.luxThreshold)      state.luxCheck = true
-            state.rules = true
+//            state.rules = true
             if (thisRule.state && thisRule.state.contains('vacant'))    state.vacant = true
             if (thisRule.fromTimeType && thisRule.toTimeType)           state.timeCheck = true
             thisRule.switchesOn.each      {
@@ -739,10 +738,10 @@ def updateRulesToState()    {
 
 private getRule(ruleNo, checkState = true)     {
     if (!ruleNo)        return null
-/*    if (checkState && state.rules)      {
+    if (checkState && state.rules)      {
         def ruleThere = state.rules[ruleNo]
         if (!ruleThere)      return null
-    }*/
+    }
     def ruleName = settings["name$ruleNo"]
     def ruleDisabled = settings["disabled$ruleNo"]
     def ruleMode = settings["mode$ruleNo"]
@@ -1122,10 +1121,10 @@ def handleSwitches(oldState = null, newState = null)	{
     if (pauseModes && pauseModes.contains(location.currentMode))       return false;
     if (state.dayOfWeek && !(checkRunDay()))                    return false;
     ifDebug("busyCheck: $state.busyCheck | isBusy: $state.isBusy | newState: $newState")
-    def moveToEngaged = false
+//    def moveToEngaged = false
     if (state.busyCheck && state.isBusy && newState != 'engaged' && ['occupied', 'checking', 'vacant'].contains(newState))      {
-        moveToEngaged = true
-//        return true
+//        moveToEngaged = true
+        return true
     }
     if (oldState == 'asleep')       {
         unschedule("roomAwake")
@@ -1160,7 +1159,8 @@ def handleSwitches(oldState = null, newState = null)	{
             dimLights()
             runIn(state.dimTimer ?: 1, roomVacant)
         }
-	return moveToEngaged
+//	return moveToEngaged
+    return false
 }
 
 /*
