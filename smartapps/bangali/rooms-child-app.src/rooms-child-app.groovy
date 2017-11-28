@@ -21,7 +21,11 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
-*  Version: 0.07.0
+*  Version: 0.07.1
+*
+*   DONE:   11/28/2017
+*   1) Fixed removed code
+*   2) Added ability to choose action for night button
 *
 *   DONE:   11/27/2017
 *   1) instead of adding swtiches to individual settings created rules to allow switches to be turned on and off
@@ -363,7 +367,7 @@ private pageRule(params)   {
                                                           [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
 //            input "luxSensor$ruleNo", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false, submitOnChange: true
             if (luxSensor && luxThreshold)
-                input "luxThreshold$ruleNo", "number", title: "What lux value?", required: false, multiple: false, defaultValue: luxThreshold, range: "0..$luxThreshold"
+                input "luxThreshold$ruleNo", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..$luxThreshold"
             else
                 paragraph "What lux value?\nset lux sensor and lux threshold in main settings to select."
             if (ruleToTimeType)
@@ -395,7 +399,7 @@ input "setColorTo", "enum", title: "Set color when turning ON?", required: false
 input "setColorTemperatureTo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
                                                                         required: false, multiple: false, defaultValue: null, range: "1500..6500"*/
             input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null,
-                    options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+                    options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
             input "setColorTo$ruleNo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null, options: [
                             			                                                 ["Soft White":"Soft White - Default"],
                             					                                         ["White":"White - Concentrate"],
@@ -518,16 +522,21 @@ private pageNightMode() {
             else
                 paragraph "Turn ON which Switches when room state is ASLEEP and there is Motion?\nselect motion sensor(s) above to set."
             if (nightSwitches)      {
-//                input "nightSetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
-//                                                    options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+                input "nightSetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
+                                                    options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
                 input "nightButton", "capability.button", title: "Button to toggle ASLEEP state Switches?", required: false, multiple: false, submitOnChange: true
                 if (nightButton)
                     input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
                 else
                     paragraph "Button Number?\nselect button above to set"
+                    
+                if (nightButton)
+                    input "nightButtonAction", "enum", title: "Turn on/off or toggle switches?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Turn on"],[2:"Turn off"],[3:"Toggle"]]
+                else
+                    paragraph "Button Action?\nselect action for the button above to set"
             }
             else        {
-//                paragraph "Set Level When Turning ON?\nselect switches above to set"
+                paragraph "Set Level When Turning ON?\nselect switches above to set"
                 paragraph "Button to toggle Night Switches?\nselect switches rooms above to set"
                 paragraph "Button Number?\nselect button above to set"
             }
@@ -1766,10 +1775,24 @@ def	nightButtonPushedEventHandler(evt)     {
     if (nightSwitches && roomState == 'asleep')     {
         unscheduleAll("night button pushed handler")
         def switchValue = nightSwitches.currentValue("switch")
-        if (switchValue.contains('on'))
-            nightSwitchesOff()
-        else
-            dimNightLights()
+        if (nightButtonAction == "1")
+        {
+        	log.debug "action 1"
+        	dimNightLights()
+        }
+        else if (nightButtonAction == "2" && switchValue.contains('on')) 
+        {
+        	log.debug "action 2"
+        	nightSwitchesOff()
+        }
+        else if (nightButtonAction == "3")
+        {
+        	log.debug "action 3"
+        	if (switchValue.contains('on'))
+            	nightSwitchesOff()
+        	else
+            	dimNightLights()
+        }
     }
 }
 
