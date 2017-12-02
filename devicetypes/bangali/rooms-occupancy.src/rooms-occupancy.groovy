@@ -24,8 +24,8 @@
 *
 *  Version: 0.07.3
 *
-*   DONE:   11/27/2017
-*   1) added support for executing piston instead of turninng on a light
+*   DONE:   12/2/2017
+*   1) added support for executing piston instead of just turning on a light
 *   2) added view all settings
 *   3) added room device indicators to the room device so they can be seen in one place
 *   4) added timer to room which counts down in increments of 5
