@@ -30,6 +30,12 @@
 *   4) added timer to room which counts down in increments of 5
 *   5) some bug fixes.
 *
+*  Version: 0.07.1
+*
+*   DONE:   11/28/2017
+*   1) Fixed removed code
+*   2) Added ability to choose action for night button
+*
 *  Version: 0.07.0
 *
 *   DONE:   11/27/2017
@@ -549,9 +555,14 @@ private pageNightMode() {
                     input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
                 else
                     paragraph "Button Number?\nselect button above to set"
+
+                if (nightButton)
+                    input "nightButtonAction", "enum", title: "Turn on/off or toggle switches?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Turn on"],[2:"Turn off"],[3:"Toggle"]]
+                else
+                    paragraph "Button Action?\nselect action for the button above to set"
             }
             else        {
-//                paragraph "Set Level When Turning ON?\nselect switches above to set"
+                paragraph "Set Level When Turning ON?\nselect switches above to set"
                 paragraph "Button to toggle Night Switches?\nselect switches rooms above to set"
                 paragraph "Button Number?\nselect button above to set"
             }
@@ -1660,7 +1671,7 @@ def uninstalled() {
 }
 
 def childUninstalled()  {
-log.debug "uninstalled room ${app.label}"
+ifDebug("uninstalled room ${app.label}")
 }
 
 private saveHueToState()        {
@@ -2009,7 +2020,7 @@ def getAdjMotionSensors()  {
 
 def getAdjRoomDetails()  {
     def adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-log.debug "childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}"
+ifDebug("childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
 /*    if (motionSensors)   {
         def motionSensorsList = []
         def motionSensorsNameList = []
@@ -2104,10 +2115,24 @@ def	nightButtonPushedEventHandler(evt)     {
     if (nightSwitches && roomState == 'asleep')     {
         unscheduleAll("night button pushed handler")
         def switchValue = nightSwitches.currentValue("switch")
-        if (switchValue.contains('on'))
-            nightSwitchesOff()
-        else
-            dimNightLights()
+        if (nightButtonAction == "1")
+        {
+        	ifDebug("action 1")
+        	dimNightLights()
+        }
+        else if (nightButtonAction == "2" && switchValue.contains('on'))
+        {
+        	ifDebug("action 2")
+        	nightSwitchesOff()
+        }
+        else if (nightButtonAction == "3")
+        {
+        	ifDebug("action 3")
+        	if (switchValue.contains('on'))
+            	nightSwitchesOff()
+        	else
+            	dimNightLights()
+        }
     }
 }
 
@@ -2127,7 +2152,7 @@ def nightSwitchesOff()      {
 }
 
 def sleepEventHandler(evt)		{
-log.debug "sleepEventHandler: ${asleepSensor} - ${evt.value}"
+ifDebug("sleepEventHandler: ${asleepSensor} - ${evt.value}")
 	def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
     if (evt.value == "not sleeping")
