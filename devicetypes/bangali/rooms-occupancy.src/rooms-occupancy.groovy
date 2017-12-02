@@ -22,6 +22,24 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.07.3
+*
+*   DONE:   11/27/2017
+*   1) added support for executing piston instead of turninng on a light
+*   2) added view all settings
+*   3) added room device indicators to the room device so they can be seen in one place
+*   4) added timer to room which counts down in increments of 5
+*   5) some bug fixes.
+*
+*  Version: 0.07.0
+*
+*   DONE:   11/27/2017
+*   1) instead of adding swtiches to individual settings created rules to allow switches to be turned on and off
+*       and routines to be executed via this rule. VACANT state automatically turns of the switches the last rule
+*       turned on unless user creates a rule for VACANT state in which case the automatic turning off of switches
+*       on VACANT state is skipped instead the rules are checked and executed for the VACANT state.
+*   2) some bug fixes.
+*
 *  Version: 0.05.9
 *
 *   DONE:   11/21/2017
@@ -185,6 +203,7 @@ metadata {
 		capability "Actuator"
 		capability "Button"
 		capability "Sensor"
+		capability "Switch"
 		attribute "occupancy", "string"
 		command "occupied"
         command "checking"
@@ -195,6 +214,8 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+		command "turnSwitchesAllOn"
+		command "turnSwitchesAllOff"
 		command "updateOccupancy", ["string"]
 	}
 
@@ -225,17 +246,53 @@ metadata {
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
-			state "donotdisturb", label: 'Do Not Disturb', icon:"st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
+			state "donotdisturb", label: 'DnD', icon:"st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
 			state "reserved", label: 'Reserved', icon:"st.Office.office7", backgroundColor:"#ccac00"
 			state "asleep", label: 'Asleep', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879af"
 			state "locked", label: 'Locked', icon:"st.locks.lock.locked", backgroundColor:"#c079a3"
 			state "engaged", label: 'Engaged', icon:"st.locks.lock.unlocked", backgroundColor:"#ff6666"
 			state "kaput", label: 'Kaput', icon:"st.Outdoor.outdoor18", backgroundColor:"#95623d"
         }
-		valueTile("status", "device.status", inactiveLabel: false, width: 5, height: 1, decoration: "flat", wordWrap: false)	{
+		valueTile("status", "device.status", inactiveLabel: false, width: 4, height: 1, decoration: "flat", wordWrap: false)	{
 			state "status", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 		}
+//		valueTile("statusFiller", "device.statusFiller", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
+//			state "statusFiller", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
+//		}
+		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
+			state "timer", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
+		}
+		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("timeFT", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
 //
+		standardTile("motionInd", "device.motionInd", width: 1, height: 1, canChangeIcon: true) {
+			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
+			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
+			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
+		}
+		valueTile("luxInd", "device.luxInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("lux", label:'${currentValue}\nlux', backgroundColor:"#ffffff")
+		}
+		standardTile("contactInd", "device.contactInd", width: 1, height: 1, canChangeIcon: true) {
+			state("closed", label:'${name}', icon:"st.contact.contact.closed", backgroundColor:"#00A0DC")
+			state("open", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#e86d13")
+			state("none", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#ffffff")
+		}
+		standardTile("switchInd", "device.switchInd", width: 1, height: 1, canChangeIcon: true) {
+			state "off", label: '${name}', action: "turnSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
+			state "on", label: '${name}', action: "turnSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC"
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+		}
+		standardTile("presenceInd", "device.flexibleInd", width: 1, height: 1, canChangeIcon: true) {
+			state("not present", label:'absent', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
+			state("present", label:'${name}', icon:"st.presence.tile.present", backgroundColor:"#00A0DC")
+			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
+		}
+		valueTile("temperatureInd", "device.temperatureInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("temperature", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state "deviceList1", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
@@ -313,7 +370,8 @@ metadata {
 		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancy", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
+		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "temperatureInd", "occupied", "locked", "asleep"])
+		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
 		// details (["occupancy", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main tiles and devices list only
@@ -326,11 +384,13 @@ metadata {
 
 def parse(String description)	{}
 
-def installed()		{	initialize();	vacant()	}
+def installed()		{  initialize();	vacant()  }
 
-def updated()	{	initialize()	}
+def updated()	{  initialize()  }
 
-def	initialize()	{	sendEvent(name: "numberOfButtons", value: 9)	}
+def	initialize()	{
+	sendEvent(name: "numberOfButtons", value: 9)
+}
 
 def occupied()	{	stateUpdate('occupied')		}
 
@@ -350,18 +410,14 @@ def engaged()	{	stateUpdate('engaged')		}
 
 def kaput()		{	stateUpdate('kaput')		}
 
-private	stateUpdate(state)	{
+private	stateUpdate(state)		{
 	def oldState = device.currentValue('occupancy')
-	def newState = state
-	def moveToEngaged = false
-	if (oldState != newState)	{
-		updateOccupancy(newState)
+	if (oldState != state)	{
+		updateOccupancy(state)
         if (parent)
-        	moveToEngaged = parent.handleSwitches(oldState, newState)
+        	parent.handleSwitches(oldState, state)
 	}
 	resetTile(state)
-	if (moveToEngaged)
-		runIn(1, engaged)
 }
 
 private updateOccupancy(occupancy = null) 	{
@@ -374,18 +430,19 @@ private updateOccupancy(occupancy = null) 	{
 	sendEvent(name: "occupancy", value: occupancy, descriptionText: "${device.displayName} changed to ${occupancy}", isStateChange: true, displayed: true)
     def button = buttonMap[occupancy]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
-	state.statusMsg = "Since: " + formatLocalTime()
-	updateRoomStatus()
+	updateRoomStatusMsg()
+}
+
+private updateRoomStatusMsg()		{
+//	sendEvent(name: "statusFiller", value: "Since:", isStateChange: true, displayed: false)
+	state.statusMsg = formatLocalTime()
+	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
 }
 
 private formatLocalTime(time = now(), format = "EEE, MMM d yyyy @ h:mm:ss a z")		{
 	def formatter = new java.text.SimpleDateFormat(format)
 	formatter.setTimeZone(location.timeZone)
 	return formatter.format(time)
-}
-
-private updateRoomStatus()		{
-	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
 }
 
 def deviceList(devicesMap)		{
@@ -420,6 +477,97 @@ def generateEvent(state = null)		{
 }
 
 def getRoomState()	{	return device.currentValue('occupancy')	}
+
+def updateMotionInd(motionOn)		{
+	switch(motionOn)	{
+		case 1:
+			sendEvent(name: 'motionInd', value: 'active', descriptionText: "indicate motion active", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'motionInd', value: 'inactive', descriptionText: "indicate motion inactive", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'motionInd', value: 'none', descriptionText: "indicate no motion sensor", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateLuxInd(lux)		{
+	if (lux == -1)
+		sendEvent(name: 'luxInd', value: 'no', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'luxInd', value: lux, descriptionText: "indicate lux value", isStateChange: true, displayed: false)
+}
+
+def updateContactInd(contactClosed)		{
+	switch(contactClosed)	{
+		case 1:
+			sendEvent(name: 'contactInd', value: 'closed', descriptionText: "indicate contact closed", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'contactInd', value: 'open', descriptionText: "indicate contact open", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'contactInd', value: 'none', descriptionText: "indicate no contact sensor", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateSwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'switchInd', value: 'on', descriptionText: "indicate switch at least one switch in room is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'switchInd', value: 'off', descriptionText: "indicate all switches in room is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'switchInd', value: 'none', descriptionText: "indicate no switches to turn on in room", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updatePresenceInd(presencePresent)		{
+	switch(presencePresent)	{
+		case 1:
+			sendEvent(name: 'presenceInd', value: 'present', descriptionText: "indicate presence present", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'presenceInd', value: 'not present', descriptionText: "indicate presence not present", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'presenceInd', value: 'none', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateTimeInd(timeFromTo)		{
+	sendEvent(name: 'timeInd', value: timeFromTo, descriptionText: "indicate time from to", isStateChange: true, displayed: false)
+}
+
+def updateTemperatureInd(temp)		{
+	if (temp == -1)
+		sendEvent(name: 'temperatureInd', value: '--°F', descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'temperatureInd', value: temp+'°F', descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
+}
+
+def turnSwitchesAllOn()		{
+	if (parent)
+		parent.turnSwitchesAllOn()
+}
+
+def turnSwitchesAllOff()		{
+	if (parent)
+		parent.turnSwitchesAllOff()
+}
+
+def updateTimer(timer = 0)	{
+	if (!timer)
+		sendEvent(name: "timer", value: '--', isStateChange: true, displayed: false)
+	else
+		sendEvent(name: "timer", value: timer, isStateChange: true, displayed: false)
+}
 
 /*
 not using yet but have plans to ...

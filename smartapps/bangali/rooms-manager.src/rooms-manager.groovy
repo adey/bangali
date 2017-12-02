@@ -18,6 +18,24 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.07.3
+*
+*   DONE:   11/27/2017
+*   1) added support for executing piston instead of turninng on a light
+*   2) added view all settings
+*   3) added room device indicators to the room device so they can be seen in one place
+*   4) added timer to room which counts down in increments of 5
+*   5) some bug fixes.
+*
+*  Version: 0.07.0
+*
+*   DONE:   11/27/2017
+*   1) instead of adding swtiches to individual settings created rules to allow switches to be turned on and off
+*       and routines to be executed via this rule. VACANT state automatically turns of the switches the last rule
+*       turned on unless user creates a rule for VACANT state in which case the automatic turning off of switches
+*       on VACANT state is skipped instead the rules are checked and executed for the VACANT state.
+*   2) some bug fixes.
+*
 *  Version: 0.05.9
 *
 *   DONE:   11/21/2017
@@ -226,10 +244,23 @@ def getARoomName(childID)    {
 }
 
 def handleAdjRooms()    {
+//  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
+    def skipAdjRoomsMotionCheck = true
+    def adjRoomDetailsMap = [:]
     childApps.each	{ childAll ->
         def adjRoomDetails = childAll.getAdjRoomDetails()
         def childID = adjRoomDetails['childid']
         def adjRooms = adjRoomDetails['adjrooms']
+        adjRoomDetailsMap << [(childID):(adjRooms)]
+        if (adjRooms)
+            skipAdjRoomsMotionCheck = false
+    }
+    if (skipAdjRoomsMotionCheck)
+        return false
+    childApps.each	{ childAll ->
+//        def adjRoomDetails = childAll.getAdjRoomDetails()
+        def childID = childAll.id
+        def adjRooms = adjRoomDetailsMap[childID]
         def adjMotionSensors = []
         def adjMotionSensorsNames = []
         if (childID && adjRooms)    {
@@ -250,9 +281,9 @@ def handleAdjRooms()    {
         }
 log.debug "rooms manager: updating room $childAll.label"
 log.debug "$adjMotionSensors"
-        childAll.updateRoom(adjMotionSensors)
+        childAll.updateRoom(adjMotionSensor)
     }
-    return
+    return true
 }
 
 def getLastStateDate(childID)      {
