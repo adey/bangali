@@ -18,6 +18,27 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.08.0
+*
+*   DONE:   12/8/2017
+*   1) added support to reset room state from ENAGED or ASLEEP when another room changes to ENGAGED or ASLEEP
+*   2) added support to reset room state when another room changes to ENGAGED or ASLEEP.
+*   3) removed lux threshold support from main settings since this is now available under rules.
+*   4) fixed presence indicator for device display.
+*   5) added support for multiple engaged switches.
+*   6) added undimming for lights.
+*	7) added support for centigrade display.
+*   8) added support for multiple presence sensors.
+*   9) couple of bug fixes.
+*
+*  Version: 0.07.5
+*
+*   DONE:   12/5/2017
+*   1) added support to reset room state from ENGAGED or ASLEEP when another room changes to ENGAGED or ASLEEP
+*   2) added right temperature scale support
+*   3) fixed couple of bugs
+*   4) added support for date filtering in rules
+*
 *  Version: 0.07.3
 *
 *   DONE:   12/2/2017
@@ -221,8 +242,27 @@ def updated()		{
 def initialize()	{
 	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
-		log.info "rooms manager: room: ${child.label}"
+		log.info "rooms manager: room: ${child.label} id: ${child.id}"
 	}
+}
+
+def subscribeChildrenToEngaged(childID,roomID)     {
+    if (!state.onEngaged)
+        state.onEngaged = [:]
+    if (state.onEngaged[(roomID)])
+        state.onEngaged.remove(roomID)
+    state.onEngaged << [(roomID):(childID)]
+}
+
+def notifyAnotherRoomEngaged(roomID)   {
+log.debug "notifyAnotherRoomEngaged: $roomID"
+    def childID = state.onEngaged[(roomID)]
+    if (childID)   {
+        childApps.each	{ child ->
+            if (childID == child.id)
+                child.anotherRoomEngagedEventHandler()
+        }
+    }
 }
 
 def getRoomNames(childID)    {

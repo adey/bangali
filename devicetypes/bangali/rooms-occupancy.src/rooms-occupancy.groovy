@@ -22,6 +22,27 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.08.0
+*
+*   DONE:   12/8/2017
+*   1) added support to reset room state from ENAGED or ASLEEP when another room changes to ENGAGED or ASLEEP
+*   2) added support to reset room state when another room changes to ENGAGED or ASLEEP.
+*   3) removed lux threshold support from main settings since this is now available under rules.
+*   4) fixed presence indicator for device display.
+*   5) added support for multiple engaged switches.
+*   6) added undimming for lights.
+*	7) added support for centigrade display.
+*   8) added support for multiple presence sensors.
+*   9) couple of bug fixes.
+*
+*  Version: 0.07.5
+*
+*   DONE:   12/5/2017
+*   1) added support to reset room state from ENAGED or ASLEEP when another room changes to ENGAGED or ASLEEP
+*   2) added right temperature scale support
+*   3) fixed couple of bugs
+*   4) added support for date filtering in rules
+*
 *  Version: 0.07.3
 *
 *   DONE:   12/2/2017
@@ -214,6 +235,7 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
 		command "turnSwitchesAllOff"
 		command "updateOccupancy", ["string"]
@@ -259,8 +281,8 @@ metadata {
 //		valueTile("statusFiller", "device.statusFiller", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
 //			state "statusFiller", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 //		}
-		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
-			state "timer", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
+		standardTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
+			state "timer", label:'${currentValue}', action: "turnOnAndOffSwitches", backgroundColor:"#ffffff"
 		}
 		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true)	{
 			state("timeFT", label:'${currentValue}', backgroundColor:"#ffffff")
@@ -284,8 +306,8 @@ metadata {
 			state "on", label: '${name}', action: "turnSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC"
 			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 		}
-		standardTile("presenceInd", "device.flexibleInd", width: 1, height: 1, canChangeIcon: true) {
-			state("not present", label:'absent', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
+		standardTile("presenceInd", "device.presenceInd", width: 1, height: 1, canChangeIcon: true) {
+			state("absent", label:'absent', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 			state("present", label:'${name}', icon:"st.presence.tile.present", backgroundColor:"#00A0DC")
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
@@ -390,6 +412,7 @@ def updated()	{  initialize()  }
 
 def	initialize()	{
 	sendEvent(name: "numberOfButtons", value: 9)
+	state.timer = 0
 }
 
 def occupied()	{	stateUpdate('occupied')		}
@@ -533,7 +556,7 @@ def updatePresenceInd(presencePresent)		{
 			sendEvent(name: 'presenceInd', value: 'present', descriptionText: "indicate presence present", isStateChange: true, displayed: false)
 			break
 		case 0:
-			sendEvent(name: 'presenceInd', value: 'not present', descriptionText: "indicate presence not present", isStateChange: true, displayed: false)
+			sendEvent(name: 'presenceInd', value: 'absent', descriptionText: "indicate presence not present", isStateChange: true, displayed: false)
 			break
 		default:
 			sendEvent(name: 'presenceInd', value: 'none', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
@@ -546,23 +569,38 @@ def updateTimeInd(timeFromTo)		{
 }
 
 def updateTemperatureInd(temp)		{
+	def tS = (location.temperatureScale ?: 'F')
 	if (temp == -1)
-		sendEvent(name: 'temperatureInd', value: '--°F', descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: '--°' + tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'temperatureInd', value: temp+'°F', descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: temp+'°' + tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
 }
 
 def turnSwitchesAllOn()		{
-	if (parent)
-		parent.turnSwitchesAllOn()
+	if (parent)		{
+		parent.turnSwitchesAllOnOrOff(true)
+        updateSwitchInd(1)
+	}
 }
 
 def turnSwitchesAllOff()		{
-	if (parent)
-		parent.turnSwitchesAllOff()
+	if (parent)		{
+		parent.turnSwitchesAllOnOrOff(false)
+		updateSwitchInd(0)
+	}
 }
 
-def updateTimer(timer = 0)	{
+def	turnOnAndOffSwitches()	{
+	updateTimer(-1)
+	if (parent)
+		parent.turnOnAndOffSwitches()
+}
+
+def updateTimer(timer = 0)		{
+	if (timer == -1)
+		timer = state.timer
+	else
+		state.timer = timer
 	if (!timer)
 		sendEvent(name: "timer", value: '--', isStateChange: true, displayed: false)
 	else
