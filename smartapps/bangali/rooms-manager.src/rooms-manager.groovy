@@ -321,7 +321,7 @@ def handleAdjRooms()    {
         }
 log.debug "rooms manager: updating room $childAll.label"
 log.debug "$adjMotionSensors"
-        childAll.updateRoom(adjMotionSensor)
+        childAll.updateRoom(adjMotionSensors)
     }
     return true
 }
