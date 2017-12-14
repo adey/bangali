@@ -18,6 +18,19 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.08.3
+*
+*   DONE:   12/12/2017
+*   1) added support for wake and sleep times to calculate level and color temperature.
+*   2) add support to process rules every 15 minutes so switches state/level/color temperature is updated.
+*   3) fix for continuous motion with motion sensor.
+*
+*  Version: 0.08.1
+*
+*   DONE:   12/10/2017
+*   1) added support for auto level which automatically calculates light level and optionally color temperature to
+*       to be set based on local sunrise and sunset times. this does not yet use circadian rhytym based calculation.
+*
 *  Version: 0.08.0
 *
 *   DONE:   12/8/2017
@@ -244,6 +257,7 @@ def initialize()	{
 	childApps.each	{ child ->
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
 	}
+    runEvery15Minutes(processChildSwitches)
 }
 
 def subscribeChildrenToEngaged(childID,roomID)     {
@@ -338,4 +352,13 @@ def getLastStateDate(childID)      {
         }
     }
     return lastStateDate
+}
+
+def processChildSwitches()      {
+    int i = 1
+    childApps.each	{ child ->
+//        runIn(i, child.turnOnAndOffSwitches, [overwrite: false])
+        child.turnOnAndOffSwitches()
+        i = i + 1
+    }
 }

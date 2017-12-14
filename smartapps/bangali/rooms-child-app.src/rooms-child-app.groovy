@@ -21,6 +21,14 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.08.3
+*
+*   DONE:   12/12/2017
+*   1) added support for wake and sleep times to calculate level and color temperature.
+*   2) added support to process rules every 15 minutes so switches state/level/color temperature is updated even
+*       when there is no motion in room but there are switches on.
+*   3) fix for continuous motion with motion sensor.
+*
 *  Version: 0.08.1
 *
 *   DONE:   12/10/2017
@@ -243,7 +251,8 @@ definition	(
 
 preferences {
 	page(name: "roomName", title: "Room Name and Settings")
-//    page(name: "pageOccupiedSettings", title: "Occupied Mode Settings")
+    page(name: "pageOccupiedSettings", title: "Occupied State Settings")
+    page(name: "pageCheckingSettings", title: "Checking State Settings")
     page(name: "pageLuxTimeSettings", title: "Lux & Time Settings")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageRules", title: "Maintain Lighting Rules")
@@ -277,23 +286,12 @@ def roomName()	{
         section		{
             paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WHEN THAT MAKES SENSE."
         }
-        section("MOTION SENSOR CONFIGURATION", hideable: true, hidden: (!motionSensors))		{
-            input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
-            input "noMotion", "number", title: "Motion timeout after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
-            if (noMotion)
-                input "whichNoMotion", "enum", title: "Use which motion event?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
-                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
-            else
-                paragraph "Use which motion event?\nselect number of seconds above to set"
-        }
-        section("Dimming settings before room changes to VACANT.", hideable: true, hidden: (!dimTimer))		{
-            input "dimTimer", "number", title: "Dim lights for how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
-            if (dimTimer)
-                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
-                                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
-            else
-                paragraph "Dim lights by what level?\nselect dim timer above to set"
-        }
+        section("") {
+				href "pageOccupiedSettings", title: "OCCUPIED SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure")
+		}
+        section("") {
+				href "pageCheckingSettings", title: "CHECKING SETTINGS", description: ((dimTimer || dimByLevel) ? "Tap to change existing settings" : "Tap to configure")
+		}
         section("") {
 				href "pageLuxTimeSettings", title: "LUX SETTING", description: (luxAndTimeSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
@@ -322,6 +320,36 @@ def roomName()	{
 	}
 }
 
+private pageOccupiedSettings()      {
+	dynamicPage(name: "pageOccupiedSettings", title: "", install: false, uninstall: false)     {
+        section("MOTION SENSOR CONFIGURATION FOR OCCUPIED STATE:", hideable: false)        {
+            input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
+            if (motionSensors)
+                input "noMotion", "number", title: "Motion timeout after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            else
+                paragraph "Motion timeout after how many seconds?\nselect motion sensor above to set"
+            if (noMotion)
+                input "whichNoMotion", "enum", title: "Use which motion event?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
+                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            else
+                paragraph "Use which motion event?\nselect number of seconds above to set"
+        }
+	}
+}
+
+private pageCheckingSettings()      {
+	dynamicPage(name: "pageCheckingSettings", title: "", install: false, uninstall: false)     {
+        section("CHECKING STATE TIMER BEFORE ROOM CHANGES TO VACANT:", hideable: false)		{
+            input "dimTimer", "number", title: "Checking state timer for how many seconds? (this value should be higher than your motion sensor blind window. recommended value 2 x motion sensor blind window. this also doubles as the dim timer to dim lights for same number of seconds.)", required: false, multiple: false, defaultValue: 5, range: "5..99999", submitOnChange: true
+            if (dimTimer)
+                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
+                                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+            else
+                paragraph "Dim lights by what level?\nselect timer seconds above to set"
+        }
+	}
+}
+
 private pageLuxTimeSettings()       {
 	dynamicPage(name: "pageLuxTimeSettings", title: "", install: false, uninstall: false)      {
 		section("LUX SENSOR FOR USE WITH SETTINGS BELOW AND/OR RULES:", hideable: false)      {
@@ -335,28 +363,42 @@ private pageLuxTimeSettings()       {
 }
 
 private pageAutoLevelSettings()     {
+    def wTime
+    def sTime
+    if (autoColorTempearture && (wakeupTime || sleepTime))     {
+        if (!wakeupTime || !sleepTime)
+            sendNotification("Invalid time range!", [method: "push"])
+        else        {
+            wTime = timeToday(wakeupTime, location.timeZone)
+            sTime = timeToday(sleepTime, location.timeZone)
+            if (wTime > sTime || ((sTime.getTime() - wTime.getTime()) < 18000L))
+                sendNotification("Invalid time range!", [method: "push"])
+        }
+    }
 	dynamicPage(name: "pageAutoLevelSettings", title: "", install: false, uninstall: false)    {
 		section("SETTINGS TO USE WHEN LEVEL IN RULES IS SET TO 'AL':", hideable: false)		{
             if (autoColorTempearture || ruleHasAL)   {
                 input "minLevel", "number", title: "Minimum level?", required: true, multiple: false, defaultValue: 1, range: "1..${maxLevel ?: 100}", submitOnChange: true
                 input "maxLevel", "number", title: "Maximum level?", required: true, multiple: false, defaultValue: 100, range: "$minLevel..100", submitOnChange: true
-//                input "peakTime", "time", title: "Peak time for level?", true: true, multiple: false, defaultValue: "15:00"
             }
             else    {
                 input "minLevel", "number", title: "Minimum Level?", required: false, multiple: false, defaultValue: null, range: "1..${maxLevel ?: 100}", submitOnChange: true
                 input "maxLevel", "number", title: "Maximum Level?", required: false, multiple: false, defaultValue: null, range: "$minLevel..100", submitOnChange: true
-//                input "peakTime", "time", title: "Peak time for level?", required: true, multiple: false, defaultValue: "15:00"
             }
         }
         section("SETTINGS FOR AUTO COLOR TEMPERATURE:", hideable: false)		{
             input "autoColorTempearture", "bool", title: "Auto set color temperature when using 'AL'?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            if (autoColorTempearture)   {
-                input "minKelvin", "number", title: "Minimum kelvin?", required: true, multiple: false, defaultValue: 1900, range: "1500..9000", submitOnChange: true
+            if (autoColorTempearture)       {
+                input "wakeupTime", "time", title: "Wakeup Time?", required: true, multiple: false, submitOnChange: true
+                input "sleepTime", "time", title: "Sleep Time?", required: true, multiple: false, submitOnChange: true
+                input "minKelvin", "number", title: "Minimum kelvin?", required: true, multiple: false, defaultValue: 1900, range: "1500.${maxKelvin ?: 9000}", submitOnChange: true
                 input "maxKelvin", "number", title: "Maximum kelvin?", required: true, multiple: false, defaultValue: 6500, range: "$minKelvin..9000", submitOnChange: true
             }
             else    {
-                paragraph "Minimum kelvin?\nselect switches above to set"
-                paragraph "Maximum kelvin?\nselect switches rooms above to set"
+                paragraph "Wakeup time?\nenable auto color temperature above"
+                paragraph "Sleep time?\nenable auto color temperature above"
+                paragraph "Minimum kelvin?\nenable auto color temperature above"
+                paragraph "Maximum kelvin?\nenable auto color temperature above"
             }
         }
     }
@@ -393,8 +435,8 @@ private pageRules()     {
                         ruleDesc = (thisRule.piston ? "$ruleDesc Piston=$thisRule.piston" : "$ruleDesc")
                         ruleDesc = (thisRule.actions ? "$ruleDesc Routines=$thisRule.actions" : "$ruleDesc")
                         if (thisRule.fromTimeType && thisRule.toTimeType)        {
-                            def ruleFromTimeHHmm = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime)) : '')
-                            def ruleToTimeHHmm = (thisRule.toTime ? format24hrTime(timeToday(thisRule.toTime)) : '')
+                            def ruleFromTimeHHmm = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime, location.timeZone)) : '')
+                            def ruleToTimeHHmm = (thisRule.toTime ? format24hrTime(timeToday(thisRule.toTime, location.timeZone)) : '')
                             ruleDesc = (thisRule.fromTimeType == timeTime() ? "$ruleDesc From=$ruleFromTimeHHmm" : (thisRule.fromTimeType == timeSunrise() ? "$ruleDesc From=Sunrise" : "$ruleDesc From=Sunset"))
                             ruleDesc = (thisRule.toTimeType == timeTime() ? "$ruleDesc To=$ruleToTimeHHmm" : (thisRule.toTimeType == timeSunrise() ? "$ruleDesc To=Sunrise" : "$ruleDesc To=Sunset"))
                         }
@@ -498,7 +540,7 @@ private pageRule(params)   {
             input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
             input "switchesOn$ruleNo", "capability.switch", title: "Turn ON which switches?", required: false, multiple: true
             input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
-                    options: [[AL:"AL"],[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+                    options: [[AL:"Auto Level (and color temperature)"],[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
             input "setColorTo$ruleNo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null, options: [
                             			                                                 ["Soft White":"Soft White - Default"],
                             					                                         ["White":"White - Concentrate"],
@@ -553,7 +595,7 @@ private pageEngagedSettings() {
             paragraph "SETTINGS ARE IN ORDER OF PRIORITY IN WHICH THEY ARE CHECKED. FOR EXAMPLE, IF THERE IS BOTH AN ENGAGED SWITCH AND CONTACT SENSOR THE ENGAGED SWITCH WHEN ON WILL TAKE PRIORITY OVER THE CONTACT SENSOR BEING OPEN."
             if (motionSensors)
                 input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
-                                                                            options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
+                                                                options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
             input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
@@ -569,7 +611,7 @@ private pageEngagedSettings() {
                 paragraph "Arrival or Departure or Both??\nselect presence sensor above to set"
             input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
             input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false
-            input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is 'ENGAGED'?", required: false, multiple: false, defaultValue: null, range: "5..99999"
+            input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "anotherRoomEngaged", "enum", title: "Reset ENGAGED state when another room changes to ENGAGED? If yes, which room?", required: false, multiple: false, defaultValue: null, options: roomDevices, submitOnChange: true
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
         }
@@ -672,7 +714,7 @@ private pageAllSettings() {
             paragraph "Dim timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
 //            paragraph "Lux sensor:\t\t\t\t${(luxSensor ? true : '')}\nLux threshold:\t\t\t${(luxThreshold ?: '')}\nTurn off last switches:\t$allSwitchesOff"
             paragraph "Lux sensor:\t\t${(luxSensor ? true : '')}"
-            paragraph "Min level:\t\t\t$minLevel\nMax level:\t\t\t$maxLevel\nSet kelvin also?\t$autoColorTempearture\nMin kelvin:\t\t\t$minKelvin\nMax kelvin:\t\t$maxKelvin"
+            paragraph "Min level:\t\t\t$minLevel\nMax level:\t\t\t$maxLevel\nSet kelvin also?\t$autoColorTempearture\nWakeup time:\t\t${format24hrTime(timeToday(wakeupTime, location.timeZone))}\nSleep time:\t\t${format24hrTime(timeToday(sleepTime, location.timeZone))}\nMin kelvin:\t\t\t$minKelvin\nMax kelvin:\t\t$maxKelvin"
             paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == 3 ? 'Light traffic' : (busyCheck == 5 ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(buttonIs ?: '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\n\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
             paragraph "Asleep sensor:\t${(asleepSensor ? true : '')}\nAsleep timeout:\t${(noAsleep ? noAsleep + ' hours' : '')}\n\nAsleep switches:\t${(nightSwitches ? true : '')}\nNight level:\t\t${(nightSetLevelTo ?: '')}\nNight button:\t\t${(nightButton ? true : '')}\nButton number:\t${(!nightButton ? '' : (nightButtonIs ?: ''))}"
             paragraph "Away modes:\t\t\t\t${(awayModes ? awayModes.size() : '')}\nPause modes:\t\t\t\t${(pauseModes ? pauseModes.size() : '')}\nTurn off all switches:\t$allSwitchesOff\nDay of week:\t\t\t\t${(dayOfWeek ? dOW[dayOfWeek] : 'All days')}"
@@ -698,8 +740,8 @@ private pageAllSettings() {
                     }
                 }
                 if (thisRule.fromTimeType && thisRule.toTimeType)        {
-                    def ruleFromTimeHHmm = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime)) : '')
-                    def ruleToTimeHHmm = (thisRule.toTime ? format24hrTime(timeToday(thisRule.toTime)) : '')
+                    def ruleFromTimeHHmm = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime, location.timeZone)) : '')
+                    def ruleToTimeHHmm = (thisRule.toTime ? format24hrTime(timeToday(thisRule.toTime, location.timeZone)) : '')
                     ruleDesc = (thisRule.fromTimeType == timeTime() ? "$ruleDesc From=$ruleFromTimeHHmm" : (thisRule.fromTimeType == timeSunrise() ? "$ruleDesc From=Sunrise" : "$ruleDesc From=Sunset"))
                     ruleDesc = (thisRule.toTimeType == timeTime() ? "$ruleDesc To=$ruleToTimeHHmm" : (thisRule.toTimeType == timeSunrise() ? "$ruleDesc To=Sunrise" : "$ruleDesc To=Sunset"))
                 }
@@ -758,7 +800,7 @@ def updateRoom(adjMotionSensors)     {
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
     state.switchesHasColorTemperature = [:]
-    state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 0)
+    state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 5) // forces minimum of 5 seconds to allow for checking state
     state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel as Integer : null)
     if (engagedSwitch)      {
     	subscribe(engagedSwitch, "switch.on", engagedSwitchOnEventHandler)
@@ -1033,7 +1075,7 @@ def	modeEventHandler(evt)	{
     if (state.dayOfWeek && !(checkRunDay()))
         return
 	if (awayModes && awayModes.contains(evt.value))    {
-    	roomVacant()
+    	roomVacant(true)
         return
     }
     else    {
@@ -1373,10 +1415,19 @@ def luxEventHandler(evt)    {
 //private luxRose(currentLux, luxThreshold)   {   return (currentLux > luxThreshold && state.previousLux <= luxThreshold)  }
 
 // pass in child and roomState???
-def roomVacant()	  {
+def roomVacant(forceVacant = false)	  {
     ifDebug("roomVacant")
-	def child = getChildDevice(getRoom())
+
+    def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
+    if (!forceVacant && motionSensors && ['engaged', 'occupied', 'checking'].contains(roomState))      {
+        def motionValue = motionSensors.currentValue("motion")
+        if (motionValue.contains('active'))     {
+            motionActiveEventHandler(null)
+            return
+        }
+    }
+
     def newState = null
     if (['engaged', 'occupied'].contains(roomState))    {
         if (state.dimTimer)     newState = 'checking';
@@ -1418,10 +1469,10 @@ def handleSwitches(oldState = null, newState = null)	{
         updateAsleepChildTimer(0)
         nightSwitchesOff()
     }
-    else
+    else    {
         unscheduleAll("handle switches")
-    if (oldState == 'checking' && ['engaged', 'occupied', 'vacant'].contains(newState))      {
-        unDimLights()
+        if (oldState == 'checking')
+            unDimLights()
     }
     def child = getChildDevice(getRoom())
     if (['engaged', 'occupied', 'asleep', 'vacant'].contains(newState))     {
@@ -1597,19 +1648,23 @@ private switchesOnOff(thisRule)       {
         def colorTemperature = null
         def level = null
         thisRule.switchesOn.each      {
-            it.on();
+            if (it.currentSwitch != 'on')
+                it.on();
             def itID = it.getId()
-            if (thisRule.color && state.switchesHasColor[itID])
-                it.setColor(thisRule.hue)
+            if (thisRule.color && state.switchesHasColor[itID])     {
+                if (it.currentColor != thisRule.hue)
+                    it.setColor(thisRule.hue);
+            }
             else
                 if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTempearture)) && state.switchesHasColorTemperature[itID])       {
                     if (!colorTemperature)      {
                         if (thisRule.level == 'AL' && autoColorTempearture)
-                            colorTemperature = calculateKelvin() as Integer
+                            colorTemperature = calculateLevelOrKelvin(true) as Integer
                         else
                             colorTemperature = thisRule.colorTemperature as Integer
                     }
-                    it.setColorTemperature(colorTemperature)
+                    if (it.currentColorTemperature != colorTemperature)
+                        it.setColorTemperature(colorTemperature)
                 }
             if (thisRule.level && state.switchesHasLevel[itID])     {
                 if (!level)     {
@@ -1618,69 +1673,150 @@ private switchesOnOff(thisRule)       {
                     else
                         level = thisRule.level as Integer
                 }
-                it.setLevel(level)
+                if (it.currentLevel != level)
+                    it.setLevel(level)
             }
         }
         def child = getChildDevice(getRoom())
         child.updateSwitchInd(1)
     }
     if (thisRule.switchesOff)
-        thisRule.switchesOff.off()
+        if (thisRule.switchesOff.currentSwitch.contains('on'))
+            thisRule.switchesOff.off()
 }
 
 private runActions(thisRule)    {
-    if (thisRule.actions)   {
-        thisRule.actions.each   {
-            location.helloHome?.execute(it)
+    if (thisRule.actions)   {  thisRule.actions.each  {  location.helloHome?.execute(it)  }  }
+}
+
+private executePiston(thisRule)    {  if (thisRule.piston)  webCoRE_execute(thisRule.piston)  }
+
+private calculateLevelOrKelvin(kelvin = false)       {
+    ifDebug("calculateLevelOrKelvin")
+    long timeNow = now()
+    def dateNow = new Date(timeNow)
+
+    def wTime = timeTodayAfter(sleepTime, wakeupTime, location.timeZone)
+    def sTime = timeToday(sleepTime, location.timeZone)
+//    if (wTime > sTime)      return maxKelvin;
+
+    if (kelvin)     {
+        if (state.kelvin && state.kelvin.kelvin && dateNow.getTime() < state.kelvin.time && wTime == state.kelvin.wTime && sTime == state.kelvin.sTime &&
+           minKelvin == state.kelvin.minKelvin && maxKelvin == state.kelvin.maxKelvin)
+           return state.kelvin.kelvin
+        else
+            state.kelvin = [time: (dateNow.getTime() + 600000L), wTime: wTime, sTime: sTime, minKelvin: minKelvin, maxKelvin: maxKelvin]
+    }
+    else        {
+        if (state.level && state.level.level && dateNow.getTime() < state.level.time && wTime == state.level.wTime && sTime == state.level.sTime &&
+           minLevel == state.level.minLevel && maxLevel == state.level.maxLevel)
+           return state.level.level
+        else
+            state.level = [time: (dateNow.getTime() + 600000L), wTime: wTime, sTime: sTime, minLevel: minLevel, maxLevel: maxLevel]
+    }
+
+    def wTimeMinus1hr = new Date((wTime.getTime() - 3600000L))
+    def sTimeMinus2hr = new Date((sTime.getTime() - 7200000L))
+
+//    ifDebug("now: $dateNow | wTimeMinus1hr: $wTimeMinus1hr | sTimeMinus2hr: $sTimeMinus2hr")
+
+    if (timeOfDayIsBetween(sTimeMinus2hr, wTimeMinus1hr, dateNow, location.timeZone))     {
+        ifDebug("in sleep hours")
+        if (kelvin)     {
+            state.kelvin << [kelvin: minKelvin]
+            return minKelvin
+        }
+        else        {
+            state.level << [level: minLevel]
+            return minLevel
         }
     }
-}
 
-private executePiston(thisRule)    {
-    if (thisRule.piston)
-        webCoRE_execute(thisRule.piston)
-}
+    wTime = timeToday(wakeupTime, location.timeZone)
+    wTimeMinus1hr = new Date((wTime.getTime() - 3600000L))
 
-private calculateKelvin()       {
-    long timeNow = now()
-    def d = new Date(timeNow)
-    def z11 = d.format("HH", location.timeZone) as Integer
-    def z12 = d.format("mm", location.timeZone) as Integer
-    long timeIs = (z11 * 3600L) + (z12 * 60L)
-    def sunriseAndSunset = getSunriseAndSunset()
+    def z1 = dateNow.format("HH", location.timeZone) as Integer
+    def z2 = dateNow.format("mm", location.timeZone) as Integer
+    long timeIs = (z1 * 3600L) + (z2 * 60L)
+
+/*    def sunriseAndSunset = getSunriseAndSunset()
 //    ifDebug("${new Date(sunriseAndSunset.sunrise.getTime())} | ${new Date(sunriseAndSunset.sunset.getTime())}")
     def sunriseTime = sunriseAndSunset.sunrise.getTime()
     def sunsetTime = sunriseAndSunset.sunset.getTime()
     long sunDiff = ((sunsetTime - sunriseTime) / 2L)
-    d = new Date(sunriseTime + sunDiff)
-//    ifDebug("peakTime: $d")
-    def z21 = d.format("HH", location.timeZone) as Integer
-    def z22 = d.format("mm", location.timeZone) as Integer
-    long time1500 = (z21 * 3600L) + (z22 * 60L)
-    d = timeToday("23:59", location.timeZone)
-    def z31 = d.format("HH", location.timeZone) as Integer
-    def z32 = d.format("mm", location.timeZone) as Integer
-    long time2359 = (z31 * 3600L) + (z32 * 60L)
-//    ifDebug("$z11, $z12, $z21, $z22, $z31, $z32")
+    def d = new Date(sunriseTime + sunDiff) */
 
-    long levelKelvinDiff = maxKelvin - minKelvin
+//    ifDebug("now: $dateNow | wTimeMinus1hr: $wTimeMinus1hr | sTimeMinus2hr: $sTimeMinus2hr")
+
+    long sunDiff = (sTimeMinus2hr.getTime() - wTimeMinus1hr.getTime()) / 2L
+    def d = new Date(wTimeMinus1hr.getTime() + sunDiff)
+
+    def peakMinus1hr = new Date((d.getTime() - 3600000L))
+    def peakPlus1hr = new Date((d.getTime() + 3600000L))
+
+//    ifDebug("now: $dateNow | peakMinus1hr: $peakMinus1hr | peakPlus1hr: $peakPlus1hr")
+
+    if (timeOfDayIsBetween(peakMinus1hr, peakPlus1hr, dateNow, location.timeZone))     {
+        ifDebug("in peak hours")
+        if (kelvin)     {
+            state.kelvin << [kelvin: maxKelvin]
+            return maxKelvin
+        }
+        else        {
+            state.level << [level: maxLevel]
+            return maxLevel
+        }
+    }
+
+    long maxMinDiff = (kelvin ? (maxKelvin - minKelvin) : (maxLevel - minLevel))
     double cDD
     int cD
-    if (timeIs < time1500)      {
-        cDD = timeIs / time1500
-        cDD = cDD * levelKelvinDiff
+    long timeStart
+    long timeEnd
+    if (dateNow < peakMinus1hr)     {
+        z1 = wTimeMinus1hr.format("HH", location.timeZone) as Integer
+        z2 = wTimeMinus1hr.format("mm", location.timeZone) as Integer
+        timeStart = (z1 * 3600L) + (z2 * 60L)
+
+        z1 = peakMinus1hr.format("HH", location.timeZone) as Integer
+        z2 = peakMinus1hr.format("mm", location.timeZone) as Integer
+        timeEnd = (z1 * 3600L) + (z2 * 60L)
+
+        cDD = (timeIs - timeStart) / (timeEnd - timeStart)
+        cDD = cDD * maxMinDiff
     }
-    else    {
-        cDD = timeIs / time2359
-        cDD = cDD * levelKelvinDiff
-        cDD = levelKelvinDiff - cDD
+    else        {
+        z1 = peakPlus1hr.format("HH", location.timeZone) as Integer
+        z2 = peakPlus1hr.format("mm", location.timeZone) as Integer
+        timeStart = (z1 * 3600L) + (z2 * 60L)
+
+        z1 = sTimeMinus2hr.format("HH", location.timeZone) as Integer
+        z2 = sTimeMinus2hr.format("mm", location.timeZone) as Integer
+        timeEnd = (z1 * 3600L) + (z2 * 60L)
+
+        cDD = (timeIs - timeStart) / (timeEnd - timeStart)
+        cDD = cDD * maxMinDiff
+        cDD = maxMinDiff - cDD
     }
-    cD = cDD + minKelvin
-    ifDebug("circadian Daylight kelvin: $cD")
+
+//    ifDebug("timeStart: $timeStart | timeEnd: $timeEnd | timeIs: $timeIs")
+
+    if (kelvin)     {
+        cD = cDD + minKelvin
+        state.kelvin << [kelvin: cD]
+    }
+    else        {
+        cD = cDD + minLevel
+        state.level << [level: cD]
+    }
+    ifDebug("circadian Daylight ${(kelvin ? 'kelvin' : 'level')}: $cD")
     return cD
 }
 
 private calculateLightLevel()       {
+    if (autoColorTempearture)
+        return calculateLevelOrKelvin(false)
+
     long timeNow = now()
     def d = new Date(timeNow)
     def z11 = d.format("HH", location.timeZone) as Integer
@@ -1715,25 +1851,46 @@ private calculateLightLevel()       {
         lLD = levelDiff - lLD
     }
     lD = lLD + minLevel
-    ifDebug("circadian Daylight level: $lD")
+    ifDebug("Daylight level: $lD")
     return lD
+}
+
+private whichSwitchesAreOn()   {
+    ifDebug("whichSwitchesAreOn")
+    def switchesThatAreOn = []
+    def switchesThatAreOnID = []
+    for (def i = 1; i < 11; i++)      {
+        def ruleNo = String.valueOf(i)
+        def thisRule = getRule(ruleNo)
+        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
+            thisRule.switchesOn.each        {
+                def itID = it.getId()
+                if (it.currentSwitch == 'on' && !(switchesThatAreOnID.contains(itID)))    {
+                    switchesThatAreOn << it
+                    switchesThatAreOnID << itID
+                }
+            }
+        }
+    }
+    return switchesThatAreOn
 }
 
 def dimLights()     {
     ifDebug("dim lights")
     state.preDimLevel = [:]
-    if (!state.dimTimer || !state.dimByLevel || !state.previousRuleNo)      return;
-    def thisRule = getRule(state.previousRuleNo)
-    if (!thisRule.switchesOn)       return;
-    thisRule.switchesOn.each      {
+    if (!state.dimTimer || !state.dimByLevel)       return;
+//    if (!state.dimTimer || !state.dimByLevel || !state.previousRuleNo)      return;
+//    def thisRule = getRule(state.previousRuleNo)
+//    if (!thisRule.switchesOn)       return;
+    def switchesThatAreOn = whichSwitchesAreOn()
+    switchesThatAreOn.each      {
         if (it.currentValue("switch") == 'on')      {
-            def currentLevel = 0
             if (it.hasCommand("setLevel"))     {
-                currentLevel = it.currentValue("level")
+                def currentLevel = it.currentValue("level")
                 def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
                 it.setLevel(newLevel)
+                state.preDimLevel << [(it.getId()):currentLevel]
             }
-            state.preDimLevel << [(it.getId()):currentLevel]
         }
     }
 
@@ -1767,19 +1924,26 @@ def dimLights()     {
 //def forceSwitches2Off()     {  switches2Off(allSwitchesOff)  }
 
 def unDimLights()       {
-    if (!dimTimer || !dimByLevel || !state.previousRuleNo || !state.preDimLevel)      return;
-    updateChildTimer(0)
-    def thisRule = getRule(state.previousRuleNo)
-    if (thisRule.level)         return;
-    thisRule.switchesOn.each      {
+    ifDebug("unDimLights")
+    ifDebug("state.preDimLevel: $state.preDimLevel")
+//    if (!dimTimer || !dimByLevel || !state.previousRuleNo || !state.preDimLevel)      return;
+    if (!dimTimer || !dimByLevel || !state.preDimLevel)      return;
+//    def thisRule = getRule(state.previousRuleNo)
+//    if (thisRule.level)         return;
+    def switchesThatAreOn = whichSwitchesAreOn()
+    ifDebug("undim switchesThatAreOn: $switchesThatAreOn")
+    switchesThatAreOn.each      {
         if (it.currentValue("switch") == 'on')      {
             if (it.hasCommand("setLevel"))     {
                 def newLevel = state.preDimLevel[(it.getId())]
+                ifDebug("newLevel: $newLevel")
                 if (newLevel > 0)
                     it.setLevel(newLevel)
             }
         }
     }
+    updateChildTimer(0)
+    state.preDimLevel = [:]
 }
 
 def switches2Off()       {
@@ -1791,7 +1955,12 @@ def switches2Off()       {
         def child = getChildDevice(getRoom())
         child.updateSwitchInd(isAnySwitchOn())
     }*/
-    def i = 1
+    def switchesThatAreOn = whichSwitchesAreOn()
+    switchesThatAreOn.each      {
+        if (it.currentSwitch != 'off')
+            it.off()
+    }
+/*    def i = 1
     for (; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
         def thisRule = getRule(ruleNo)
@@ -1800,7 +1969,7 @@ def switches2Off()       {
                 it.off()
             }
         }
-    }
+    }*/
 }
 
 private previousStateStack(previousState)    {
@@ -2257,7 +2426,7 @@ private updateTimeFromToInd()     {
     }
 }
 
-private format24hrTime(timeToFormat = now(), format = "HH:mm")		{
+private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
     return timeToFormat.format("HH:mm", location.timeZone)
 }
 
@@ -2321,8 +2490,8 @@ def turnSwitchesAllOnOrOff(turnOn)     {
     ifDebug("turnSwitchesAllOnOrOff")
     def switches = getAllSwitches()
     if (switches)   {
-        if (turnOn)     switches.each   {  it.on()  }
-        else            switches.each   {  it.off()  }
+        if (turnOn)     switches.each   {  if (it.currentSwitch != 'on')   it.on()  }
+        else            switches.each   {  if (it.currentSwitch != 'off')  it.off()  }
     }
 }
 
@@ -2378,7 +2547,8 @@ def	nightButtonPushedEventHandler(evt)     {
 
 def dimNightLights()     {
     nightSwitches.each      {
-        it.on()
+        if (it.currentSwitch != 'on')
+            it.on()
         if (state.nightSetLevelTo && state.switchesHasLevel[it.getId()])
             it.setLevel(state.nightSetLevelTo)
     }

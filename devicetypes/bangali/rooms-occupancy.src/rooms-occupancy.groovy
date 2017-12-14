@@ -22,6 +22,20 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.08.3
+*
+*   DONE:   12/12/2017
+*   1) added support for wake and sleep times to calculate level and color temperature.
+*   2) added support to process rules every 15 minutes so switches state/level/color temperature is updated even
+*       when there is no motion in room but there are switches on.
+*   3) fix for continuous motion with motion sensor.
+*
+*  Version: 0.08.1
+*
+*   DONE:   12/10/2017
+*   1) added support for auto level which automatically calculates light level and optionally color temperature to
+*       to be set based on local sunrise and sunset times. this does not yet use circadian rhytym based calculation.
+*
 *  Version: 0.08.0
 *
 *   DONE:   12/8/2017
@@ -281,7 +295,7 @@ metadata {
 //		valueTile("statusFiller", "device.statusFiller", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
 //			state "statusFiller", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 //		}
-		standardTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
+		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
 			state "timer", label:'${currentValue}', action: "turnOnAndOffSwitches", backgroundColor:"#ffffff"
 		}
 		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true)	{
