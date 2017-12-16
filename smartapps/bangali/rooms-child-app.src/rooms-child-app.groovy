@@ -427,14 +427,14 @@ private pageAutoLevelSettings()     {
             if (autoColorTempearture)       {
                 input "wakeupTime", "time", title: "Wakeup Time?", required: true, multiple: false, submitOnChange: true
                 input "sleepTime", "time", title: "Sleep Time?", required: true, multiple: false, submitOnChange: true
-                input "minKelvin", "number", title: "Minimum kelvin?", required: true, multiple: false, defaultValue: 1900, range: "1500.${maxKelvin ?: 9000}", submitOnChange: true
+                input "minKelvin", "number", title: "Minimum kelvin?", required: true, multiple: false, defaultValue: 1900, range: "1500..${maxKelvin?:9000}", submitOnChange: true
                 input "maxKelvin", "number", title: "Maximum kelvin?", required: true, multiple: false, defaultValue: 6500, range: "$minKelvin..9000", submitOnChange: true
             }
             else    {
-                paragraph "Wakeup time?\nenable auto color temperature above"
-                paragraph "Sleep time?\nenable auto color temperature above"
-                paragraph "Minimum kelvin?\nenable auto color temperature above"
-                paragraph "Maximum kelvin?\nenable auto color temperature above"
+                paragraph "Wakeup time?\nenable auto color temperature above to set"
+                paragraph "Sleep time?\nenable auto color temperature above to set"
+                paragraph "Minimum kelvin?\nenable auto color temperature above to set"
+                paragraph "Maximum kelvin?\nenable auto color temperature above to set"
             }
         }
     }
@@ -1031,7 +1031,7 @@ def updateRulesToState()    {
 //            state.rules << ["$ruleNo":[ruleNo:i, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek, luxThreshold:ruleLuxThreshold,
 //                                       fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime,
 //                                       level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo, colorTemperature:ruleSetColorTemperatureTo]]
-            if (!state.rules)   state.rules = [:]
+            if (!state.rules)   state.rules = [:];
             state.rules << ["$ruleNo":[isRule:true]]
 //            if (thisRule.luxThreshold)      state.luxCheck = true
 //            state.rules = true
