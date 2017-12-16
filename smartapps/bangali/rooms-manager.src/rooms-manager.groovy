@@ -18,6 +18,13 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.08.5
+*
+*   DONE:   12/16/2017
+*   1) added support for arrival and departure announcement.
+*   2) added support for speaker control through rules and use of speaker to set a room to engaged.
+*   3) bug fix to stop truncating temperature to integer.
+*
 *  Version: 0.08.3
 *
 *   DONE:   12/12/2017
@@ -225,6 +232,10 @@
 *
 *****************************************************************************************************************/
 
+private isDebug()   {  return true  }
+
+private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
+
 definition (
     name: "rooms manager",
     namespace: "bangali",
@@ -238,10 +249,42 @@ definition (
 )
 
 preferences	{
-	page(name: "mainPage", title: "Installed Rooms", install: true, uninstall: true, submitOnChange: true) {
+    page(name: "mainPage", content: "mainPage")
+    page(name: "pageSpeakerSettings", content: "pageSpeakerSettings")
+}
+
+def mainPage()  {
+    dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings") {
 		section {
             app(name: "Rooms Manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
+	}
+}
+
+def pageSpeakerSettings()   {
+    def i = (presenceSensors ? presenceSensors.size() : 0)
+    def str = (presenceNames ? presenceNames.split(',') : [])
+    def j = str.size()
+    if (i != j)
+    sendNotification("Count of presense sensors and names do not match!", [method: "push"])
+    dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
+		section   {
+            input "speakerAnnounce", "bool", title: "Announce when presence sensors return?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            if (speakerAnnounce)    {
+                input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
+                input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
+                input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: true, multiple: true
+                input "speakerVolume", "number", title: "Speaker volume?", required: true, multiple: false, defaultValue: 33, range: "1..100"
+                input "contactSensors", "capability.contactSensor", title: "Which contact sensors?", required: true, multiple: true
+            }
+            else    {
+                paragraph "Which presence sensors?\nselect announce to set."
+                paragraph "Comma delmited names?\nselect announce to set."
+                paragraph "Which speakers?\nselect announce to set."
+                paragraph "Speaker volume?\nselect announce to set."
+                paragraph "Which contact sensors?\nselect announce to set."
+            }
+        }
 	}
 }
 
@@ -249,7 +292,27 @@ def installed()		{	initialize()	}
 
 def updated()		{
 	unsubscribe()
+    unschedule()
 	initialize()
+    if (speakerAnnounce)    {
+        def i = presenceSensors.size()
+        def str = presenceNames.split(',')
+        def j = str.size()
+        ifDebug("i: $i | str: $str | j: $j")
+        if (i == j)     {
+            i = 0
+            presenceSensors.each        {
+                state.whoCameHome.personNames << [(it.getId()):(i <= j ? str[i].trim() : '')]
+                i = i + 1
+            }
+            if (presenceSensors)     {
+                subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
+                subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
+            }
+            subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
+        }
+    }
+    runEvery15Minutes(processChildSwitches)
 }
 
 def initialize()	{
@@ -257,7 +320,65 @@ def initialize()	{
 	childApps.each	{ child ->
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
 	}
-    runEvery15Minutes(processChildSwitches)
+    state.whoCameHome = [:]
+    state.whoCameHome.personsIn = []
+    state.whoCameHome.personsOut = []
+    state.whoCameHome.personNames = [:]
+}
+
+def	presencePresentEventHandler(evt)     {
+    whoCameHome(evt.device)
+}
+
+def	presenceNotPresentEventHandler(evt)     {
+    whoCameHome(evt.device, true)
+}
+
+def contactClosedEventHandler(evt = null)     {
+    if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
+    def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
+    def i = str.size()
+    def j = 1
+    def persons = (evt ? 'Welcome home ' : '')
+    str.each      {
+        persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
+        j = j + 1
+    }
+    persons = persons + (evt ? '' : ' left home')
+    speakerDevices.playTextAndResume(persons, speakerVolume as Integer)
+    if (evt)
+        state.whoCameHome.personsIn = []
+    else
+        state.whoCameHome.personsOut = []
+}
+
+def whoCameHome(presenceSensor, left = false)      {
+    if (!presenceSensor)      return;
+    def presenceName = state.whoCameHome.personNames[(presenceSensor.getId())]
+    if (!presenceName)      return;
+    ifDebug("presenceName: $presenceName")
+/*    if (left)       {
+        if (state.whoCameHome.persons && state.whoCameHome.persons.contains(presenceName))
+            state.whoCameHome.persons.remove(presenceName)
+        return
+    }*/
+    long nowTime = now()
+    long howLong
+    if (!left)      {
+        if (state.whoCameHome.personsIn)      {
+            howLong = nowTime - state.whoCameHome.lastOne
+            if (howLong > 300000L)
+                state.whoCameHome.personsIn = []
+        }
+        state.whoCameHome.lastOne = nowTime
+        if (!state.whoCameHome.personsIn || !(state.whoCameHome.personsIn.contains(presenceName)))
+            state.whoCameHome.personsIn << presenceName
+    }
+    else    {
+        if (!state.whoCameHome.personsOut || !(state.whoCameHome.personsOut.contains(presenceName)))
+            state.whoCameHome.personsOut << presenceName
+        runIn(30, contactClosedEventHandler)
+    }
 }
 
 def subscribeChildrenToEngaged(childID,roomID)     {
