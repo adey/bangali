@@ -276,7 +276,7 @@ preferences {
 def roomName()	{
     def roomNames = parent.getRoomNames(app.id)
     def luxAndTimeSettings = (luxSensor || timeSettings)
-    def autoLevelSettings = (minLevel || maxLevel || state.ruleHasAL || autoColorTempearture)
+    def autoLevelSettings = (minLevel || maxLevel || state.ruleHasAL || autoColorTemperature)
     def timeSettings = (fromTimeType || toTimeType)
     def adjRoomSettings = (adjRooms ? true : false)
     def miscSettings = (awayModes || pauseModes || dayOfWeek)
@@ -400,7 +400,7 @@ private pageAutoLevelSettings()     {
     ifDebug("pageAutoLevelSettings")
     def wTime
     def sTime
-    if (autoColorTempearture && (wakeupTime || sleepTime))     {
+    if (autoColorTemperature && (wakeupTime || sleepTime))     {
         if (!wakeupTime || !sleepTime)
             sendNotification("Invalid time range!", [method: "push"])
         else        {
@@ -412,19 +412,9 @@ private pageAutoLevelSettings()     {
     }
     updateRulesToState()
 	dynamicPage(name: "pageAutoLevelSettings", title: "", install: false, uninstall: false)    {
-		section("SETTINGS TO USE WHEN LEVEL IN RULES IS SET TO 'AL':", hideable: false)		{
-            if (autoColorTempearture || state.ruleHasAL)   {
-                input "minLevel", "number", title: "Minimum level?", required: true, multiple: false, defaultValue: 1, range: "1..${maxLevel ?: 100}", submitOnChange: true
-                input "maxLevel", "number", title: "Maximum level?", required: true, multiple: false, defaultValue: 100, range: "$minLevel..100", submitOnChange: true
-            }
-            else    {
-                input "minLevel", "number", title: "Minimum Level?", required: false, multiple: false, defaultValue: null, range: "1..${maxLevel ?: 100}", submitOnChange: true
-                input "maxLevel", "number", title: "Maximum Level?", required: false, multiple: false, defaultValue: null, range: "$minLevel..100", submitOnChange: true
-            }
-        }
-        section("SETTINGS FOR AUTO COLOR TEMPERATURE:", hideable: false)		{
-            input "autoColorTempearture", "bool", title: "Auto set color temperature when using 'AL'?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            if (autoColorTempearture)       {
+        section("SETTINGS FOR AUTO COLOR TEMPERATURE WHEN RULE LEVEL IS SET TO 'AL':", hideable: false)		{
+            input "autoColorTemperature", "bool", title: "Auto set color temperature when using 'AL'?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            if (autoColorTemperature)       {
                 input "wakeupTime", "time", title: "Wakeup Time?", required: true, multiple: false, submitOnChange: true
                 input "sleepTime", "time", title: "Sleep Time?", required: true, multiple: false, submitOnChange: true
                 input "minKelvin", "number", title: "Minimum kelvin?", required: true, multiple: false, defaultValue: 1900, range: "1500..${maxKelvin?:9000}", submitOnChange: true
@@ -435,6 +425,16 @@ private pageAutoLevelSettings()     {
                 paragraph "Sleep time?\nenable auto color temperature above to set"
                 paragraph "Minimum kelvin?\nenable auto color temperature above to set"
                 paragraph "Maximum kelvin?\nenable auto color temperature above to set"
+            }
+        }
+		section("SETTINGS FOR AUTO LEVEL WHEN RULE LEVEL IS SET TO 'AL':", hideable: false)		{
+            if (autoColorTemperature || state.ruleHasAL)   {
+                input "minLevel", "number", title: "Minimum level?", required: true, multiple: false, defaultValue: 1, range: "1..${maxLevel ?: 100}", submitOnChange: true
+                input "maxLevel", "number", title: "Maximum level?", required: true, multiple: false, defaultValue: 100, range: "$minLevel..100", submitOnChange: true
+            }
+            else    {
+                input "minLevel", "number", title: "Minimum Level?", required: false, multiple: false, defaultValue: null, range: "1..${maxLevel ?: 100}", submitOnChange: true
+                input "maxLevel", "number", title: "Maximum Level?", required: false, multiple: false, defaultValue: null, range: "$minLevel..100", submitOnChange: true
             }
         }
     }
@@ -593,7 +593,7 @@ private pageRule(params)   {
                             					                                         ["Daylight":"Daylight - Energize"],
                             					                                         ["Warm White":"Warm White - Relax"],
                             					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
-            if (settings["setLevelTo$ruleNo"] == 'AL' && autoColorTempearture)
+            if (settings["setLevelTo$ruleNo"] == 'AL' && autoColorTemperature)
                 paragraph "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)\ncannot set when level is set to 'AL'."
             else
                 input "setColorTemperatureTo$ruleNo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
@@ -765,7 +765,7 @@ private pageAllSettings() {
             paragraph "Dim timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
 //            paragraph "Lux sensor:\t\t\t\t${(luxSensor ? true : '')}\nLux threshold:\t\t\t${(luxThreshold ?: '')}\nTurn off last switches:\t$allSwitchesOff"
             paragraph "Lux sensor:\t\t${(luxSensor ? true : '')}"
-            paragraph "Min level:\t\t\t${(minLevel ?: '')}\nMax level:\t\t\t${(maxLevel ?: '')}\nSet kelvin also?\t$autoColorTempearture\nWakeup time:\t\t${(autoColorTempearture ? format24hrTime(timeToday(wakeupTime, location.timeZone)) : '')}\nSleep time:\t\t${(autoColorTempearture ? format24hrTime(timeToday(sleepTime, location.timeZone)) : '')}\nMin kelvin:\t\t\t${(autoColorTempearture ? minKelvin : '')}\nMax kelvin:\t\t${(autoColorTempearture ? maxKelvin : '')}"
+            paragraph "Min level:\t\t\t${(minLevel ?: '')}\nMax level:\t\t\t${(maxLevel ?: '')}\nSet kelvin also?\t$autoColorTemperature\nWakeup time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(wakeupTime, location.timeZone)) : '')}\nSleep time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(sleepTime, location.timeZone)) : '')}\nMin kelvin:\t\t\t${(autoColorTemperature ? minKelvin : '')}\nMax kelvin:\t\t${(autoColorTemperature ? maxKelvin : '')}"
             paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\n\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
             paragraph "Asleep sensor:\t${(asleepSensor ? true : '')}\nAsleep timeout:\t${(noAsleep ? noAsleep + ' hours' : '')}\n\nAsleep switches:\t${(nightSwitches ? true : '')}\nNight level:\t\t${(nightSetLevelTo ?: '')}\nNight button:\t\t${(nightButton ? true : '')}\nButton number:\t${(!nightButton ? '' : (nightButtonIs ?: ''))}"
             paragraph "Away modes:\t\t\t\t${(awayModes ? awayModes.size() : '')}\nPause modes:\t\t\t\t${(pauseModes ? pauseModes.size() : '')}\nTurn off all switches:\t$allSwitchesOff\nDay of week:\t\t\t${(dayOfWeek ? dOW[dayOfWeek] : 'All days')}"
@@ -1777,9 +1777,9 @@ private switchesOnOff(thisRule)       {
                     it.setColor(thisRule.hue);
             }
             else
-                if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTempearture)) && state.switchesHasColorTemperature[itID])       {
+                if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTemperature)) && state.switchesHasColorTemperature[itID])       {
                     if (!colorTemperature)      {
-                        if (thisRule.level == 'AL' && autoColorTempearture)
+                        if (thisRule.level == 'AL' && autoColorTemperature)
                             colorTemperature = calculateLevelOrKelvin(true) as Integer
                         else
                             colorTemperature = thisRule.colorTemperature as Integer
@@ -1947,7 +1947,7 @@ private calculateLevelOrKelvin(kelvin = false)       {
 
 private calculateLightLevel()       {
     ifDebug("calculateLightLevel")
-    if (autoColorTempearture)
+    if (autoColorTemperature)
         return calculateLevelOrKelvin(false)
 
     long timeNow = now()
