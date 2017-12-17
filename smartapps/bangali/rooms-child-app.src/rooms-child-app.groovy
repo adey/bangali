@@ -21,6 +21,12 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.08.6
+*
+*   DONE:   12/17/2017
+*   1) added support for variable text for arrival and departure announcements.
+*   2) added support for power level to set room to engaged.
+*
 *  Version: 0.08.5
 *
 *   DONE:   12/16/2017
@@ -259,14 +265,15 @@ definition	(
 preferences {
 	page(name: "roomName", title: "Room Name and Settings")
     page(name: "pageOccupiedSettings", title: "Occupied State Settings")
+    page(name: "pageEngagedSettings", title: "Engaged State Settings")
     page(name: "pageCheckingSettings", title: "Checking State Settings")
     page(name: "pageVacantSettings", title: "Vacant State Settings")
     page(name: "pageLuxTimeSettings", title: "Lux & Time Settings")
     page(name: "pageSpeakerSettings", title: "Speaker Settings")
+    page(name: "pagePowerSettings", title: "Power Settings")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageRules", title: "Maintain Lighting Rules")
     page(name: "pageRule", title: "Edit Lighting Rule")
-    page(name: "pageEngagedSettings", title: "Engaged State Settings")
     page(name: "pageNightMode", title: "Night Mode Settings")
     page(name: "pageAdjacentRooms", title: "Adjacent Rooms Settings")
     page(name: "pageGeneralSettings", title: "General Settings")
@@ -299,6 +306,9 @@ def roomName()	{
 				href "pageOccupiedSettings", title: "OCCUPIED SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
+				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure")
+		}
+        section("") {
 				href "pageCheckingSettings", title: "CHECKING SETTINGS", description: ((dimTimer || dimByLevel) ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
@@ -311,13 +321,13 @@ def roomName()	{
 				href "pageSpeakerSettings", title: "SPEAKER SETTING", description: (musicDevice ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
+				href "pagePowerSettings", title: "POWER SETTING", description: (powerMeter ? "Tap to change existing settings" : "Tap to configure")
+		}
+        section("") {
 				href "pageAutoLevelSettings", title: "AUTO LEVEL 'AL' SETTINGS", description: (autoLevelSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
 				href "pageRules", title: "LIGHTING RULES", description: "Maintain rules"
-		}
-        section("") {
-				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
 				href "pageNightMode", title: "ASLEEP SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure")
@@ -352,6 +362,64 @@ private pageOccupiedSettings()      {
 	}
 }
 
+private pageEngagedSettings() {
+    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    def engagedButtonOptions = [:]
+    if (engagedButton)      {
+        def engagedButtonAttributes = engagedButton.supportedAttributes
+        def attributeNameFound = false
+        engagedButtonAttributes.each  { att ->
+            if (att.name == 'occupancy')
+                buttonNames = [[1:'occupied'], [2:'checking'], [3:'vacant'], [4:'locked'], [5:'reserved'], [6:'kaput'], [7:'donotdisturb'], [8:'asleep'], [9:'engaged']]
+            if (att.name == 'numberOfButtons')
+                attributeNameFound = true
+        }
+        def numberOfButtons = engagedButton.currentValue("numberOfButtons")
+        if (attributeNameFound && numberOfButtons)      {
+            def i = 0
+            for (; i < numberOfButtons; i++)
+                engagedButtonOptions << buttonNames[i]
+        }
+        else
+            engagedButtonOptions << [null:"No buttons"]
+    }
+    def roomDevices = parent.getRoomNames(app.id)
+	dynamicPage(name: "pageEngagedSettings", title: "", install: false, uninstall: false) {
+		section("CHANGE ROOM TO 'ENGAGED' WHEN?\n(if specified this will also reset room state to 'vacant' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
+            paragraph "SETTINGS ARE IN ORDER OF PRIORITY IN WHICH THEY ARE CHECKED. FOR EXAMPLE, IF THERE IS BOTH AN ENGAGED SWITCH AND CONTACT SENSOR THE ENGAGED SWITCH WHEN ON WILL TAKE PRIORITY OVER THE CONTACT SENSOR BEING OPEN."
+            if (motionSensors)
+                input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
+                                                                options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
+            else
+                paragraph "When room is busy?\nselect motion sensor(s) above to set."
+            input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (engagedButton)
+                input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
+            else
+                paragraph "Button Number?\nselect button to set"
+            input "personsPresence", "capability.presenceSensor", title: "Presence sensor?", required: false, multiple: true, submitOnChange: true
+            if (personsPresence)
+                input "presenceAction", "enum", title: "Arrival or Departure or Both?", required: true, multiple: false, defaultValue: 3,
+                                                    options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
+            else
+                paragraph "Arrival or Departure or Both?\nselect presence sensor above to set"
+            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
+            if (powerDevice)
+                input "powerValue", "number", title: "Power value to set room to engaged?", required: false, multiple: false, defaultValue: null
+            else
+                paragraph "Power value to set room to engaged?\nselect power device in power settings to set."
+            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false
+            if (musicDevice)
+                input "musicEngaged", "bool", title: "Set room to engaged when music starts playing?", required: false, multiple: false, defaultValue: false
+            else
+                paragraph "Set room to engaged when music is playing?\nselect music device in speaker settings to set."
+            input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
+            input "anotherRoomEngaged", "enum", title: "Reset ENGAGED state when another room changes to ENGAGED? If yes, which room?", required: false, multiple: false, defaultValue: null, options: roomDevices, submitOnChange: true
+            input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
+        }
+	}
+}
+
 private pageCheckingSettings()      {
 	dynamicPage(name: "pageCheckingSettings", title: "", install: false, uninstall: false)     {
         section("CHECKING STATE TIMER BEFORE ROOM CHANGES TO VACANT:", hideable: false)		{
@@ -379,7 +447,7 @@ private pageVacantSettings()      {
 private pageLuxTimeSettings()       {
 	dynamicPage(name: "pageLuxTimeSettings", title: "", install: false, uninstall: false)      {
 		section("LUX SENSOR FOR USE WITH SETTINGS BELOW AND/OR RULES:", hideable: false)      {
-            input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false, submitOnChange: true
+            input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
             /*            if (luxSensor)
                             input "luxThreshold", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..*"
                         else
@@ -391,7 +459,15 @@ private pageLuxTimeSettings()       {
 private pageSpeakerSettings()       {
 	dynamicPage(name: "pageSpeakerSettings", title: "", install: false, uninstall: false)      {
 		section("SPEAKER SETTINGS:", hideable: false)      {
-            input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false, submitOnChange: true
+            input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false
+        }
+	}
+}
+
+private pagePowerSettings()       {
+	dynamicPage(name: "pagePowerSettings", title: "", install: false, uninstall: false)      {
+		section("POWER METER SETTINGS:", hideable: false)      {
+            input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
         }
 	}
 }
@@ -615,60 +691,6 @@ private dateInputValid(dateInput, isStartDate)       {
     return dP
 }
 
-private pageEngagedSettings() {
-    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
-    def engagedButtonOptions = [:]
-    if (engagedButton)      {
-        def engagedButtonAttributes = engagedButton.supportedAttributes
-        def attributeNameFound = false
-        engagedButtonAttributes.each  { att ->
-            if (att.name == 'occupancy')
-                buttonNames = [[1:'occupied'], [2:'checking'], [3:'vacant'], [4:'locked'], [5:'reserved'], [6:'kaput'], [7:'donotdisturb'], [8:'asleep'], [9:'engaged']]
-            if (att.name == 'numberOfButtons')
-                attributeNameFound = true
-        }
-        def numberOfButtons = engagedButton.currentValue("numberOfButtons")
-        if (attributeNameFound && numberOfButtons)      {
-            def i = 0
-            for (; i < numberOfButtons; i++)
-                engagedButtonOptions << buttonNames[i]
-        }
-        else
-            engagedButtonOptions << [null:"No buttons"]
-    }
-    def roomDevices = parent.getRoomNames(app.id)
-	dynamicPage(name: "pageEngagedSettings", title: "", install: false, uninstall: false) {
-		section("CHANGE ROOM TO 'ENGAGED' WHEN?\n(if specified this will also reset room state to 'vacant' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
-            paragraph "SETTINGS ARE IN ORDER OF PRIORITY IN WHICH THEY ARE CHECKED. FOR EXAMPLE, IF THERE IS BOTH AN ENGAGED SWITCH AND CONTACT SENSOR THE ENGAGED SWITCH WHEN ON WILL TAKE PRIORITY OVER THE CONTACT SENSOR BEING OPEN."
-            if (motionSensors)
-                input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
-                                                                options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
-            else
-                paragraph "When room is busy?\nselect motion sensor(s) above to set."
-            input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
-            if (engagedButton)
-                input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
-            else
-                paragraph "Button Number?\nselect button to set"
-            input "personsPresence", "capability.presenceSensor", title: "Presence sensor?", required: false, multiple: true, submitOnChange: true
-            if (personsPresence)
-                input "presenceAction", "enum", title: "Arrival or Departure or Both?", required: true, multiple: false, defaultValue: 3,
-                                                    options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
-            else
-                paragraph "Arrival or Departure or Both?\nselect presence sensor above to set"
-            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
-            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false
-            if (musicDevice)
-                input "musicEngaged", "bool", title: "Set room to engaged when music starts playing?", required: false, multiple: false, defaultValue: false
-            else
-                paragraph "Set room to engaged when music is playing?\nselect music device in speaker settings to set."
-            input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
-            input "anotherRoomEngaged", "enum", title: "Reset ENGAGED state when another room changes to ENGAGED? If yes, which room?", required: false, multiple: false, defaultValue: null, options: roomDevices, submitOnChange: true
-            input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
-        }
-	}
-}
-
 private pageNightMode() {
     def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def nightButtonOptions = [:]
@@ -766,6 +788,7 @@ private pageAllSettings() {
             paragraph "Dim timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
 //            paragraph "Lux sensor:\t\t\t\t${(luxSensor ? true : '')}\nLux threshold:\t\t\t${(luxThreshold ?: '')}\nTurn off last switches:\t$allSwitchesOff"
             paragraph "Lux sensor:\t\t${(luxSensor ? true : '')}"
+            paragraph "Power meter:\t\t${(powerDevice ? true : '')}"
             paragraph "Min level:\t\t\t${(minLevel ?: '')}\nMax level:\t\t\t${(maxLevel ?: '')}\nSet kelvin also?\t$autoColorTemperature\nWakeup time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(wakeupTime, location.timeZone)) : '')}\nSleep time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(sleepTime, location.timeZone)) : '')}\nMin kelvin:\t\t\t${(autoColorTemperature ? minKelvin : '')}\nMax kelvin:\t\t${(autoColorTemperature ? maxKelvin : '')}"
             paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\n\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
             paragraph "Asleep sensor:\t${(asleepSensor ? true : '')}\nAsleep timeout:\t${(noAsleep ? noAsleep + ' hours' : '')}\n\nAsleep switches:\t${(nightSwitches ? true : '')}\nNight level:\t\t${(nightSetLevelTo ?: '')}\nNight button:\t\t${(nightButton ? true : '')}\nButton number:\t${(!nightButton ? '' : (nightButtonIs ?: ''))}"
@@ -888,6 +911,12 @@ def updateRoom(adjMotionSensors)     {
 //        state.luxEnabled = false
         state.previousLux = null
     }
+    if (powerDevice)    {
+        subscribe(powerDevice, "power", powerEventHandler)
+        state.previousPower = powerDevice.currentValue("power")
+    }
+    else
+        state.previousPower = null
     if (asleepSensor)
         subscribe(asleepSensor, "sleeping", sleepEventHandler)
     if (nightButton)
@@ -1366,6 +1395,7 @@ def	engagedSwitchOnEventHandler(evt)     {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
     if (['occupied', 'checking', 'vacant'].contains(roomState))
@@ -1378,6 +1408,7 @@ def	engagedSwitchOffEventHandler(evt)	{
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
     if (musicDevice && musicEngaged && musicDevice.currentValue("status") == 'playing')  return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     if (engagedSwitch.currentValue("switch").contains('on'))        return;
     def child = getChildDevice(getRoom())
 	def roomState = child.getRoomState()
@@ -1397,6 +1428,7 @@ def	contactOpenEventHandler(evt)	{
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
     if (musicDevice && musicEngaged && musicDevice.currentValue("status") == 'playing')  return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
 	def roomState = child.getRoomState()
     if (resetEngagedDirectly && roomState == 'engaged')
@@ -1415,6 +1447,7 @@ def	contactClosedEventHandler(evt)     {
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
     if (musicDevice && musicEngaged && musicDevice.currentValue("status") == 'playing')  return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
@@ -1433,6 +1466,7 @@ def musicPlayingEventHandler(evt)       {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
@@ -1451,6 +1485,7 @@ def musicStoppedEventHandler(evt)       {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
+    if (powerDevice && powerDevice.currentValue("power") >= powerValue)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
 	def roomState = child.getRoomState()
     if (resetEngagedDirectly && roomState == 'engaged')
@@ -1521,6 +1556,28 @@ def luxEventHandler(evt)    {
     else*/
     turnOnAndOffSwitches()
     state.previousLux = currentLux
+}
+
+def powerEventHandler(evt)    {
+    ifDebug("powerEventHandler")
+    if (pauseModes && pauseModes.contains(location.currentMode))       return;
+    if (state.dayOfWeek && !(checkRunDay()))    return;
+    if (personsPresence && personsPresence.currentValue("presence").contains('present'))     return;
+    if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    def currentPower = evt.value.toInteger()
+    if (powerValue)
+        if (currentPower >= powerValue && state.previousPower < powerValue)        {
+            if (['occupied', 'checking', 'vacant'].contains(roomState))
+                child.generateEvent('engaged')
+        }
+        else
+            if (currentPower < powerValue && state.previousPower >= powerValue)        {
+                if (roomState == 'engaged')
+                    child.generateEvent('checking')
+            }
+    state.previousPower = currentPower
 }
 
 //private luxFell(currentLux, luxThreshold)   {   return (currentLux <= luxThreshold && state.previousLux > luxThreshold)  }
@@ -1726,6 +1783,7 @@ private switches2On(roomState = null)     {
             }
             if (thisRule.luxThreshold != null)   {
                 def lux = luxSensor.currentValue("illuminance")
+                ifDebug("lux from device: $lux | rule lux threshold: $thisRule.luxThreshold")
                 if (lux > thisRule.luxThreshold)    continue;
             }
             if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&

@@ -18,6 +18,12 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.08.6
+*
+*   DONE:   12/17/2017
+*   1) added support for variable text for arrival and departure announcements.
+*   2) added support for power level to set room to engaged.
+*
 *  Version: 0.08.5
 *
 *   DONE:   12/16/2017
@@ -276,6 +282,8 @@ def pageSpeakerSettings()   {
                 input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: true, multiple: true
                 input "speakerVolume", "number", title: "Speaker volume?", required: true, multiple: false, defaultValue: 33, range: "1..100"
                 input "contactSensors", "capability.contactSensor", title: "Which contact sensors?", required: true, multiple: true
+                input "welcomeHome", "text", title: "Welcome home greeting? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: 'Welcome home &'
+                input "leftHome", "text", title: "Left home announcement? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: '& left home'
             }
             else    {
                 paragraph "Which presence sensors?\nselect announce to set."
@@ -311,6 +319,12 @@ def updated()		{
             }
             subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
         }
+        str = welcomeHome.split('&')
+        state.welcomeHome1 = str[0]
+        state.welcomeHome2 = str[1]
+        str = leftHome.split('&')
+        state.leftHome1 = str[0]
+        state.leftHome2 = str[1]
     }
     runEvery15Minutes(processChildSwitches)
 }
@@ -339,12 +353,12 @@ def contactClosedEventHandler(evt = null)     {
     def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
     def i = str.size()
     def j = 1
-    def persons = (evt ? 'Welcome home ' : '')
+    def persons = (evt ? state.welcomeHome1 : state.leftHome1) + ' '
     str.each      {
         persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
         j = j + 1
     }
-    persons = persons + (evt ? '' : ' left home')
+    persons = persons + ' ' + (evt ? state.welcomeHome2 : state.leftHome2)
     speakerDevices.playTextAndResume(persons, speakerVolume as Integer)
     if (evt)
         state.whoCameHome.personsIn = []
