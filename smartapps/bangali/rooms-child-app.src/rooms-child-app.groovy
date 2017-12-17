@@ -411,7 +411,18 @@ private pageAutoLevelSettings()     {
         }
     }
     updateRulesToState()
+    def levelRequired = (autoColorTemperature || state.ruleHasAL || minLevel || maxLevel ? true : false)
 	dynamicPage(name: "pageAutoLevelSettings", title: "", install: false, uninstall: false)    {
+        section("SETTINGS FOR AUTO LEVEL WHEN RULE LEVEL IS SET TO 'AL':", hideable: false)		{
+/*            if    {*/
+                input "minLevel", "number", title: "Minimum level?", required: levelRequired, multiple: false, defaultValue: (levelRequired ? 1 : null), range: "1..${maxLevel ?: 100}", submitOnChange: true
+                input "maxLevel", "number", title: "Maximum level?", required: levelRequired, multiple: false, defaultValue: (levelRequired ? 100 : null), range: "${minLevel ?: 1}..100", submitOnChange: true
+/*            }
+            else    {
+                input "minLevel", "number", title: "Minimum Level?", required: false, multiple: false, defaultValue: null, range: "1..${maxLevel ?: 100}", submitOnChange: true
+                input "maxLevel", "number", title: "Maximum Level?", required: false, multiple: false, defaultValue: null, range: "$minLevel..100", submitOnChange: true
+            }*/
+        }
         section("SETTINGS FOR AUTO COLOR TEMPERATURE WHEN RULE LEVEL IS SET TO 'AL':", hideable: false)		{
             input "autoColorTemperature", "bool", title: "Auto set color temperature when using 'AL'?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             if (autoColorTemperature)       {
@@ -425,16 +436,6 @@ private pageAutoLevelSettings()     {
                 paragraph "Sleep time?\nenable auto color temperature above to set"
                 paragraph "Minimum kelvin?\nenable auto color temperature above to set"
                 paragraph "Maximum kelvin?\nenable auto color temperature above to set"
-            }
-        }
-		section("SETTINGS FOR AUTO LEVEL WHEN RULE LEVEL IS SET TO 'AL':", hideable: false)		{
-            if (autoColorTemperature || state.ruleHasAL)   {
-                input "minLevel", "number", title: "Minimum level?", required: true, multiple: false, defaultValue: 1, range: "1..${maxLevel ?: 100}", submitOnChange: true
-                input "maxLevel", "number", title: "Maximum level?", required: true, multiple: false, defaultValue: 100, range: "$minLevel..100", submitOnChange: true
-            }
-            else    {
-                input "minLevel", "number", title: "Minimum Level?", required: false, multiple: false, defaultValue: null, range: "1..${maxLevel ?: 100}", submitOnChange: true
-                input "maxLevel", "number", title: "Maximum Level?", required: false, multiple: false, defaultValue: null, range: "$minLevel..100", submitOnChange: true
             }
         }
     }
