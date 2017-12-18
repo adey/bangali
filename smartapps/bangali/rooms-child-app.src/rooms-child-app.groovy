@@ -274,6 +274,8 @@ preferences {
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageRules", title: "Maintain Lighting Rules")
     page(name: "pageRule", title: "Edit Lighting Rule")
+    page(name: "pageRuleDate", title: "Edit Lighting Rule Date")
+    page(name: "pageRuleTime", title: "Edit Lighting Rule Time")
     page(name: "pageNightMode", title: "Night Mode Settings")
     page(name: "pageAdjacentRooms", title: "Adjacent Rooms Settings")
     page(name: "pageGeneralSettings", title: "General Settings")
@@ -584,27 +586,14 @@ private pageRule(params)   {
         state.passedParams = params
     }
     if (params.ruleNo)
-        state.pageruleNo = params.ruleNo
+        state.pageRuleNo = params.ruleNo
     else if (state.passedParams)
-        state.pageruleNo = state.passedParams.ruleNo
-    def ruleNo = state.pageruleNo
-    def ruleFromDate = settings["fromDate$ruleNo"]
-    def ruleToDate = settings["toDate$ruleNo"]
-//    if ((ruleFromDate && ruleToDate) && (!dateInputValid(ruleFromDate, true) || !dateInputValid(ruleToDate, false)))
-    if (ruleFromDate && ruleToDate)     {
-        def fTime = dateInputValid(ruleFromDate, true)
-        def tTime = dateInputValid(ruleToDate, false)
-        def fTime2
-        def tTime2
-        if (fTime && tTime)     {
-            fTime2 = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", fTime)
-            tTime2 = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", tTime)
-        }
-        if (!fTime || !tTime || tTime2 < fTime2)
-            sendNotification("Invalid date range!", [method: "push"])
-    }
+        state.pageRuleNo = state.passedParams.ruleNo
+    def ruleNo = state.pageRuleNo
     def ruleFromTimeType = settings["fromTimeType$ruleNo"]
     def ruleToTimeType = settings["toTimeType$ruleNo"]
+    def ruleFromTimeHHmm = (settings["fromTime$ruleNo"] ? format24hrTime(timeToday(settings["fromTime$ruleNo"], location.timeZone)) : '')
+    def ruleToTimeHHmm = (settings["toTime$ruleNo"] ? format24hrTime(timeToday(settings["toTime$ruleNo"], location.timeZone)) : '')
     def allActions = location.helloHome?.getPhrases()*.label
     if (allActions)
         allActions.sort();
@@ -625,17 +614,86 @@ private pageRule(params)   {
                 input "luxThreshold$ruleNo", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..*"
             else
                 paragraph "What lux value?\nset lux sensor in main settings to select."
+        }
 
-            paragraph 'THERE IS NO WAY TO FORCE VALIDATE DATE FORMAT ON INPUT DUE TO ST LIMITATION. IF A INVALID DATE IS ENTERED IN EITHER FROM OR TO FEILD THE DATE CHECKING WILL BE SKIPPED FOR THAT RULE.'
-            if (ruleToDate)
-                input "fromDate$ruleNo", "text", title: "From date? (yyyy/MM/dd format)", required: true, multiple: false, defaultValue: null, submitOnChange: true
-            else
-                input "fromDate$ruleNo", "text", title: "From date? (yyyy/MM/dd format)", required: false, multiple: false, defaultValue: null, submitOnChange: true
-            if (ruleFromDate)
-                input "toDate$ruleNo", "text", title: "To date? (yyyy/MM/dd format)", required: true, multiple: false, defaultValue: null, submitOnChange: true
-            else
-                input "toDate$ruleNo", "text", title: "To date? (yyyy/MM/dd format)", required: false, multiple: false, defaultValue: null, submitOnChange: true
+        section("") {
+        	href "pageRuleDate", title: "Date filter", description: "${(settings["fromDate$ruleNo"] || settings["toDate$ruleNo"] ? settings["fromDate$ruleNo"] + ' - ' + settings["toDate$ruleNo"] : 'Add date filtering')}", params: [ruleNo: "$ruleNo"]
+        }
 
+        section("") {
+        	href "pageRuleTime", title: "Time filter", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset")) + ' - ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset")) : 'Add time filtering')}", params: [ruleNo: "$ruleNo"]
+        }
+
+        section()     {
+            input "piston$ruleNo", "enum", title: "Piston to execute?", required: false, multiple: false, defaultValue: null, options: state.pList
+            input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
+            if (musicDevice)
+                input "musicAction$ruleNo", "enum", title: "Start or stop music player?", required: false, multiple: false, defaultValue: null,
+                                                                                options: [[1:"Start music player"], [2:"Pause music player"], [3:"Neither"]]
+            else
+                paragraph "Start or stop music player?\nset music player in speaker settings to set."
+        }
+
+        section()     {
+            input "switchesOn$ruleNo", "capability.switch", title: "Turn ON which switches?", required: false, multiple: true
+            input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
+                    options: [[AL:"Auto Level (and color temperature)"],[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+            input "setColorTo$ruleNo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null,
+                                                                               options: [["Soft White":"Soft White - Default"],
+                            					                                         ["White":"White - Concentrate"],
+                            					                                         ["Daylight":"Daylight - Energize"],
+                            					                                         ["Warm White":"Warm White - Relax"],
+                            					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
+            if (settings["setLevelTo$ruleNo"] == 'AL' && autoColorTemperature)
+                paragraph "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)\ncannot set when level is set to 'AL'."
+            else
+                input "setColorTemperatureTo$ruleNo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
+                                                                                        required: false, multiple: false, defaultValue: null, range: "1500..6500"
+            input "switchesOff$ruleNo", "capability.switch", title: "Turn OFF which switches?", required: false, multiple: true
+        }
+    }
+}
+
+private pageRuleDate(params)   {
+    if (params.ruleNo)
+        state.pageRuleNo = params.ruleNo
+    else if (state.passedParams)
+            state.pageRuleNo = state.passedParams.ruleNo
+    def ruleNo = state.pageRuleNo
+    def ruleFromDate = settings["fromDate$ruleNo"]
+    def ruleToDate = settings["toDate$ruleNo"]
+//    if ((ruleFromDate && ruleToDate) && (!dateInputValid(ruleFromDate, true) || !dateInputValid(ruleToDate, false)))
+    if (ruleFromDate && ruleToDate)     {
+        def fTime = dateInputValid(ruleFromDate, true)
+        def tTime = dateInputValid(ruleToDate, false)
+        def fTime2
+        def tTime2
+        if (fTime && tTime)     {
+            fTime2 = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", fTime)
+            tTime2 = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", tTime)
+        }
+        if (!fTime || !tTime || tTime2 < fTime2)
+            sendNotification("Invalid date range!", [method: "push"])
+    }
+    dynamicPage(name: "pageRuleDate", title: "", install: false, uninstall: false)   {
+        section     {
+            paragraph 'NO WAY TO VALIDATE DATE FORMAT ON INPUT DUE TO ST LIMITATION. IF INVALID DATE IS ENTERED IN EITHER FROM OR TO FEILD DATE CHECKING WILL BE SKIPPED.'
+            input "fromDate$ruleNo", "text", title: "From date? (yyyy/MM/dd format)", required: (ruleToDate ? true : false), multiple: false, defaultValue: null, submitOnChange: true
+            input "toDate$ruleNo", "text", title: "To date? (yyyy/MM/dd format)", required: (ruleFromDate ? true : false), multiple: false, defaultValue: null, submitOnChange: true
+        }
+    }
+}
+
+private pageRuleTime(params)   {
+    if (params.ruleNo)
+        state.pageRuleNo = params.ruleNo
+    else if (state.passedParams)
+            state.pageRuleNo = state.passedParams.ruleNo
+    def ruleNo = state.pageRuleNo
+    def ruleFromTimeType = settings["fromTimeType$ruleNo"]
+    def ruleToTimeType = settings["toTimeType$ruleNo"]
+    dynamicPage(name: "pageRuleTime", title: "", install: false, uninstall: false)   {
+        section()     {
             if (ruleToTimeType)
                 input "fromTimeType$ruleNo", "enum", title: "Choose from time type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             else
@@ -652,30 +710,6 @@ private pageRule(params)   {
                 input "toTime$ruleNo", "time", title: "To time?", required: true, multiple: false, defaultValue: null
             else
                 paragraph "To time?\nchange to time type to time to select"
-
-            input "piston$ruleNo", "enum", title: "Piston to execute?", required: false, multiple: false, defaultValue: null, options: state.pList
-            input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
-            if (musicDevice)
-                input "musicAction$ruleNo", "enum", title: "Start or stop music player?", required: false, multiple: false, defaultValue: null,
-                                                                                options: [[1:"Start music player"], [2:"Pause music player"], [3:"Neither"]]
-            else
-                paragraph "Start or stop music player?\nset music player in speaker settings to set."
-
-            input "switchesOn$ruleNo", "capability.switch", title: "Turn ON which switches?", required: false, multiple: true
-            input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
-                    options: [[AL:"Auto Level (and color temperature)"],[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
-            input "setColorTo$ruleNo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null,
-                                                                               options: [["Soft White":"Soft White - Default"],
-                            					                                         ["White":"White - Concentrate"],
-                            					                                         ["Daylight":"Daylight - Energize"],
-                            					                                         ["Warm White":"Warm White - Relax"],
-                            					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
-            if (settings["setLevelTo$ruleNo"] == 'AL' && autoColorTemperature)
-                paragraph "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)\ncannot set when level is set to 'AL'."
-            else
-                input "setColorTemperatureTo$ruleNo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
-                                                                                        required: false, multiple: false, defaultValue: null, range: "1500..6500"
-            input "switchesOff$ruleNo", "capability.switch", title: "Turn OFF which switches?", required: false, multiple: true
         }
     }
 }
@@ -790,7 +824,7 @@ private pageAllSettings() {
             paragraph "Lux sensor:\t\t${(luxSensor ? true : '')}"
             paragraph "Power meter:\t\t${(powerDevice ? true : '')}"
             paragraph "Min level:\t\t\t${(minLevel ?: '')}\nMax level:\t\t\t${(maxLevel ?: '')}\nSet kelvin also?\t$autoColorTemperature\nWakeup time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(wakeupTime, location.timeZone)) : '')}\nSleep time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(sleepTime, location.timeZone)) : '')}\nMin kelvin:\t\t\t${(autoColorTemperature ? minKelvin : '')}\nMax kelvin:\t\t${(autoColorTemperature ? maxKelvin : '')}"
-            paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\n\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
+            paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nPower meter:\t\t\t${(powerDevice ?: '')}\nPower value:\t\t\t${(powerDevice ? powerValue : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
             paragraph "Asleep sensor:\t${(asleepSensor ? true : '')}\nAsleep timeout:\t${(noAsleep ? noAsleep + ' hours' : '')}\n\nAsleep switches:\t${(nightSwitches ? true : '')}\nNight level:\t\t${(nightSetLevelTo ?: '')}\nNight button:\t\t${(nightButton ? true : '')}\nButton number:\t${(!nightButton ? '' : (nightButtonIs ?: ''))}"
             paragraph "Away modes:\t\t\t\t${(awayModes ? awayModes.size() : '')}\nPause modes:\t\t\t\t${(pauseModes ? pauseModes.size() : '')}\nTurn off all switches:\t$allSwitchesOff\nDay of week:\t\t\t${(dayOfWeek ? dOW[dayOfWeek] : 'All days')}"
             def i = 1
@@ -964,7 +998,7 @@ def updateIndicators()      {
         ind = -1;
     child.updateMotionInd(ind)
     def lux = -1
-    if (luxSensor)      lux = luxSensor.currentValue("illuminance");
+    if (luxSensor)      lux = getIntfromStr((String) luxSensor.currentValue("illuminance"));
     child.updateLuxInd(lux)
     if (contactSensor)      {
         devValue = contactSensor.currentValue("contact");
@@ -1505,7 +1539,7 @@ def temperatureEventHandler(evt)    {
 def luxEventHandler(evt)    {
     ifDebug("luxEventHandler")
     def child = getChildDevice(getRoom())
-    def currentLux = evt.value.toInteger()
+    def currentLux = getIntfromStr((String) evt.value)
     child.updateLuxInd(currentLux)
     if (pauseModes && pauseModes.contains(location.currentMode))       return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
@@ -1558,6 +1592,17 @@ def luxEventHandler(evt)    {
     state.previousLux = currentLux
 }
 
+private getIntfromStr(String mayOrMayNotBeDecimal)     {
+    int intValue
+    if (mayOrMayNotBeDecimal.indexOf('.') >= 0)     {
+        def str = mayOrMayNotBeDecimal.split('.')
+        intValue = str[0].toInteger()
+    }
+    else
+        intValue = mayOrMayNotBeDecimal.toInteger()
+    return intValue
+}
+
 def powerEventHandler(evt)    {
     ifDebug("powerEventHandler")
     if (pauseModes && pauseModes.contains(location.currentMode))       return;
@@ -1572,11 +1617,12 @@ def powerEventHandler(evt)    {
             if (['occupied', 'checking', 'vacant'].contains(roomState))
                 child.generateEvent('engaged')
         }
-        else
+        else    {
             if (currentPower < powerValue && state.previousPower >= powerValue)        {
                 if (roomState == 'engaged')
                     child.generateEvent('checking')
             }
+        }
     state.previousPower = currentPower
 }
 
@@ -1782,7 +1828,7 @@ private switches2On(roomState = null)     {
                 if (nowDate < fTime || nowDate > tTime)    continue;
             }
             if (thisRule.luxThreshold != null)   {
-                def lux = luxSensor.currentValue("illuminance")
+                def lux = getIntfromStr((String) luxSensor.currentValue("illuminance"))
                 ifDebug("lux from device: $lux | rule lux threshold: $thisRule.luxThreshold")
                 if (lux > thisRule.luxThreshold)    continue;
             }

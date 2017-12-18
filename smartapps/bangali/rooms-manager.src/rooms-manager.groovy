@@ -281,8 +281,9 @@ def pageSpeakerSettings()   {
                 input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
                 input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: true, multiple: true
                 input "speakerVolume", "number", title: "Speaker volume?", required: true, multiple: false, defaultValue: 33, range: "1..100"
-                input "contactSensors", "capability.contactSensor", title: "Which contact sensors?", required: true, multiple: true
+                input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)", required: true, multiple: true
                 input "welcomeHome", "text", title: "Welcome home greeting? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: 'Welcome home &'
+                input "secondsAfter", "number", title: "Seconds after? (left home annoucement is made after this many seconds.)", required: true, multiple: false, defaultValue: 15, range: "5..100"
                 input "leftHome", "text", title: "Left home announcement? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: '& left home'
             }
             else    {
@@ -291,6 +292,9 @@ def pageSpeakerSettings()   {
                 paragraph "Which speakers?\nselect announce to set."
                 paragraph "Speaker volume?\nselect announce to set."
                 paragraph "Which contact sensors?\nselect announce to set."
+                paragraph "Welcome home greeting?\nselect announce to set."
+                paragraph "Seconds after?\nselect announce to set."
+                paragraph "Left home announcement?\nselect announce to set."
             }
         }
 	}
@@ -306,11 +310,11 @@ def updated()		{
         def i = presenceSensors.size()
         def str = presenceNames.split(',')
         def j = str.size()
-        ifDebug("i: $i | str: $str | j: $j")
+//        ifDebug("i: $i | str: $str | j: $j")
         if (i == j)     {
             i = 0
             presenceSensors.each        {
-                state.whoCameHome.personNames << [(it.getId()):(i <= j ? str[i].trim() : '')]
+                state.whoCameHome.personNames << [(it.getId()):(i < j ? str[i].trim() : '')]
                 i = i + 1
             }
             if (presenceSensors)     {
@@ -321,10 +325,10 @@ def updated()		{
         }
         str = welcomeHome.split('&')
         state.welcomeHome1 = str[0]
-        state.welcomeHome2 = str[1]
+        state.welcomeHome2 = (str.size() >= 2 ? str[1] : '')
         str = leftHome.split('&')
         state.leftHome1 = str[0]
-        state.leftHome2 = str[1]
+        state.leftHome2 = (str.size() >= 2 ? str[1] : '')
     }
     runEvery15Minutes(processChildSwitches)
 }
@@ -391,7 +395,7 @@ def whoCameHome(presenceSensor, left = false)      {
     else    {
         if (!state.whoCameHome.personsOut || !(state.whoCameHome.personsOut.contains(presenceName)))
             state.whoCameHome.personsOut << presenceName
-        runIn(30, contactClosedEventHandler)
+        runIn(secondsAfter as Integer, contactClosedEventHandler)
     }
 }
 
