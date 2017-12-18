@@ -997,7 +997,7 @@ def updateIndicators()      {
     else
         ind = -1;
     child.updateMotionInd(ind)
-    def lux = -1
+    int lux = -1
     if (luxSensor)      lux = getIntfromStr((String) luxSensor.currentValue("illuminance"));
     child.updateLuxInd(lux)
     if (contactSensor)      {
@@ -1539,7 +1539,7 @@ def temperatureEventHandler(evt)    {
 def luxEventHandler(evt)    {
     ifDebug("luxEventHandler")
     def child = getChildDevice(getRoom())
-    def currentLux = getIntfromStr((String) evt.value)
+    int currentLux = getIntfromStr((String) evt.value)
     child.updateLuxInd(currentLux)
     if (pauseModes && pauseModes.contains(location.currentMode))       return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
@@ -1593,11 +1593,10 @@ def luxEventHandler(evt)    {
 }
 
 private getIntfromStr(String mayOrMayNotBeDecimal)     {
-    ifDebug("getIntfromStr - mayOrMayNotBeDecimal: $mayOrMayNotBeDecimal | indexOf: ${mayOrMayNotBeDecimal.indexOf('.')}")
+    ifDebug("getIntfromStr")
     int intValue
     if (mayOrMayNotBeDecimal.indexOf('.') >= 0)     {
         def str = mayOrMayNotBeDecimal.substring(0, mayOrMayNotBeDecimal.indexOf('.'))
-        ifDebug("str: $str")
         intValue = str as Integer
     }
     else
@@ -1831,7 +1830,7 @@ private switches2On(roomState = null)     {
                 if (nowDate < fTime || nowDate > tTime)    continue;
             }
             if (thisRule.luxThreshold != null)   {
-                def lux = getIntfromStr((String) luxSensor.currentValue("illuminance"))
+                int lux = getIntfromStr((String) luxSensor.currentValue("illuminance"))
                 ifDebug("lux from device: $lux | rule lux threshold: $thisRule.luxThreshold")
                 if (lux > thisRule.luxThreshold)    continue;
             }
@@ -2468,8 +2467,8 @@ def scheduleFromToTimes()       {
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getRule(ruleNo)
-        if (!thisRule || thisRule.disabled)      continue
-        if (!thisRule.fromTimeType || !thisRule.toTimeType)     continue
+        if (!thisRule || thisRule.disabled)      continue;
+        if (!thisRule.fromTimeType || !thisRule.toTimeType)     continue;
         if (thisRule.fromTimeType == timeSunrise() && !sunriseFromSubscribed)   {
             subscribe(location, "sunrise", timeFromHandler)
             sunriseFromSubscribed = true
