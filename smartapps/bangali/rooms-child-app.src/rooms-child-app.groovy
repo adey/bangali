@@ -1593,7 +1593,7 @@ def luxEventHandler(evt)    {
 }
 
 private getIntfromStr(String mayOrMayNotBeDecimal)     {
-    ifDebug("getIntfromStr")
+    ifDebug("getIntfromStr - mayOrMayNotBeDecimal: $mayOrMayNotBeDecimal")
     int intValue
     if (mayOrMayNotBeDecimal.indexOf('.') >= 0)     {
         def str = mayOrMayNotBeDecimal.split('.')
