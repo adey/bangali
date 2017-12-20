@@ -1039,10 +1039,10 @@ private isAnySwitchOn()   {
     ifDebug("isAnySwitchOn")
     def ind = -1
     if (occSwitches) {
-    		ind = 0
-	    if (isAnyOccupancySwitchOn()) { 
-	    		return 1 
-	    }
+    	    ind = 0
+        if (isAnyOccupancySwitchOn()) { 
+        	    return 1 
+        }
     }
     for (def i = 1; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
@@ -1062,11 +1062,11 @@ private isAnySwitchOn()   {
 
 private isAnyOccupancySwitchOn() { 
     ifDebug("isAnyOccupancySwitchOn")
-	def v = false
-	if (occSwitches) { 
-		v = occSwitches.currentValue("switch").contains('on')
-	}
-	return v
+    def v = false
+    if (occSwitches) { 
+        v = occSwitches.currentValue("switch").contains('on')
+    }
+    return v
 }
 
 def updateRulesToState()    {
@@ -1356,31 +1356,31 @@ def adjMotionActiveEventHandler(evt)    {
 def adjMotionInactiveEventHandler(evt)      {}
 
 def occupancySwitchOnEventHandler(evt) {
-	ifDebug("occupancySwitchOnEventHandler")
-	log.trace "occupancySwitchOnEventHandler"
-	// Occupancy Switch is turned on
-	def child = getChildDevice(getRoom())
+    ifDebug("occupancySwitchOnEventHandler")
+    log.trace "occupancySwitchOnEventHandler"
+    // Occupancy Switch is turned on
+    def child = getChildDevice(getRoom())
     child.updateSwitchInd(1)
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-	def roomState = child.getRoomState()
-	def newState = roomState
-	if (['vacant','occupied'].contains(roomState)) {
-		if (roomState == 'vacant') {
-			child.generateEvent('occupied')
-			newState='occupied'
-		}
-		if (noMotion && newState == 'occupied') {
-			updateChildTimer(state.noMotion)
-			runIn(state.noMotion, roomVacant)
-		}
-	}
+    def roomState = child.getRoomState()
+    def newState = roomState
+    if (['vacant','occupied'].contains(roomState)) {
+        if (roomState == 'vacant') {
+            child.generateEvent('occupied')
+            newState='occupied'
+        }
+        if (noMotion && newState == 'occupied') {
+            updateChildTimer(state.noMotion)
+            runIn(state.noMotion, roomVacant)
+        }
+    }
 }
 
 def occupancySwitchOffEventHandler(evt) {
-	ifDebug("occupancySwitchOffEventHandler")
-	// Occupancy Switch is turned off
-	def child = getChildDevice(getRoom())
+    ifDebug("occupancySwitchOffEventHandler")
+    // Occupancy Switch is turned off
+    def child = getChildDevice(getRoom())
     child.updateSwitchInd(isAnySwitchOn())
 }
 
@@ -2806,7 +2806,7 @@ private getAllSwitches()    {
         }
     }
     if (occSwitches)
-    		switches += occSwitches
+    	    switches += occSwitches
     ifDebug("getAllSwitches: $switches")
     return switches
 }
