@@ -2328,6 +2328,7 @@ private whichSwitchesAreOn()   {
             }
         }
     }
+    ifDebug("whichSwitchesAreOn @ return: $switchesThatAreOn")
     return switchesThatAreOn
 }
 
@@ -2413,8 +2414,7 @@ def switches2Off()       {
     }*/
     def switchesThatAreOn = whichSwitchesAreOn()
     switchesThatAreOn.each      {
-        if (it.currentSwitch != 'off')
-            it.off()
+        if (it.currentSwitch != 'off')      it.off();
     }
 /*    def i = 1
     for (; i < 11; i++)      {
@@ -2426,6 +2426,7 @@ def switches2Off()       {
             }
         }
     }*/
+    ifDebug("switches2Off @ return")
 }
 
 private previousStateStack(previousState)    {
@@ -2497,12 +2498,14 @@ def turnOffIsBusy()     {
 }
 
 def spawnChildDevice(roomName)	{
+    ifDebug("spawnChildDevice")
 	app.updateLabel(app.label)
 	if (!childCreated())
 		def child = addChildDevice("bangali", "rooms occupancy", getRoom(), null, [name: getRoom(), label: roomName, completedSetup: true])
 }
 
 private childCreated()		{
+    ifDebug("childCreated")
 	if (getChildDevice(getRoom()))
 		return true
 	else
@@ -2512,6 +2515,7 @@ private childCreated()		{
 private getRoom()	{ return "rm_${app.id}" }
 
 def uninstalled() {
+    ifDebug("uninstalled")
 	getChildDevices().each	{
 		deleteChildDevice(it.deviceNetworkId)
 	}
@@ -2623,8 +2627,7 @@ private scheduleFromToTimes()       {
 */
 
 def scheduleFromToTimes()       {
-    if (!state.rules || !state.timeCheck)
-        return
+    if (!state.rules || !state.timeCheck)       return;
     ifDebug("scheduleFromToTimes")
     def sunriseFromSubscribed = false
     def sunriseToSubscribed = false
@@ -2871,6 +2874,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def getAdjMotionSensors()  {
+    ifDebug("getAdjMotionSensors")
     if (motionSensors)   {
         def motionSensorsList = []
         motionSensors.each   {  motionSensorsList << it }
