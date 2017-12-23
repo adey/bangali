@@ -1373,7 +1373,7 @@ def	motionActiveEventHandler(evt)	{
         }
         return
     }
-    def cVContact = contactSensor.currentValue("contact")
+    def cVContact = contactSensor?.currentValue("contact")
     if (contactSensor && ((cVContact == 'closed' && !contactSensorOutsideDoor) || (cVContact == 'open' && contactSensorOutsideDoor)))      {
         if (['occupied', 'checking'].contains(roomState))
             child.generateEvent('engaged')
@@ -2413,20 +2413,11 @@ def switches2Off()       {
         child.updateSwitchInd(isAnySwitchOn())
     }*/
     def switchesThatAreOn = whichSwitchesAreOn()
+    ifDebug("switches2Off: $switchesThatAreOn")
     switchesThatAreOn.each      {
         if (it.currentSwitch != 'off')      it.off();
     }
-/*    def i = 1
-    for (; i < 11; i++)      {
-        def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
-            thisRule.switchesOn.each        {
-                it.off()
-            }
-        }
-    }*/
-    ifDebug("switches2Off @ return")
+    ifDebug("switches2Off: is it trying to turn off switches that are null?")
 }
 
 private previousStateStack(previousState)    {
