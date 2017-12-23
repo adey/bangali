@@ -22,6 +22,34 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.09.0
+*
+*   DONE:   12/23/2017
+*   1) added color coding for temperature indicator. since ST does not allow device handler display to be conditional
+*       for celcius color coding user will need to edit the DTH and uncomment the celcius section and comment the
+*       Fahrenheit values.
+*   2) added support for room AC and heater support to maintain room temperature. support for thermostat is coming.
+*   3) moved all stanalone devices to their own settings page.
+*   4) added setting to indiciate if contact sensor is on inside door or outside. e.g. contact sesnor on garage door
+*       would be an outside door contact sesnor. this reverses the occupancy logic so when contact sensor is open
+*       the door is engaged or occupied instead of when the door is closed.
+*   5) added support for button to set room to vacant.
+*   6) moved webCoRE_init call to the bottom of the updated() method.
+*   7) couple of bug fixes.
+*
+*  Version: 0.08.6
+*
+*   DONE:   12/17/2017
+*   1) added support for variable text for arrival and departure announcements.
+*   2) added support for power level to set room to engaged.
+*
+*  Version: 0.08.5
+*
+*   DONE:   12/16/2017
+*   1) added support for arrival and departure announcement.
+*   2) added support for speaker control through rules and use of speaker to set a room to engaged.
+*   3) bug fix to stop truncating temperature to integer.
+*
 *  Version: 0.08.3
 *
 *   DONE:   12/12/2017
@@ -326,7 +354,23 @@ metadata {
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
 		valueTile("temperatureInd", "device.temperatureInd", width: 1, height: 1, canChangeIcon: true)	{
-			state("temperature", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("temperature", label:'${currentValue}', unit:'', backgroundColors: [
+/*                														// Celsius Color Range
+                														[value:  0, color: "#153591"],
+                														[value:  7, color: "#1E9CBB"],
+                														[value: 15, color: "#90D2A7"],
+                														[value: 23, color: "#44B621"],
+                														[value: 29, color: "#F1D801"],
+                														[value: 33, color: "#D04E00"],
+                														[value: 36, color: "#BC2323"],*/
+                														// Fahrenheit Color Range
+                														[value: 32, color: "#153591"],
+                														[value: 45, color: "#1E9CBB"],
+                														[value: 59, color: "#90D2A7"],
+                														[value: 73, color: "#44B621"],
+                														[value: 84, color: "#F1D801"],
+                														[value: 91, color: "#D04E00"],
+                														[value: 97, color: "#BC2323"]])
 		}
 
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
@@ -508,9 +552,22 @@ private	resetTile(occupancy)	{
 
 def generateEvent(state = null)		{
 //	if	(state && device.currentValue('occupancy') != state)
-	if	(state)
+/*
+	switch(state)		{
+		case 'occupied':		runIn(0, occupied);		break;
+		case 'vacant':			runIn(0, vacant);		break;
+		case 'checking':		runIn(0, checking);		break;
+		case 'engaged':			runIn(0, engaged);		break;
+		case 'locked':			runIn(0, locked);		break;
+		case 'reserved':		runIn(0, reserved);		break;
+		case 'kaput':			runIn(0, kaput);		break;
+		case 'donotdisturb':	runIn(0, donotdisturb);	break;
+		case 'asleep':			runIn(0, asleep);		break;
+		default:										break;
+	}
+*/
+	if (state)
 		stateUpdate(state)
-	return null
 }
 
 def getRoomState()	{	return device.currentValue('occupancy')	}
@@ -583,11 +640,11 @@ def updateTimeInd(timeFromTo)		{
 }
 
 def updateTemperatureInd(temp)		{
-	def tS = (location.temperatureScale ?: 'F')
+	def tS = '°' + (location.temperatureScale ?: 'F')
 	if (temp == -1)
-		sendEvent(name: 'temperatureInd', value: '--°' + tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: '--°', unit: tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'temperatureInd', value: temp+'°' + tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: temp, unit: tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
 }
 
 def turnSwitchesAllOn()		{
