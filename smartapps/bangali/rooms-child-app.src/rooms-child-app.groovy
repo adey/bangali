@@ -21,6 +21,21 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.09.0
+*
+*   DONE:   12/23/2017
+*   1) added color coding for temperature indicator. since ST does not allow device handler display to be conditional
+*       for celcius color coding user will need to edit the DTH and uncomment the celcius section and comment the
+*       Fahrenheit values.
+*   2) added support for room AC and heater support to maintain room temperature. support for thermostat is coming.
+*   3) moved all stanalone devices to their own settings page.
+*   4) added setting to indiciate if contact sensor is on inside door or outside. e.g. contact sesnor on garage door
+*       would be an outside door contact sesnor. this reverses the occupancy logic so when contact sensor is open
+*       the door is engaged or occupied instead of when the door is closed.
+*   5) added support for button to set room to vacant.
+*   6) moved webCoRE_init call to the bottom of the updated() method.
+*   7) couple of bug fixes.
+*
 *  Version: 0.08.6
 *
 *   DONE:   12/17/2017
@@ -248,6 +263,16 @@
 *
 *****************************************************************************************************************/
 
+import groovy.transform.Field
+
+@Field final String lastMotionActive = '1'
+@Field final String lastMotionInactive = '2'
+
+@Field final String asleep   = 'asleep'
+@Field final String engaged  = 'engaged'
+@Field final String occupied = 'occupied'
+@Field final String vacant   = 'vacant'
+
 private isDebug()   {  return true  }
 
 definition	(
@@ -268,9 +293,11 @@ preferences {
     page(name: "pageEngagedSettings", title: "Engaged State Settings")
     page(name: "pageCheckingSettings", title: "Checking State Settings")
     page(name: "pageVacantSettings", title: "Vacant State Settings")
-    page(name: "pageLuxTimeSettings", title: "Lux & Time Settings")
-    page(name: "pageSpeakerSettings", title: "Speaker Settings")
-    page(name: "pagePowerSettings", title: "Power Settings")
+    page(name: "pageOtherDevicesSettings", title: "Other Devices")
+//    page(name: "pagePresenceSettings", title: "Presence Settings")
+//    page(name: "pageLuxTimeSettings", title: "Lux Settings")
+//    page(name: "pageSpeakerSettings", title: "Speaker Settings")
+//    page(name: "pagePowerSettings", title: "Power Settings")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageRules", title: "Maintain Lighting Rules")
     page(name: "pageRule", title: "Edit Lighting Rule")
@@ -278,6 +305,7 @@ preferences {
     page(name: "pageRuleTime", title: "Edit Lighting Rule Time")
     page(name: "pageNightMode", title: "Night Mode Settings")
     page(name: "pageAdjacentRooms", title: "Adjacent Rooms Settings")
+    page(name: "pageRoomTemperature", title: "Room Temperature Settings")
     page(name: "pageGeneralSettings", title: "General Settings")
     page(name: "pageAllSettings", title: "All Settings")
 }
@@ -289,7 +317,8 @@ def roomName()	{
     def timeSettings = (fromTimeType || toTimeType)
     def adjRoomSettings = (adjRooms ? true : false)
     def miscSettings = (awayModes || pauseModes || dayOfWeek)
-    def engagedSettings = (busyCheck || engagedButton || buttonIs || personsPresence || engagedSwitch || contactSensor || noMotionEngaged)
+    def engagedSettings = (busyCheck || engagedButton || buttonIs || engagedSwitch || contactSensor || noMotionEngaged)
+    def otherDevicesSettings = (personsPresence || luxAndTimeSettings || musicDevice || powerMeter)
 //    def luxSettings = (luxSensor || luxThreshold)
 //    def luxAndTimeSettings = (luxSettings || timeSettings)
     def asleepSettings = (asleepSensor || nightSwitches)
@@ -317,6 +346,13 @@ def roomName()	{
 				href "pageVacantSettings", title: "VACANT SETTINGS", description: (turnOffMusic ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
+				href "pageOtherDevicesSettings", title: "OTHER DEVICES", description: (otherDevicesSettings ? "Tap to change existing settings" : "Tap to configure")
+		}
+/*
+        section("") {
+				href "pagePresenceSettings", title: "PRESENCE SETTING", description: (personsPresence ? "Tap to change existing settings" : "Tap to configure")
+		}
+        section("") {
 				href "pageLuxTimeSettings", title: "LUX SETTING", description: (luxAndTimeSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
@@ -325,17 +361,21 @@ def roomName()	{
         section("") {
 				href "pagePowerSettings", title: "POWER SETTING", description: (powerMeter ? "Tap to change existing settings" : "Tap to configure")
 		}
+*/
         section("") {
 				href "pageAutoLevelSettings", title: "AUTO LEVEL 'AL' SETTINGS", description: (autoLevelSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
-				href "pageRules", title: "LIGHTING RULES", description: "Maintain rules"
+				href "pageRules", title: "RULES (lights/switches, pistons & more ...)", description: "Maintain rules"
 		}
         section("") {
 				href "pageNightMode", title: "ASLEEP SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
 				href "pageAdjacentRooms", title: "ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure")
+		}
+        section("") {
+				href "pageRoomTemperature", title: "ROOM TEMPERATURE SETTINGS", description: (tempSensors || maintainRoomTemp ? "Tap to change existing settings" : "Tap to configure")
 		}
         section("") {
 				href "pageGeneralSettings", title: "MODE AND OTHER SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure")
@@ -351,21 +391,21 @@ private pageOccupiedSettings()      {
 	dynamicPage(name: "pageOccupiedSettings", title: "", install: false, uninstall: false)     {
         section("MOTION SENSOR CONFIGURATION FOR OCCUPIED STATE:", hideable: false)        {
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
+            if (motionSensors)
+                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
+                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            else
+                paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
         section("SWITCH CONFIGURATION FOR OCCUPIED STATE:", hideable:false)	{ 
             input "occSwitches", "capability.switch", title: "Which switches?", required:false, multiple: true, submitOnChange: true
         }
         section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hedeable:fase) { 
-            if (hasOccupancySensor())
-                input "noMotion", "number", title: "Timeout occupancy after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            if (hasOccupiedSensor())
+                input "noMotion", "number", title: "Occupancy timeout after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             else
-                paragraph "Timeout occupance after how many seconds?\nselect device above to set"
-            if (noMotion && motionSensors)
-                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
-                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
-            else
-                paragraph "Use which motion event for timeout?\nselect motion sensor and timeout above to set"
-        
+                paragraph "Occupancy timeout after how many seconds?\nselect device above to set"
+
         }
 	}
 }
@@ -405,12 +445,11 @@ private pageEngagedSettings() {
                 input "buttonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
             else
                 paragraph "Button Number?\nselect button to set"
-            input "personsPresence", "capability.presenceSensor", title: "Presence sensor?", required: false, multiple: true, submitOnChange: true
             if (personsPresence)
                 input "presenceAction", "enum", title: "Arrival or Departure or Both?", required: true, multiple: false, defaultValue: 3,
                                                     options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
             else
-                paragraph "Arrival or Departure or Both?\nselect presence sensor above to set"
+                paragraph "Arrival or Departure or Both?\nselect presence sensor(s) to set"
             if (musicDevice)
                 input "musicEngaged", "bool", title: "Set room to engaged when music starts playing?", required: false, multiple: false, defaultValue: false
             else
@@ -420,7 +459,11 @@ private pageEngagedSettings() {
                 input "powerValue", "number", title: "Power value to set room to engaged?", required: false, multiple: false, defaultValue: null
             else
                 paragraph "Power value to set room to engaged?\nselect power device in power settings to set."
-            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false
+            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false, submitOnChange: true
+            if (contactSensor)
+                input "contactSensorOutsideDoor", "bool", title: "Contact sensor on outside door?", required: false, multiple: false, defaultValue: false
+            else
+                paragraph "Contact sensor on outside door?\nselect contact sensor above to set."
             input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "anotherRoomEngaged", "enum", title: "Reset ENGAGED state when another room changes to ENGAGED? If yes, which room?", required: false, multiple: false, defaultValue: null, options: roomDevices, submitOnChange: true
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
@@ -442,8 +485,33 @@ private pageCheckingSettings()      {
 }
 
 private pageVacantSettings()      {
+    def buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    def vacntButtonOptions = [:]
+    if (vacantButton)      {
+        def vacantButtonAttributes = vacantButton.supportedAttributes
+        def attributeNameFound = false
+        vacantButtonAttributes.each  { att ->
+            if (att.name == 'occupancy')
+                buttonNames = [[1:'occupied'], [2:'checking'], [3:'vacant'], [4:'locked'], [5:'reserved'], [6:'kaput'], [7:'donotdisturb'], [8:'asleep'], [9:'engaged']]
+            if (att.name == 'numberOfButtons')
+                attributeNameFound = true
+        }
+        def numberOfButtons = vacantButton.currentValue("numberOfButtons")
+        if (attributeNameFound && numberOfButtons)      {
+            def i = 0
+            for (; i < numberOfButtons; i++)
+                vacantButtonOptions << buttonNames[i]
+        }
+        else
+            vacantButtonOptions << [null:"No buttons"]
+    }
 	dynamicPage(name: "pageVacantSettings", title: "", install: false, uninstall: false)     {
         section("VACANT SETTINGS:", hideable: false)		{
+            input "vacantButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (vacantButton)
+                input "buttonIsVacant", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: vacantButtonOptions
+            else
+                paragraph "Button Number?\nselect button to set"
             if (musicDevice)
                 input "turnOffMusic", "bool", title: "Pause speaker when room changes to vacant?", required: false, multiple: false, defaultValue: false
             else
@@ -452,21 +520,44 @@ private pageVacantSettings()      {
 	}
 }
 
+
+private pageOtherDevicesSettings()       {
+	dynamicPage(name: "pageOtherDevicesSettings", title: "", install: false, uninstall: false)      {
+		section("PRESENCE DEVICES:", hideable: false)      {
+            input "personsPresence", "capability.presenceSensor", title: "Presence sensors?", required: false, multiple: true, submitOnChange: true
+        }
+        section("LUX SENSOR FOR USE WITH RULES:", hideable: false)      {
+            input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
+        }
+        section("SPEAKER DEVICE:", hideable: false)      {
+            input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false
+        }
+        section("POWER METER:", hideable: false)      {
+            input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
+        }
+	}
+}
+
+/*
+private pagePresenceSettings()       {
+	dynamicPage(name: "pagePresenceSettings", title: "", install: false, uninstall: false)      {
+		section("PRESENCE SETTING:", hideable: false)      {
+            input "personsPresence", "capability.presenceSensors", title: "Presence sensors?", required: false, multiple: true, submitOnChange: true
+        }
+	}
+}
+
 private pageLuxTimeSettings()       {
 	dynamicPage(name: "pageLuxTimeSettings", title: "", install: false, uninstall: false)      {
 		section("LUX SENSOR FOR USE WITH SETTINGS BELOW AND/OR RULES:", hideable: false)      {
             input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
-            /*            if (luxSensor)
-                            input "luxThreshold", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..*"
-                        else
-                            paragraph "What lux value?\nset lux sensor to select"*/
         }
 	}
 }
 
 private pageSpeakerSettings()       {
 	dynamicPage(name: "pageSpeakerSettings", title: "", install: false, uninstall: false)      {
-		section("SPEAKER SETTINGS:", hideable: false)      {
+		section("SPEAKER SETTING:", hideable: false)      {
             input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false
         }
 	}
@@ -479,6 +570,7 @@ private pagePowerSettings()       {
         }
 	}
 }
+*/
 
 private pageAutoLevelSettings()     {
     ifDebug("pageAutoLevelSettings")
@@ -611,7 +703,7 @@ private pageRule(params)   {
             input "disabled$ruleNo", "bool", title: "Rule disabled?", required: false, multiple: false, defaultValue: false
 			input "mode$ruleNo", "mode", title: "Which mode?", required: false, multiple: true
             input "state$ruleNo", "enum", title: "Which state?", required: false, multiple: true,
-                    options: ['asleep', 'engaged', 'occupied', 'vacant']
+                    options: [asleep, engaged, occupied, vacant]
             input "dayOfWeek$ruleNo", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
                                                 options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                           [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
@@ -799,6 +891,31 @@ private pageAdjacentRooms() {
 	}
 }
 
+private pageRoomTemperature() {
+	dynamicPage(name: "pageRoomTemperature", title: "", install: false, uninstall: false)    {
+        section("MAINTAIN ROOM TEMPERATURE", hideable: false)		{
+            input "tempSensors", "capability.temperatureMeasurement", title: "Which temperature sensor?", required: (['1', '2', '3'].contains(maintainRoomTemperature)), multiple: true, submitOnChange: true
+            if (personsPresence)
+                input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: false, multiple: false, defaultValue: null,
+                                                                                options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
+            else
+                paragraph "Maintain room temperature?\nselect presence sensor(s) to set"
+            if (['1', '2', '3'].contains(maintainRoomTemp))
+                input "outTempSensor", "capability.temperatureMeasurement", title: "Which outdoor temperature sensor?", required: false, multiple: false
+            if (['1', '3'].contains(maintainRoomTemp))      {
+                input "roomCoolSwitch", "capability.switch", title: "Which switch to turn on AC?", required: true, multiple: false, range: "32..99"
+                input "roomCoolTemp", "decimal", title: "What temperature?", required: true, multiple: false, range: "32..99"
+                input "nightModes", "mode", title: "Night mode?", required: false, multiple: true
+                input "roomCoolTempNight", "decimal", title: "What temperature?", required: (nightModes), multiple: false, range: "32..99"
+            }
+            if (['2', '3'].contains(maintainRoomTemp))      {
+                input "roomHeatSwitch", "capability.switch", title: "Which switch to turn on heater?", required: true, multiple: false, range: "32..99"
+                input "roomHeatTemp", "decimal", title: "What temperature?", required: true, multiple: false, range: "32..99"
+            }
+        }
+	}
+}
+
 private pageGeneralSettings() {
 	dynamicPage(name: "pageGeneralSettings", title: "", install: false0, uninstall: false) {
 		section("MODE SETTINGS FOR AWAY AND PAUSE MODES?", hideable: false)		{
@@ -813,9 +930,6 @@ private pageGeneralSettings() {
 						                                                    options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                                                       [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
 		}
-        section("TEMPERATURE SENSOR", hideable: false)		{
-            input "temperatureSensor", "capability.temperatureMeasurement", title: "Which temperature sensor?", required: false, multiple: false
-        }
 	}
 }
 
@@ -824,12 +938,12 @@ private pageAllSettings() {
     def dOW = [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],[3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
 	dynamicPage(name: "pageAllSettings", title: "", install: false, uninstall: false)    {
 		section("", hideable: false)		{
-            paragraph "Motion sensor:\t${(motionSensors ? true : '')}\nOccupied switches:\t${ (occSwitches ? true : '')}\nOccupancy timeout:\t${( (hasOccupancySensor() && noMotion) ? noMotion : '') }\nMotion event:\t\t${(motionSensors ? (whichNoMotion == 1 ? 'Last Motion Active' : 'Last Motion Inactive') : '')}"
-            paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nPower meter:\t\t\t${(powerDevice ?: '')}\nPower value:\t\t\t${(powerDevice ? powerValue : '')}\nEngaged on music?\t\t${(musicDevice && musicEngaged ? true : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
-            paragraph "Dim timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
+            paragraph "Motion sensor:\t${(motionSensors ? true : '')}\nMotion event:\t\t${(motionSensors ? (whichNoMotion == 1 ? 'Last Motion Active' : 'Last Motion Inactive') : '')}\nOccupied switches:\t${ (occSwitches ? true : '')}\nOccupancy timeout:\t${( (hasOccupiedSensor() && noMotion) ? noMotion : '') }"
+            paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nPower meter:\t\t\t${(powerDevice ?: '')}\nPower value:\t\t\t${(powerDevice ? powerValue : '')}\nEngaged on music:\t\t${(musicDevice && musicEngaged ? true : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\nOutside door:\t\t${(contactSensor && contactSensorOutsideDoor? true : '')}\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
+            paragraph "Checking timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
 //            paragraph "Lux sensor:\t\t\t\t${(luxSensor ? true : '')}\nLux threshold:\t\t\t${(luxThreshold ?: '')}\nTurn off last switches:\t$allSwitchesOff"
             paragraph "Music player:\t\t${(musicDevice ? true : '')}"
-            paragraph "Temperature sensor:\t\t${(temperatureSensor ? true : '')}"
+            paragraph "Temperature sensors:\t\t${(tempSensors ? true : '')}\nMaintain room temperature:\t\t${(!maintainRoomTemp || maintainRoomTemp == '4' ? 'No' : (maintainRoomTemp == '1' ? 'Cool' : (maintainRoomTemp == '2' ? 'Heat' : 'Both')))}\nOutdoor temperature sensor:\t${(['1', '2', '3'].contains(maintainRoomTemp) && outTempSensor ? true : '')}"
             paragraph "Lux sensor:\t\t${(luxSensor ? true : '')}"
             paragraph "Power meter:\t\t${(powerDevice ? true : '')}"
             paragraph "Min level:\t\t\t${(minLevel ?: '')}\nMax level:\t\t\t${(maxLevel ?: '')}\nSet kelvin also?\t${(autoColorTemperature ? true : '')}\nWakeup time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(wakeupTime, location.timeZone)) : '')}\nSleep time:\t\t${(autoColorTemperature ? format24hrTime(timeToday(sleepTime, location.timeZone)) : '')}\nMin kelvin:\t\t\t${(autoColorTemperature ? minKelvin : '')}\nMax kelvin:\t\t${(autoColorTemperature ? maxKelvin : '')}"
@@ -879,30 +993,26 @@ private pageAllSettings() {
 def installed()		{}
 
 def updated()	{
-    if (!childCreated())	{
-		spawnChildDevice(app.label)
-	}
+    ifDebug("updated")
+    if (!childCreated())    spawnChildDevice(app.label);
     if (!(parent.handleAdjRooms()))     {
         ifDebug("no adjacent rooms")
         updateRoom(null)
     }
-    def child = getChildDevice(getRoom())
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
     def busyCheckDisplay = (state.busyCheck == 3 ? ['Light traffic'] : (state.busyCheck == 5 ? ['Medium traffic'] : (state.busyCheck == 7 ? ['Heavy traffic'] : [])))
     def devicesMap = ['busyCheck':busyCheckDisplay, 'engagedButton':engagedButton, 'presence':personsPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
                       'motionSensors':motionSensors, 'luxSensor':luxSensor, 'adjRoomNames':adjRoomNames,
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
-
+    def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
+    webCoRE_init()
 }
 
 def updateRoom(adjMotionSensors)     {
     ifDebug("updateRoom")
-	unsubscribe()
-    unschedule()
 	initialize()
-    state.clear()
     def child = getChildDevice(getRoom())
 	subscribe(location, modeEventHandler)
     state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : 0)
@@ -916,8 +1026,8 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
     if (occSwitches) { 
-    		subscribe(occSwitches, "switch.on", occupancySwitchOnEventHandler)
-    		subscribe(occSwitches, "switch.off", occupancySwitchOffEventHandler)
+    		subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
+    		subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
     }
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
@@ -929,8 +1039,8 @@ def updateRoom(adjMotionSensors)     {
     	subscribe(engagedSwitch, "switch.off", engagedSwitchOffEventHandler)
 	}
     if (contactSensor)      {
-    	subscribe(contactSensor, "contact.open", contactOpenEventHandler)
-    	subscribe(contactSensor, "contact.closed", contactClosedEventHandler)
+    	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.closed" : "contact.open"), contactOpenEventHandler)
+    	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.open" : "contact.closed"), contactClosedEventHandler)
 	}
     if (musicDevice && musicEngaged)       {
         subscribe(musicDevice, "status.playing", musicPlayingEventHandler)
@@ -948,29 +1058,25 @@ def updateRoom(adjMotionSensors)     {
         parent.subscribeChildrenToEngaged(app.id, anotherRoomEngaged)
 //        subsribe(anotherRoomEngaged, "occupancy", anotherRoomEventHandler)
     }
+    if (vacantButton)
+        subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler)
     if (luxSensor)      {
         subscribe(luxSensor, "illuminance", luxEventHandler)
-//        state.luxEnabled = true
-        state.previousLux = luxSensor.currentValue("illuminance")
+        state.previousLux = getIntfromStr((String) luxSensor.currentValue("illuminance"))
     }
-    else    {
-//        state.luxEnabled = false
+    else
         state.previousLux = null
-    }
     if (powerDevice)    {
         subscribe(powerDevice, "power", powerEventHandler)
-        state.previousPower = powerDevice.currentValue("power")
+        state.previousPower = getIntfromStr((String) powerDevice.currentValue("power"))
     }
     else
         state.previousPower = null
-    if (asleepSensor)
-        subscribe(asleepSensor, "sleeping", sleepEventHandler)
-    if (nightButton)
-        subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler)
+    if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
+    if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
     if (nightSwitches)   {
         nightSwitches.each      {
-            if (it.hasCommand("setLevel"))
-                state.switchesHasLevel << [(it.getId()):true]
+            if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
         }
     }
     state.nightSetLevelTo = (nightSetLevelTo ? nightSetLevelTo as Integer : null)
@@ -987,14 +1093,16 @@ def updateRoom(adjMotionSensors)     {
     }
     else
         state.dayOfWeek = null
-    if (temperatureSensor)
-        subscribe(temperatureSensor, "temperature", temperatureEventHandler)
+    if (tempSensors)        subscribe(tempSensors, "temperature", temperatureEventHandler);
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
     turnOnAndOffSwitches()
+    processCoolHeat()
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
 }
+
+def	initialize()	{ unsubscribe(); unschedule(); state.clear() }
 
 def updateIndicators()      {
     ifDebug("updateIndicators")
@@ -1013,9 +1121,10 @@ def updateIndicators()      {
     if (luxSensor)      lux = getIntfromStr((String) luxSensor.currentValue("illuminance"));
     child.updateLuxInd(lux)
     if (contactSensor)      {
-        devValue = contactSensor.currentValue("contact");
-        if (devValue.contains('closed'))    ind = 1;
-        else                                ind = 0;
+        ind = (contactSensor.currentValue("contact") == 'closed' ? (!contactSensorOutsideDoor ? 1 : 0) : (!contactSensorOutsideDoor ? 0 : 1))
+//        devValue = contactSensor.currentValue("contact");
+//        if (devValue.contains('closed') && !contactSensorOutsideDoor)    ind = 1;
+//        else                                                             ind = 0;
     }
     else
         ind = -1
@@ -1030,24 +1139,33 @@ def updateIndicators()      {
         ind = -1;
     child.updatePresenceInd(ind)
     def temp = -1
-    if (temperatureSensor)
-        temp = temperatureSensor.currentValue("temperature");
+    if (tempSensors)    temp = getAvgTemperature();
     child.updateTemperatureInd(temp)
+}
+
+private getAvgTemperature()     {
+    ifDebug("getAvgTemperature")
+    int countTempSensors = (tempSensors ? tempSensors.size() : 0)
+    if (countTempSensors < 1)       return -1;
+    def temperatures = tempSensors.currentValue("temperature")
+//    ifDebug("countTempSensors: $countTempSensors | temperatures: $temperatures")
+    def temperature = 0.0
+    temperatures.each   {  temperature = temperature + it  }
+//    ifDebug("to return: ${(temperature / countTempSensors)}")
+    return (temperature / countTempSensors)
 }
 
 private isAnySwitchOn()   {
     ifDebug("isAnySwitchOn")
     def ind = -1
-    if (occSwitches) {
-    	    ind = 0
-        if (isAnyOccupancySwitchOn()) { 
-        	    return 1 
-        }
-    }
     for (def i = 1; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
+        if (thisRule.switchesOn)      {
             def devValue = thisRule.switchesOn.currentValue("switch")
             if (devValue.contains('on'))    {
                 ind = 1;
@@ -1060,8 +1178,8 @@ private isAnySwitchOn()   {
     return ind
 }
 
-private isAnyOccupancySwitchOn() { 
-    ifDebug("isAnyOccupancySwitchOn")
+private isAnyOccupiedSwitchOn() { 
+    ifDebug("isAnyOccupiedSwitchOn")
     def v = false
     if (occSwitches) { 
         v = occSwitches.currentValue("switch").contains('on')
@@ -1074,6 +1192,7 @@ def updateRulesToState()    {
     state.timeCheck = false
     state.ruleHasAL = false
     state.vacant = false
+    state.powerCheck = false
     state.previousRuleNo = null
     state.rules = false
 //    state.rules = [1:[ruleNo:1, name:'Rule 1', mode:location.currentMode, state:null, level:50, ct:2700, color:[saturation:80,hue:20]]]
@@ -1160,12 +1279,21 @@ def updateSwitchAttributesToStateAndSubscribe()    {
     }
 }
 
+private getNextRule(ruleNo)     {
+    for (def i = ruleNo as Integer; i < 11; i++)       {
+        def nextRuleNo = String.valueOf(i)
+        def thisRule = getRule(nextRuleNo)
+        if (thisRule && !thisRule.disabled)     return thisRule;
+    }
+    return [ruleNo:'EOR']
+}
+
 private getRule(ruleNo, checkState = true)     {
-    state.thisRule = [:]
+//    state.thisRule = [:]
     if (!ruleNo)        return null
     if (checkState && state.rules)      {
-        def ruleThere = state.rules[ruleNo]
-        if (!ruleThere)      return null
+//        def ruleThere = state.rules[ruleNo]
+        if (!state.rules[ruleNo])      return null
     }
     def ruleName = settings["name$ruleNo"]
     def ruleDisabled = settings["disabled$ruleNo"]
@@ -1222,8 +1350,6 @@ private getRule(ruleNo, checkState = true)     {
         return null
 }
 
-def	initialize()	{  webCoRE_init()  }
-
 def	modeEventHandler(evt)	{
     ifDebug("modeEventHandler")
     if (state.dayOfWeek && !(checkRunDay()))
@@ -1251,7 +1377,7 @@ def	motionActiveEventHandler(evt)	{
     if (roomState == 'asleep')		{
         if (nightSwitches)      {
             dimNightLights()
-            if (state.noMotion && whichNoMotion != lastMotionInactive())    {
+            if (state.noMotion && whichNoMotion != lastMotionInactive)    {
                 updateChildTimer(state.noMotion)
                 runIn(state.noMotion, nightSwitchesOff)
             }
@@ -1266,7 +1392,8 @@ def	motionActiveEventHandler(evt)	{
         }
         return
     }
-    if (contactSensor && contactSensor.currentValue("contact") == 'closed')     {
+    def cVContact = (contactSensor ? contactSensor.currentValue("contact") : null)
+    if (contactSensor && ((cVContact == 'closed' && !contactSensorOutsideDoor) || (cVContact == 'open' && contactSensorOutsideDoor)))      {
         if (['occupied', 'checking'].contains(roomState))
             child.generateEvent('engaged')
         else    {
@@ -1284,7 +1411,7 @@ def	motionActiveEventHandler(evt)	{
                 child.generateEvent('occupied')
         }
         else    {
-            if (roomState == 'occupied' && whichNoMotion == lastMotionActive() && state.noMotion)   {
+            if (roomState == 'occupied' && whichNoMotion == lastMotionActive && state.noMotion)   {
                 updateChildTimer(state.noMotion)
                 runIn(state.noMotion, roomVacant)
             }
@@ -1303,14 +1430,14 @@ def	motionInactiveEventHandler(evt)     {
 //        if (!(state.noMotion))
 //            runIn(1, roomVacant)
 //        else
-            if (state.noMotion && whichNoMotion == lastMotionInactive())    {
+            if (state.noMotion && whichNoMotion == lastMotionInactive)    {
                 updateChildTimer(state.noMotion)
                 runIn(state.noMotion, roomVacant)
             }
     }
     else    {
         if (roomState == 'asleep' && nightSwitches)     {
-            if (whichNoMotion == lastMotionInactive())      {
+            if (whichNoMotion == lastMotionInactive)      {
                 if (state.noMotion)
                     updateChildTimer(state.noMotion);
                 runIn((state.noMotion ?: 1), nightSwitchesOff)
@@ -1355,12 +1482,12 @@ def adjMotionActiveEventHandler(evt)    {
 
 def adjMotionInactiveEventHandler(evt)      {}
 
-def occupancySwitchOnEventHandler(evt) {
-    ifDebug("occupancySwitchOnEventHandler")
-    log.trace "occupancySwitchOnEventHandler"
-    // Occupancy Switch is turned on
+def occupiedSwitchOnEventHandler(evt) {
+    ifDebug("occupiedSwitchOnEventHandler")
+    log.trace "occupiedSwitchOnEventHandler"
+    // occupied Switch is turned on
     def child = getChildDevice(getRoom())
-    child.updateSwitchInd(1)
+
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
     def roomState = child.getRoomState()
@@ -1377,11 +1504,10 @@ def occupancySwitchOnEventHandler(evt) {
     }
 }
 
-def occupancySwitchOffEventHandler(evt) {
-    ifDebug("occupancySwitchOffEventHandler")
-    // Occupancy Switch is turned off
+def occupiedSwitchOffEventHandler(evt) {
+    ifDebug("occupiedSwitchOffEventHandler")
+    // occupied Switch is turned off
     def child = getChildDevice(getRoom())
-    child.updateSwitchInd(isAnySwitchOn())
 }
 
 def	switchOnEventHandler(evt)       {
@@ -1429,6 +1555,21 @@ def	buttonPushedEventHandler(evt)     {
         child.generateEvent('engaged')
 }
 
+def	buttonPushedVacantEventHandler(evt)     {
+    ifDebug("buttonPushedVacantEventHandler")
+    if (pauseModes && pauseModes.contains(location.currentMode))   return;
+    if (state.dayOfWeek && !(checkRunDay()))    return;
+    if (!evt.data)      return;
+    def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+    assert eD instanceof Map
+    if (!eD || (buttonIs && eD['buttonNumber'] != buttonIs as Integer))
+    	return
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    if (['engaged', 'occupied', 'checking'].contains(roomState))
+        child.generateEvent('vacant')
+}
+
 def	anotherRoomEngagedEventHandler()     {
     ifDebug("anotherRoomEngagedEventHandler")
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
@@ -1460,6 +1601,7 @@ def	presencePresentEventHandler(evt)     {
         if (['occupied', 'checking', 'vacant'].contains(roomState))
             child.generateEvent('engaged')
     }
+    processCoolHeat()
 }
 
 def	presenceNotPresentEventHandler(evt)     {
@@ -1478,6 +1620,7 @@ def	presenceNotPresentEventHandler(evt)     {
                 child.generateEvent('checking')
         }
     }
+    processCoolHeat()
 }
 
 def	engagedSwitchOnEventHandler(evt)     {
@@ -1541,10 +1684,10 @@ def	contactClosedEventHandler(evt)     {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
-    if (roomState == 'occupied' || (!hasOccupancySensor() && roomState == 'vacant'))
+    if (roomState == 'occupied' || (!hasOccupiedSensor() && roomState == 'vacant'))
         child.generateEvent('engaged')
     else    {
-        if (hasOccupancySensor() && roomState == 'vacant')
+        if (hasOccupiedSensor() && roomState == 'vacant')
             child.generateEvent('checking')
     }
 }
@@ -1560,10 +1703,10 @@ def musicPlayingEventHandler(evt)       {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
-    if (roomState == 'occupied' || (!hasOccupancySensor() && roomState == 'vacant'))
+    if (roomState == 'occupied' || (!hasOccupiedSensor() && roomState == 'vacant'))
         child.generateEvent('engaged')
     else    {
-        if (hasOccupancySensor() && roomState == 'vacant')
+        if (hasOccupiedSensor() && roomState == 'vacant')
             child.generateEvent('checking')
     }
 }
@@ -1589,7 +1732,52 @@ def musicStoppedEventHandler(evt)       {
 def temperatureEventHandler(evt)    {
     ifDebug("temperatureEventHandler")
     def child = getChildDevice(getRoom())
-    child.updateTemperatureInd(evt.value)
+    def temperature = getAvgTemperature()
+    child.updateTemperatureInd(temperature)
+    if (!personsPresence)       return;
+    if (pauseModes && pauseModes.contains(location.currentMode))       return;
+    if (state.dayOfWeek && !(checkRunDay()))    return;
+    processCoolHeat()
+}
+
+private processCoolHeat()       {
+    if (!personsPresence || maintainRoomTemp == '4')        return;
+    def present = personsPresence.currentValue("presence").contains('present')
+    def child = getChildDevice(getRoom())
+    def roomState = child.getRoomState()
+    def temperature = getAvgTemperature()
+    if (['1', '3'].contains(maintainRoomTemp))      {
+        def coolHigh
+        def coolLow
+        if ((nightModes && nightModes.contains(location.currentMode)) || roomState == 'asleep')     {
+            coolHigh = roomCoolTempNight + 0.5
+            coolLow = roomCoolTempNight - 0.5
+        }
+        else    {
+            coolHigh = roomCoolTemp + 0.5
+            coolLow = roomCoolTemp - 0.5
+        }
+        if (temperature >= coolHigh && present)     {
+            if (roomCoolSwitch.currentValue("switch") == 'off')     roomCoolSwitch.on();
+        }
+        else        {
+            if (temperature <= coolLow || !present)         {
+                if (roomCoolSwitch.currentValue("switch") == 'on')     roomCoolSwitch.off();
+            }
+        }
+    }
+    if (['2', '3'].contains(maintainRoomTemp))      {
+        def heatHigh = roomHeatTemp + 0.5
+        def heatLow = roomHeatTemp - 0.5
+        if (temperature >= heatHigh || !present)     {
+            if (roomHeatSwitch.currentValue("switch") == 'on')     roomHeatSwitch.off();
+        }
+        else        {
+            if (temperature <= heatLow && present)     {
+                if (roomHeatSwitch.currentValue("switch") == 'off')     roomHeatSwitch.on();
+            }
+        }
+    }
 }
 
 def luxEventHandler(evt)    {
@@ -1669,18 +1857,26 @@ def powerEventHandler(evt)    {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
-    def currentPower = evt.value.toInteger()
-    if (powerValue)
+    def currentPower = getIntfromStr((String) evt.value)
+    def proccessSwitches = true
+    if (powerValue)     {
         if (currentPower >= powerValue && state.previousPower < powerValue)        {
-            if (['occupied', 'checking', 'vacant'].contains(roomState))
+            if (['occupied', 'checking', 'vacant'].contains(roomState))     {
                 child.generateEvent('engaged')
+                proccessSwitches = false
+            }
         }
         else    {
             if (currentPower < powerValue && state.previousPower >= powerValue)        {
-                if (roomState == 'engaged')
+                if (roomState == 'engaged')     {
                     child.generateEvent('checking')
+                    proccessSwitches = false
+                }
             }
         }
+    }
+    if (proccessSwitches && state.powerCheck && currentPower != state.previousPower)
+        turnOnAndOffSwitches();
     state.previousPower = currentPower
 }
 
@@ -1742,6 +1938,7 @@ def handleSwitches(oldState = null, newState = null)	{
         unschedule('roomAwake')
         updateAsleepChildTimer(0)
         nightSwitchesOff()
+//        processCoolHeat()
     }
     else    {
         unscheduleAll("handle switches")
@@ -1767,6 +1964,7 @@ def handleSwitches(oldState = null, newState = null)	{
                     updateAsleepChildTimer(state.noAsleep)
                     runIn(state.noAsleep, roomAwake)
                 }
+//                processCoolHeat()
             }
             else    {
                 if (state.noMotionEngaged)      {
@@ -1777,10 +1975,10 @@ def handleSwitches(oldState = null, newState = null)	{
         }
         else    {
             if (newState == 'occupied')     {
-                if (state.noMotion && hasOccupancySensor())     {
+                if (state.noMotion && hasOccupiedSensor())     {
                     def motionValue = motionSensors.currentValue("motion")
                     def mV = motionValue.contains('active')
-                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !mV) || isAnyOccupancySwitchOn())      {
+                    if (whichNoMotion == lastMotionActive || (whichNoMotion == lastMotionInactive && !mV) || isAnyOccupiedSwitchOn())      {
                         updateChildTimer(state.noMotion)
                         runIn(state.noMotion, roomVacant)
                     }
@@ -1788,7 +1986,7 @@ def handleSwitches(oldState = null, newState = null)	{
             }
         }
     }
-    else
+    else    {
         if (newState == 'checking')     {
             dimLights()
             def dT = state.dimTimer ?: 1
@@ -1796,6 +1994,7 @@ def handleSwitches(oldState = null, newState = null)	{
                 updateChildTimer(dT)
             runIn(dT, roomVacant)
         }
+    }
 }
 
 /*
@@ -1837,14 +2036,18 @@ def turnOnAndOffSwitches()      {
     ifDebug("turnOnAndOffSwitches")
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
+    ifDebug("turnOnAndOffSwitches debug 1")
     if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
+        ifDebug("turnOnAndOffSwitches debug 2")
         def turnedOn = switches2On(roomState)
         if (!turnedOn && allSwitchesOff)        {
+            ifDebug("turnOnAndOffSwitches debug 3")
             switches2Off()
             if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')
                 musicDevice.stop()
         }
     }
+    ifDebug("turnOnAndOffSwitches debug 4")
 }
 
 private switches2On(roomState = null)     {
@@ -1857,6 +2060,7 @@ private switches2On(roomState = null)     {
     def previousRuleLux = null
     def thisRule = [:]
     if (state.rules)    {
+        ifDebug("switches2On debug 1")
         def currentMode = String.valueOf(location.currentMode)
         if (!roomState)     {
             def child = getChildDevice(getRoom())
@@ -1869,10 +2073,13 @@ private switches2On(roomState = null)     {
         def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         def i = 1
         for (; i < 11; i++)      {
+            ifDebug("switches2On debug 2")
 //        for (def rule in state.rules.sort{ it.key })    {
             def ruleNo = String.valueOf(i)
-            thisRule = getRule(ruleNo)
-            if (!thisRule || thisRule.disabled)      continue;
+            thisRule = getNextRule(ruleNo)
+            if (thisRule.ruleNo == 'EOR')     break;
+            i = thisRule.ruleNo as Integer
+//            if (!thisRule || thisRule.disabled)      continue;
 //            if (!thisRule.mode && !thisRule.state && !thisRule.dayOfWeek && thisRule.luxThreshold == null && !thisRule.actions &&
 //                !thisRule.fromTimeType && !thisRule.toTimeType && !thisRule.switchesOn && !thisRule.switchesOff && !thisRule.piston)
 //                continue
@@ -1900,17 +2107,18 @@ private switches2On(roomState = null)     {
 //            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
             if (thisRule.luxThreshold != null)      {
                 if (!turnOn || !previousRuleLux || thisRule.luxThreshold < previousRuleLux)    {
-                    turnOn = ruleNo
+                    turnOn = thisRule.ruleNo
                     previousRuleLux = thisRule.luxThreshold
                 }
             }
             else    {
                 if (!turnOn)
-                    turnOn = ruleNo
+                    turnOn = thisRule.ruleNo
 //                break
             }
         }
     }
+    ifDebug("switches2On debug 3")
     if (turnOn)     {
         ifDebug("${app.label} executed rule no: $turnOn")
         thisRule = getRule(turnOn)
@@ -1976,14 +2184,16 @@ private runActions(thisRule)    {
 private executePiston(thisRule)    {  if (thisRule.piston)  webCoRE_execute(thisRule.piston)  }
 
 private musicAction(thisRule)       {
-    if (musicDevice && thisRule.musicAction)
+    if (musicDevice && thisRule.musicAction)        {
         if (thisRule.musicAction == '1')    {
             musicDevice.play()
 // to unmute or not?            musicDevice.unmute()
         }
-        else
+        else    {
             if (thisRule.musicAction == '2')
                 musicDevice.pause()
+        }
+    }
 }
 
 private calculateLevelOrKelvin(kelvin = false)       {
@@ -2157,8 +2367,12 @@ private whichSwitchesAreOn()   {
     def switchesThatAreOnID = []
     for (def i = 1; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
+        if (thisRule.switchesOn)      {
             thisRule.switchesOn.each        {
                 def itID = it.getId()
                 if (it.currentSwitch == 'on' && !(switchesThatAreOnID.contains(itID)))    {
@@ -2168,6 +2382,7 @@ private whichSwitchesAreOn()   {
             }
         }
     }
+    ifDebug("whichSwitchesAreOn @ return: $switchesThatAreOn")
     return switchesThatAreOn
 }
 
@@ -2252,20 +2467,12 @@ def switches2Off()       {
         child.updateSwitchInd(isAnySwitchOn())
     }*/
     def switchesThatAreOn = whichSwitchesAreOn()
+    ifDebug("switches2Off: $switchesThatAreOn")
     switchesThatAreOn.each      {
-        if (it.currentSwitch != 'off')
-            it.off()
+        ifDebug("switches2Off: turning off: $it")
+        if (it.currentSwitch != 'off')      it.off();
     }
-/*    def i = 1
-    for (; i < 11; i++)      {
-        def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (thisRule && !thisRule.disabled && thisRule.switchesOn)      {
-            thisRule.switchesOn.each        {
-                it.off()
-            }
-        }
-    }*/
+    ifDebug("switches2Off: is it trying to turn off switches that are null?")
 }
 
 private previousStateStack(previousState)    {
@@ -2337,52 +2544,30 @@ def turnOffIsBusy()     {
 }
 
 def spawnChildDevice(roomName)	{
+    ifDebug("spawnChildDevice")
 	app.updateLabel(app.label)
 	if (!childCreated())
 		def child = addChildDevice("bangali", "rooms occupancy", getRoom(), null, [name: getRoom(), label: roomName, completedSetup: true])
 }
 
 private childCreated()		{
+    ifDebug("childCreated")
 	if (getChildDevice(getRoom()))
 		return true
 	else
 		return false
 }
 
-private getRoom()	{	return "rm_${app.id}"	}
+private getRoom()	{ return "rm_${app.id}" }
 
 def uninstalled() {
+    ifDebug("uninstalled")
 	getChildDevices().each	{
 		deleteChildDevice(it.deviceNetworkId)
 	}
 }
 
-def childUninstalled()  {
-ifDebug("uninstalled room ${app.label}")
-}
-
-private saveHueToState()        {
-    if (setColorTo)     {
-        def hueColor = 0
-        def saturation = 100
-        switch(setColorTo)       {
-            case "White":       hueColor = 52;  saturation = 19;    break;
-            case "Daylight":    hueColor = 53;  saturation = 91;    break;
-            case "Soft White":  hueColor = 23;  saturation = 56;    break;
-            case "Warm White":  hueColor = 20;  saturation = 80;    break;
-            case "Blue":        hueColor = 70;                      break;
-            case "Green":       hueColor = 39;                      break;
-            case "Yellow":      hueColor = 25;                      break;
-            case "Orange":      hueColor = 10;                      break;
-            case "Purple":      hueColor = 75;                      break;
-            case "Pink":        hueColor = 83;                      break;
-            case "Red":         hueColor = 100;                     break;
-        }
-        state.setColorTo = [hue: hueColor, saturation: saturation]
-    }
-    else
-        state.setColorTo = null
-}
+def childUninstalled()	{ ifDebug("uninstalled room ${app.label}") }
 
 private returnHueAndSaturation(setColorTo)        {
     def rHAS
@@ -2488,8 +2673,7 @@ private scheduleFromToTimes()       {
 */
 
 def scheduleFromToTimes()       {
-    if (!state.rules || !state.timeCheck)
-        return
+    if (!state.rules || !state.timeCheck)       return;
     ifDebug("scheduleFromToTimes")
     def sunriseFromSubscribed = false
     def sunriseToSubscribed = false
@@ -2522,8 +2706,11 @@ def scheduleFromToTimes()       {
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (!thisRule || thisRule.disabled)      continue;
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (!thisRule || thisRule.disabled)      continue;
         if (!thisRule.fromTimeType || !thisRule.toTimeType)     continue;
         if (thisRule.fromTimeType == timeSunrise() && !sunriseFromSubscribed)   {
             subscribe(location, "sunrise", timeFromHandler)
@@ -2578,8 +2765,11 @@ private scheduleFromTime()      {
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (!thisRule || thisRule.disabled)      continue;
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (!thisRule || thisRule.disabled)      continue;
         if (thisRule.fromDate && thisRule.toDate)       {
 //            ifDebug("scheduleFromTime: thisRule.fromDate: $thisRule.fromDate | thisRule.toDate: $thisRule.toDate")
             def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
@@ -2645,8 +2835,11 @@ private scheduleToTime()      {
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (!thisRule || thisRule.disabled)      continue;
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (!thisRule || thisRule.disabled)      continue;
 /*        if (thisRule.fromDate && thisRule.toDate)       {
             def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
             def tTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
@@ -2727,6 +2920,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def getAdjMotionSensors()  {
+    ifDebug("getAdjMotionSensors")
     if (motionSensors)   {
         def motionSensorsList = []
         motionSensors.each   {  motionSensorsList << it }
@@ -2769,8 +2963,8 @@ private checkRunDay(dayOfWeek = null)   {
         return (state.dayOfWeek.contains(thisDay))
 }
 
-private lastMotionActive()      {  return '1'  }
-private lastMotionInactive()    {  return '2'  }
+// private lastMotionActive()      {  return '1'  }
+// private lastMotionInactive()    {  return '2'  }
 
 private timeSunrise()   {  return '1'  }
 private timeSunset()    {  return '2'  }
@@ -2781,7 +2975,7 @@ private presenceActionDeparture()     {  return (presenceAction == '2' || presen
 
 private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
 
-private	hasOccupancySensor()		{ return (motionSensors || occSwitches)}
+private	hasOccupiedSensor()		{ return (motionSensors || occSwitches)}
 
 // only called from device handler
 def turnSwitchesAllOnOrOff(turnOn)     {
@@ -2798,15 +2992,17 @@ private getAllSwitches()    {
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getRule(ruleNo)
-        if (thisRule && !thisRule.disabled && thisRule.switchesOn)
+        def thisRule = getNextRule(ruleNo)
+        if (thisRule.ruleNo == 'EOR')     break;
+        i = thisRule.ruleNo as Integer
+//        def thisRule = getRule(ruleNo)
+//        if (thisRule && !thisRule.disabled && thisRule.switchesOn)
+        if (thisRule.switchesOn)
             thisRule.switchesOn.each        {
                 if (!switches.contains(it))
                     switches << it
         }
     }
-    if (occSwitches)
-    	    switches += occSwitches
     ifDebug("getAllSwitches: $switches")
     return switches
 }
@@ -2908,22 +3104,50 @@ ifDebug("sleepEventHandler: ${asleepSensor} - ${evt.value}")
 /*  The execute method accepts either an id or the name of a             */
 /*  piston, previously retrieved by webCoRE_list()                       */
 /*************************************************************************/
-private webCoRE_handle(){return'webCoRE'}
-private webCoRE_init(pistonExecutedCbk)
-{
-    state.webCoRE=(state.webCoRE instanceof Map?state.webCoRE:[:])+(pistonExecutedCbk?[cbk:pistonExecutedCbk]:[:]);
-    subscribe(location,"${webCoRE_handle()}.pistonList",webCoRE_handler);
-    if(pistonExecutedCbk)subscribe(location,"${webCoRE_handle()}.pistonExecuted",webCoRE_handler);webCoRE_poll();
+private webCoRE_handle()    { return 'webCoRE' }
+private webCoRE_init(pistonExecutedCbk)     {
+    ifDebug("webCoRE_init")
+    state.webCoRE = (state.webCoRE instanceof Map ? state.webCoRE:[:]) + (pistonExecutedCbk ? [cbk:pistonExecutedCbk] : [:])
+    subscribe(location, "${webCoRE_handle()}.pistonList", webCoRE_handler)
+    if (pistonExecutedCbk)    subscribe(location, "${webCoRE_handle()}.pistonExecuted", webCoRE_handler);
+//    webCoRE_poll()
+    sendLocationEvent([name: webCoRE_handle(), value:'poll', isStateChange:true, displayed:false])
 }
-private webCoRE_poll(){sendLocationEvent([name: webCoRE_handle(),value:'poll',isStateChange:true,displayed:false])}
-public  webCoRE_execute(pistonIdOrName,Map data=[:]){def i=(state.webCoRE?.pistons?:[]).find{(it.name==pistonIdOrName)||(it.id==pistonIdOrName)}?.id;if(i){sendLocationEvent([name:i,value:app.label,isStateChange:true,displayed:false,data:data])}}
-public  webCoRE_list(mode)
-{
-	def p=state.webCoRE?.pistons;
-    if(p)p.collect{
-		mode=='id'?it.id:(mode=='name'?it.name:[id:it.id,name:it.name])
+/*
+private webCoRE_poll()      {
+    ifDebug("webCoRE_poll")
+    sendLocationEvent([name: webCoRE_handle(), value:'poll', isStateChange:true, displayed:false])
+}
+*/
+public  webCoRE_execute(pistonIdOrName, Map data=[:])    {
+    ifDebug("webCoRE_execute")
+    def i = (state.webCoRE?.pistons ?: []).find{(it.name == pistonIdOrName) || (it.id == pistonIdOrName)}?.id;
+    if (i)    sendLocationEvent([name:i, value:app.label, isStateChange:true, displayed:false, data:data]);
+}
+public  webCoRE_list(mode)      {
+    ifDebug("webCoRE_list")
+	def p = state.webCoRE?.pistons;
+    if (p)
+        p.collect{mode == 'id' ? it.id : (mode == 'name' ? it.name : [id:it.id, name:it.name])
         // log.debug "Reading piston: ${it}"
 	}
     return p
 }
-public  webCoRE_handler(evt){switch(evt.value){case 'pistonList':List p=state.webCoRE?.pistons?:[];Map d=evt.jsonData?:[:];if(d.id&&d.pistons&&(d.pistons instanceof List)){p.removeAll{it.iid==d.id};p+=d.pistons.collect{[iid:d.id]+it}.sort{it.name};state.webCoRE = [updated:now(),pistons:p];};break;case 'pistonExecuted':def cbk=state.webCoRE?.cbk;if(cbk&&evt.jsonData)"$cbk"(evt.jsonData);break;}}
+public  webCoRE_handler(evt)    {
+    ifDebug("webCoRE_handler")
+    switch(evt.value)   {
+        case 'pistonList':
+            List p = state.webCoRE?.pistons ?: []
+            Map d = evt.jsonData ?: [:]
+            if (d.id && d.pistons && (d.pistons instanceof List))       {
+                p.removeAll{it.iid == d.id}
+                p += d.pistons.collect{[iid:d.id]+it}.sort{it.name}
+                state.webCoRE = [updated:now(), pistons:p]
+            }
+            break
+        case 'pistonExecuted':
+            def cbk = state.webCoRE?.cbk
+            if (cbk && evt.jsonData)    "$cbk"(evt.jsonData);
+            break
+    }
+}
