@@ -1881,7 +1881,7 @@ def handleSwitches(oldState = null, newState = null)	{
     ifDebug("${app.label} room state - old: ${oldState} new: ${newState}")
 //    state.roomState = newState
 //      "yyyy-MM-dd'T'HH:mm:ssZ" = 2017-11-13T23:32:45+0000
-    if (!newState || oldState == newState)      return false;
+    if (!oldState || !newState || oldState == newState)      return false;
     def nowDate = now()
     state.previousState = ['state':newState, 'date':nowDate]
     previousStateStack(state.previousState)
