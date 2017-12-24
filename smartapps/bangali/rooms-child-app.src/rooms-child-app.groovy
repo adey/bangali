@@ -1135,7 +1135,7 @@ def updateIndicators()      {
 
 private getAvgTemperature()     {
     ifDebug("getAvgTemperature")
-    int countTempSensors = tempSensors.size()
+    int countTempSensors = (tempSensors ? tempSensors.size() : 0)
     if (countTempSensors < 1)       return -1;
     def temperatures = tempSensors.currentValue("temperature")
 //    ifDebug("countTempSensors: $countTempSensors | temperatures: $temperatures")
@@ -1373,7 +1373,7 @@ def	motionActiveEventHandler(evt)	{
         }
         return
     }
-    def cVContact = contactSensor?.currentValue("contact")
+    def cVContact = (contactSensor ? contactSensor.currentValue("contact") : null)
     if (contactSensor && ((cVContact == 'closed' && !contactSensorOutsideDoor) || (cVContact == 'open' && contactSensorOutsideDoor)))      {
         if (['occupied', 'checking'].contains(roomState))
             child.generateEvent('engaged')
