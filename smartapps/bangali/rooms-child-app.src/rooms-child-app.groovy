@@ -351,21 +351,21 @@ private pageOccupiedSettings()      {
 	dynamicPage(name: "pageOccupiedSettings", title: "", install: false, uninstall: false)     {
         section("MOTION SENSOR CONFIGURATION FOR OCCUPIED STATE:", hideable: false)        {
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
+            if (motionSensors)
+                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
+                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            else
+                paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
         section("SWITCH CONFIGURATION FOR OCCUPIED STATE:", hideable:false)	{ 
             input "occSwitches", "capability.switch", title: "Which switches?", required:false, multiple: true, submitOnChange: true
         }
         section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hedeable:fase) { 
-            if (hasOccupancySensor())
-                input "noMotion", "number", title: "Timeout occupancy after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            if (hasOccupiedSensor())
+                input "noMotion", "number", title: "Occupancy timeout after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             else
-                paragraph "Timeout occupance after how many seconds?\nselect device above to set"
-            if (noMotion && motionSensors)
-                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
-                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
-            else
-                paragraph "Use which motion event for timeout?\nselect motion sensor and timeout above to set"
-        
+                paragraph "Occupancy timeout after how many seconds?\nselect device above to set"
+
         }
 	}
 }
@@ -824,7 +824,7 @@ private pageAllSettings() {
     def dOW = [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],[3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
 	dynamicPage(name: "pageAllSettings", title: "", install: false, uninstall: false)    {
 		section("", hideable: false)		{
-            paragraph "Motion sensor:\t${(motionSensors ? true : '')}\nOccupied switches:\t${ (occSwitches ? true : '')}\nOccupancy timeout:\t${( (hasOccupancySensor() && noMotion) ? noMotion : '') }\nMotion event:\t\t${(motionSensors ? (whichNoMotion == 1 ? 'Last Motion Active' : 'Last Motion Inactive') : '')}"
+            paragraph "Motion sensor:\t${(motionSensors ? true : '')}\nMotion event:\t\t${(motionSensors ? (whichNoMotion == 1 ? 'Last Motion Active' : 'Last Motion Inactive') : '')}\nOccupied switches:\t${ (occSwitches ? true : '')}\nOccupancy timeout:\t${( (hasOccupiedSensor() && noMotion) ? noMotion : '') }"
             paragraph "Room busy check:\t${(!busyCheck ? 'No traffic check' : (busyCheck == '3' ? 'Light traffic' : (busyCheck == '5' ? 'Medium traffic' : 'Heavy traffic')))}\n\nEngaged button:\t\t${(engagedButton ? true : '')}\nButton number:\t\t${(engagedButton && buttonIs ? buttonIs : '')}\nPerson presence:\t\t${(personsPresence ? personsPresence.size() : '')}\nPresence action:\t\t${(personsPresence ? (presenceAction == '1' ? 'Engaged on arrival' : (presenceAction == '2' ? 'Vacant on Departure' : (presenceAction == 3 ? 'Both' : 'Neither'))) : '')}\nPower meter:\t\t\t${(powerDevice ?: '')}\nPower value:\t\t\t${(powerDevice ? powerValue : '')}\nEngaged on music?\t\t${(musicDevice && musicEngaged ? true : '')}\nEngaged switches:\t\t${(engagedSwitch ? engagedSwitch.size() : '')}\nContact sensor:\t\t${(contactSensor ? true : '')}\nEngaged timeout:\t${(noMotionEngaged ?: '')}\nDirect reset:\t\t\t${(resetEngagedDirectly ? true : false)}"
             paragraph "Dim timer:\t\t${(dimTimer ?: '')}\nDim level:\t\t${(dimByLevel ?: '')}"
 //            paragraph "Lux sensor:\t\t\t\t${(luxSensor ? true : '')}\nLux threshold:\t\t\t${(luxThreshold ?: '')}\nTurn off last switches:\t$allSwitchesOff"
@@ -916,8 +916,8 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
     if (occSwitches) { 
-    		subscribe(occSwitches, "switch.on", occupancySwitchOnEventHandler)
-    		subscribe(occSwitches, "switch.off", occupancySwitchOffEventHandler)
+    		subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
+    		subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
     }
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
@@ -1038,12 +1038,6 @@ def updateIndicators()      {
 private isAnySwitchOn()   {
     ifDebug("isAnySwitchOn")
     def ind = -1
-    if (occSwitches) {
-    	    ind = 0
-        if (isAnyOccupancySwitchOn()) { 
-        	    return 1 
-        }
-    }
     for (def i = 1; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
         def thisRule = getRule(ruleNo)
@@ -1060,8 +1054,8 @@ private isAnySwitchOn()   {
     return ind
 }
 
-private isAnyOccupancySwitchOn() { 
-    ifDebug("isAnyOccupancySwitchOn")
+private isAnyOccupiedSwitchOn() { 
+    ifDebug("isAnyOccupiedSwitchOn")
     def v = false
     if (occSwitches) { 
         v = occSwitches.currentValue("switch").contains('on')
@@ -1355,12 +1349,12 @@ def adjMotionActiveEventHandler(evt)    {
 
 def adjMotionInactiveEventHandler(evt)      {}
 
-def occupancySwitchOnEventHandler(evt) {
-    ifDebug("occupancySwitchOnEventHandler")
-    log.trace "occupancySwitchOnEventHandler"
-    // Occupancy Switch is turned on
+def occupiedSwitchOnEventHandler(evt) {
+    ifDebug("occupiedSwitchOnEventHandler")
+    log.trace "occupiedSwitchOnEventHandler"
+    // occupied Switch is turned on
     def child = getChildDevice(getRoom())
-    child.updateSwitchInd(1)
+
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
     def roomState = child.getRoomState()
@@ -1377,11 +1371,10 @@ def occupancySwitchOnEventHandler(evt) {
     }
 }
 
-def occupancySwitchOffEventHandler(evt) {
-    ifDebug("occupancySwitchOffEventHandler")
-    // Occupancy Switch is turned off
+def occupiedSwitchOffEventHandler(evt) {
+    ifDebug("occupiedSwitchOffEventHandler")
+    // occupied Switch is turned off
     def child = getChildDevice(getRoom())
-    child.updateSwitchInd(isAnySwitchOn())
 }
 
 def	switchOnEventHandler(evt)       {
@@ -1541,10 +1534,10 @@ def	contactClosedEventHandler(evt)     {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
-    if (roomState == 'occupied' || (!hasOccupancySensor() && roomState == 'vacant'))
+    if (roomState == 'occupied' || (!hasOccupiedSensor() && roomState == 'vacant'))
         child.generateEvent('engaged')
     else    {
-        if (hasOccupancySensor() && roomState == 'vacant')
+        if (hasOccupiedSensor() && roomState == 'vacant')
             child.generateEvent('checking')
     }
 }
@@ -1560,10 +1553,10 @@ def musicPlayingEventHandler(evt)       {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
     def roomState = child.getRoomState()
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
-    if (roomState == 'occupied' || (!hasOccupancySensor() && roomState == 'vacant'))
+    if (roomState == 'occupied' || (!hasOccupiedSensor() && roomState == 'vacant'))
         child.generateEvent('engaged')
     else    {
-        if (hasOccupancySensor() && roomState == 'vacant')
+        if (hasOccupiedSensor() && roomState == 'vacant')
             child.generateEvent('checking')
     }
 }
@@ -1777,10 +1770,10 @@ def handleSwitches(oldState = null, newState = null)	{
         }
         else    {
             if (newState == 'occupied')     {
-                if (state.noMotion && hasOccupancySensor())     {
+                if (state.noMotion && hasOccupiedSensor())     {
                     def motionValue = motionSensors.currentValue("motion")
                     def mV = motionValue.contains('active')
-                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !mV) || isAnyOccupancySwitchOn())      {
+                    if (whichNoMotion == lastMotionActive() || (whichNoMotion == lastMotionInactive() && !mV) || isAnyOccupiedSwitchOn())      {
                         updateChildTimer(state.noMotion)
                         runIn(state.noMotion, roomVacant)
                     }
@@ -2781,7 +2774,7 @@ private presenceActionDeparture()     {  return (presenceAction == '2' || presen
 
 private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
 
-private	hasOccupancySensor()		{ return (motionSensors || occSwitches)}
+private	hasOccupiedSensor()		{ return (motionSensors || occSwitches)}
 
 // only called from device handler
 def turnSwitchesAllOnOrOff(turnOn)     {
@@ -2805,8 +2798,6 @@ private getAllSwitches()    {
                     switches << it
         }
     }
-    if (occSwitches)
-    	    switches += occSwitches
     ifDebug("getAllSwitches: $switches")
     return switches
 }
