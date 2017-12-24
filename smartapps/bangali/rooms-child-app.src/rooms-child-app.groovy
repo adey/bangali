@@ -1989,14 +1989,18 @@ def turnOnAndOffSwitches()      {
     ifDebug("turnOnAndOffSwitches")
     def child = getChildDevice(getRoom())
     def roomState = child.getRoomState()
+    ifDebug("turnOnAndOffSwitches debug 1")
     if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
+        ifDebug("turnOnAndOffSwitches debug 2")
         def turnedOn = switches2On(roomState)
         if (!turnedOn && allSwitchesOff)        {
+            ifDebug("turnOnAndOffSwitches debug 3")
             switches2Off()
             if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')
                 musicDevice.stop()
         }
     }
+    ifDebug("turnOnAndOffSwitches debug 4")
 }
 
 private switches2On(roomState = null)     {
@@ -2009,6 +2013,7 @@ private switches2On(roomState = null)     {
     def previousRuleLux = null
     def thisRule = [:]
     if (state.rules)    {
+        ifDebug("switches2On debug 1")
         def currentMode = String.valueOf(location.currentMode)
         if (!roomState)     {
             def child = getChildDevice(getRoom())
@@ -2021,6 +2026,7 @@ private switches2On(roomState = null)     {
         def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         def i = 1
         for (; i < 11; i++)      {
+            ifDebug("switches2On debug 2")
 //        for (def rule in state.rules.sort{ it.key })    {
             def ruleNo = String.valueOf(i)
             thisRule = getNextRule(ruleNo)
@@ -2065,6 +2071,7 @@ private switches2On(roomState = null)     {
             }
         }
     }
+    ifDebug("switches2On debug 3")
     if (turnOn)     {
         ifDebug("${app.label} executed rule no: $turnOn")
         thisRule = getRule(turnOn)
