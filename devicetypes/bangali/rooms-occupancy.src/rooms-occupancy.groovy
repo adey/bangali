@@ -568,8 +568,6 @@ def generateEvent(newState = null)		{
 	if (newState)		stateUpdate(newState);
 }
 
-def getRoomState()	{	return device.currentValue('occupancy')	}
-
 def updateMotionInd(motionOn)		{
 	switch(motionOn)	{
 		case 1:
