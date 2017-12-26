@@ -497,7 +497,8 @@ def processChildSwitches()      {
     int i = 1
     childApps.each	{ child ->
 //        runIn(i, child.turnOnAndOffSwitches, [overwrite: false])
-        child.turnOnAndOffSwitches()
+        if (child.checkRoomModesAndDoW())
+            child.turnOnAndOffSwitches()
         i = i + 1
     }
 }
