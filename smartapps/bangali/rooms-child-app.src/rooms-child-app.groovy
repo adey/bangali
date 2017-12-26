@@ -2478,12 +2478,9 @@ def switches2Off()       {
         child.updateSwitchInd(isAnySwitchOn())
     }*/
     def switchesThatAreOn = whichSwitchesAreOn()
-    ifDebug("switches2Off: $switchesThatAreOn")
     switchesThatAreOn.each      {
-        ifDebug("switches2Off: turning off: $it")
         if (it.currentSwitch != 'off')      it.off();
     }
-    ifDebug("switches2Off: is it trying to turn off switches that are null?")
 }
 
 private previousStateStack(previousState)    {

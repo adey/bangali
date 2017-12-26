@@ -491,14 +491,13 @@ def engaged()	{	stateUpdate('engaged')		}
 
 def kaput()		{	stateUpdate('kaput')		}
 
-private	stateUpdate(state)		{
+private	stateUpdate(newState)		{
 	def oldState = device.currentValue('occupancy')
-	if (oldState != state)	{
-		updateOccupancy(state)
-        if (parent)
-        	parent.handleSwitches(oldState, state)
+	if (oldState != newState)	{
+		updateOccupancy(newState)
+        if (parent)		parent.handleSwitches(oldState, newState);
 	}
-	resetTile(state)
+	resetTile(newState)
 }
 
 private updateOccupancy(occupancy = null) 	{
@@ -550,7 +549,7 @@ private	resetTile(occupancy)	{
     sendEvent(name: occupancy, value: occupancy, descriptionText: "reset tile ${occupancy} to ${occupancy}", isStateChange: true, displayed: false)
 }
 
-def generateEvent(state = null)		{
+def generateEvent(newState = null)		{
 //	if	(state && device.currentValue('occupancy') != state)
 /*
 	switch(state)		{
@@ -566,8 +565,7 @@ def generateEvent(state = null)		{
 		default:										break;
 	}
 */
-	if (state)
-		stateUpdate(state)
+	if (newState)		stateUpdate(newState);
 }
 
 def getRoomState()	{	return device.currentValue('occupancy')	}
