@@ -1146,10 +1146,10 @@ def updateRoom(adjMotionSensors)     {
     if (tempSensors)        subscribe(tempSensors, "temperature", temperatureEventHandler);
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
-    turnOnAndOffSwitches()
+    runIn(0, turnOnAndOffSwitches)
     processCoolHeat()
-    runIn(1, scheduleFromToTimes)
-    runIn(3, updateIndicators)
+    runIn(2, scheduleFromToTimes)
+    runIn(4, updateIndicators)
 }
 
 def	initialize()	{ unsubscribe(); unschedule(); state.clear() }
