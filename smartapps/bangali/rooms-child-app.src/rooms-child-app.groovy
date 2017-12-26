@@ -1146,7 +1146,7 @@ def updateRoom(adjMotionSensors)     {
     if (tempSensors)        subscribe(tempSensors, "temperature", temperatureEventHandler);
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
-//    runIn(0, turnOnAndOffSwitches)
+    switchesOnOrOff()
     processCoolHeat()
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
@@ -1373,7 +1373,7 @@ def	modeEventHandler(evt)	{
             return
         }
     }
-    turnOnAndOffSwitches()
+    switchesOnOrOff()
 }
 
 def	motionActiveEventHandler(evt)	{
@@ -1847,7 +1847,7 @@ def luxEventHandler(evt)    {
         }
     }
     else*/
-    turnOnAndOffSwitches()
+    switchesOnOrOff()
     state.previousLux = currentLux
 }
 
@@ -1891,7 +1891,7 @@ def powerEventHandler(evt)    {
         }
     }
     if (proccessSwitches && state.powerCheck && currentPower != state.previousPower)
-        turnOnAndOffSwitches();
+        switchesOnOrOff();
     state.previousPower = currentPower
 }
 
@@ -2047,10 +2047,10 @@ private switchesOn()	{
 }
 */
 
-def turnOnAndOffSwitches()      {
-    ifDebug("turnOnAndOffSwitches")
-//    def child = getChildDevice(getRoom())
-    def roomState = getChildDevice(getRoom()).currentValue('occupancy')
+def switchesOnOrOff()      {
+    ifDebug("switchesOnOrOff")
+    def child = getChildDevice(getRoom())
+    def roomState = (child ? child.currentValue('occupancy') : null)
     if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
         def turnedOn = switches2On(roomState)
         if (!turnedOn && allSwitchesOff)        {
@@ -2899,7 +2899,7 @@ def timeFromHandler(evt = null)       {
 //    def child = getChildDevice(getRoom())
 //    def roomState = child.getRoomState()
 //    if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))
-        turnOnAndOffSwitches()
+        switchesOnOrOff()
     scheduleFromToTimes()
 }
 
@@ -2910,7 +2910,7 @@ def timeToHandler(evt = null)       {
 //    def child = getChildDevice(getRoom())
 //    def roomState = child.getRoomState()
 //    if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))
-        turnOnAndOffSwitches()
+        switchesOnOrOff()
     scheduleFromToTimes()
 }
 

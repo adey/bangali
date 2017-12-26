@@ -660,7 +660,7 @@ def turnSwitchesAllOff()		{
 def	turnOnAndOffSwitches()	{
 	updateTimer(-1)
 	if (parent)
-		parent.turnOnAndOffSwitches()
+		parent.switchesOnOrOff()
 }
 
 def updateTimer(timer = 0)		{

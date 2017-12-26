@@ -496,9 +496,9 @@ def getLastStateDate(childID)      {
 def processChildSwitches()      {
     int i = 1
     childApps.each	{ child ->
-//        runIn(i, child.turnOnAndOffSwitches, [overwrite: false])
+//        runIn(i, child.switchesOnOrOff, [overwrite: false])
         if (child.checkRoomModesAndDoW())
-            child.turnOnAndOffSwitches()
+            child.switchesOnOrOff()
         i = i + 1
     }
 }
