@@ -500,11 +500,14 @@ def engaged()	{	stateUpdate('engaged')		}
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(newState)		{
-log.debug "stateUpdate: newState: $newState | oldState: $oldState"
 	def oldState = device.currentValue('occupancy')
+log.debug "stateUpdate: newState: $newState | oldState: $oldState"
 	if (oldState != newState)	{
 		updateOccupancy(newState)
-        if (parent)		parent.handleSwitches(oldState, newState);
+        if (parent)		{
+			parent.runInHandleSwitches(oldState, newState);
+//			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
+		}
 	}
 log.debug "stateUpdate: resetTile: $newState"
 	resetTile(newState)

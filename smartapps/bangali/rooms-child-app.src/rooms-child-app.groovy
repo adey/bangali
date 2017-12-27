@@ -1938,15 +1938,26 @@ def roomAwake()	  {
         if (state.dimTimer)     newState = 'checking';
         else                    newState = 'vacant';
     }
-    if (newState)
-        child.generateEvent(newState)
+    if (newState)   child.generateEvent(newState);
 }
 
-def handleSwitches(oldState = null, newState = null)	{
+def runInHandleSwitches(oldState = null, newState = null)     {
+    ifDebug("runInHandleSwitches")
+    if (!oldState || !newState)        {
+        ifDebug("runInHandleSwitches: child did not pass old and new state params in call!")
+        return
+    }
+    runIn(0, handleSwitches, [data: [oldState: oldState, newState: newState]])
+}
+
+//def handleSwitches(oldState = null, newState = null)	{
+def handleSwitches(data)	{
+    def oldState = data.oldState
+    def newState = data.newState
     ifDebug("${app.label} room state - old: ${oldState} new: ${newState}")
 //    state.roomState = newState
 //      "yyyy-MM-dd'T'HH:mm:ssZ" = 2017-11-13T23:32:45+0000
-    if (!oldState || !newState || oldState == newState)      return false;
+    if (oldState == newState)      return false;
     def nowDate = now()
     state.previousState = ['state':newState, 'date':nowDate]
     previousStateStack(state.previousState)
@@ -2990,7 +3001,7 @@ private timeTime()      {  return '3'  }
 private presenceActionArrival()       {  return (presenceAction == '1' || presenceAction == '3')  }
 private presenceActionDeparture()     {  return (presenceAction == '2' || presenceAction == '3')  }
 
-private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
 
 // only called from device handler
 def turnSwitchesAllOnOrOff(turnOn)     {
