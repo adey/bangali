@@ -18,6 +18,29 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.09.2
+*
+*   DONE:   12/25/2017
+*   1) added option to temporarily override motion timers with rules.
+*   2) added support for button to set room to asleep.
+*   3) added checks for interval processing of rules.
+*   4) some optimizations and bug fix.
+*
+*  Version: 0.09.0
+*
+*   DONE:   12/23/2017
+*   1) added color coding for temperature indicator. since ST does not allow device handler display to be conditional
+*       for celcius color coding user will need to edit the DTH and uncomment the celcius section and comment the
+*       Fahrenheit values.
+*   2) added support for room AC and heater support to maintain room temperature. support for thermostat is coming.
+*   3) moved all stanalone devices to their own settings page.
+*   4) added setting to indiciate if contact sensor is on inside door or outside. e.g. contact sesnor on garage door
+*       would be an outside door contact sesnor. this reverses the occupancy logic so when contact sensor is open
+*       the door is engaged or occupied instead of when the door is closed.
+*   5) added support for button to set room to vacant.
+*   6) moved webCoRE_init call to the bottom of the updated() method.
+*   7) couple of bug fixes.
+*
 *  Version: 0.08.6
 *
 *   DONE:   12/17/2017
@@ -262,7 +285,7 @@ preferences	{
 def mainPage()  {
     dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings") {
 		section {
-            app(name: "Rooms Manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
+            app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
 	}
 }

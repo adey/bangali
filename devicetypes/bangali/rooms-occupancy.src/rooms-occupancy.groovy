@@ -22,6 +22,14 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.09.2
+*
+*   DONE:   12/25/2017
+*   1) added option to temporarily override motion timers with rules.
+*   2) added support for button to set room to asleep.
+*   3) added checks for interval processing of rules.
+*   4) some optimizations and bug fix.
+*
 *  Version: 0.09.0
 *
 *   DONE:   12/23/2017
@@ -492,11 +500,13 @@ def engaged()	{	stateUpdate('engaged')		}
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(newState)		{
+log.debug "stateUpdate: newState: $newState | oldState: $oldState"
 	def oldState = device.currentValue('occupancy')
 	if (oldState != newState)	{
 		updateOccupancy(newState)
         if (parent)		parent.handleSwitches(oldState, newState);
 	}
+log.debug "stateUpdate: resetTile: $newState"
 	resetTile(newState)
 }
 

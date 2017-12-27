@@ -24,7 +24,10 @@
 *  Version: 0.09.2
 *
 *   DONE:   12/25/2017
-*   1) TODO
+*   1) added option to temporarily override motion timers with rules.
+*   2) added support for button to set room to asleep.
+*   3) added checks for interval processing of rules.
+*   4) some optimizations and bug fix.
 *
 *  Version: 0.09.0
 *
@@ -2051,7 +2054,7 @@ def switchesOnOrOff()      {
     ifDebug("switchesOnOrOff")
     def child = getChildDevice(getRoom())
     def roomState = (child ? child.currentValue('occupancy') : null)
-    if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
+    if (roomState && ['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
         def turnedOn = switches2On(roomState)
         if (!turnedOn && allSwitchesOff)        {
             switches2Off()
@@ -2393,7 +2396,6 @@ private whichSwitchesAreOn()   {
             }
         }
     }
-    ifDebug("whichSwitchesAreOn @ return: $switchesThatAreOn")
     return switchesThatAreOn
 }
 
