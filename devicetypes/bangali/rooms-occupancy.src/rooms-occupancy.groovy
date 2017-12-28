@@ -361,8 +361,38 @@ metadata {
 			state("present", label:'${name}', icon:"st.presence.tile.present", backgroundColor:"#00A0DC")
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
+		standardTile("musicInd", "device.musicInd", width: 1, height: 1, canChangeIcon: true) {
+			state "off", label: '${name}', action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff"
+			state "on", label: '${name}', action: "pauseMusic", icon: "sst.sonos.pause-btn", backgroundColor: "#00A0DC"
+			state("none", label:'${name}', icon:"sst.sonos.stop-btn", backgroundColor:"#ffffff")
+		}
+		valueTile("powerInd", "device.powerInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("power", label:'${currentValue}\nwatts', backgroundColor:"#ffffff")
+		}
+		valueTile("pauseInd", "device.pauseInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("pause", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
 		valueTile("temperatureInd", "device.temperatureInd", width: 1, height: 1, canChangeIcon: true)	{
 			state("temperature", label:'${currentValue}', unit:'', backgroundColors: [
+/*                														// Celsius Color Range
+                														[value:  0, color: "#153591"],
+                														[value:  7, color: "#1E9CBB"],
+                														[value: 15, color: "#90D2A7"],
+                														[value: 23, color: "#44B621"],
+                														[value: 29, color: "#F1D801"],
+                														[value: 33, color: "#D04E00"],
+                														[value: 36, color: "#BC2323"],*/
+                														// Fahrenheit Color Range
+                														[value: 32, color: "#153591"],
+                														[value: 45, color: "#1E9CBB"],
+                														[value: 59, color: "#90D2A7"],
+                														[value: 73, color: "#44B621"],
+                														[value: 84, color: "#F1D801"],
+                														[value: 91, color: "#D04E00"],
+                														[value: 97, color: "#BC2323"]])
+		}
+		valueTile("maintinInd", "device.maintinInd", width: 1, height: 1, canChangeIcon: true)	{
+			state("maintain", label:'${currentValue}', unit:'', backgroundColors: [
 /*                														// Celsius Color Range
                 														[value:  0, color: "#153591"],
                 														[value:  7, color: "#1E9CBB"],
@@ -458,7 +488,7 @@ metadata {
 		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "temperatureInd", "occupied", "locked", "asleep"])
+		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
 		// details (["occupancy", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
