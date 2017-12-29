@@ -362,9 +362,9 @@ metadata {
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
 		standardTile("musicInd", "device.musicInd", width: 1, height: 1, canChangeIcon: true) {
-			state "off", label: '${name}', action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff"
-			state "on", label: '${name}', action: "pauseMusic", icon: "sst.sonos.pause-btn", backgroundColor: "#00A0DC"
-			state("none", label:'${name}', icon:"sst.sonos.stop-btn", backgroundColor:"#ffffff")
+			state("none", label:'none', icon:"st.Electronics.electronics12", backgroundColor:"#ffffff")
+			state "pause", action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff"
+			state "play", action: "pauseMusic", icon: "st.sonos.pause-btn", backgroundColor: "#00A0DC"
 		}
 		valueTile("powerInd", "device.powerInd", width: 1, height: 1, canChangeIcon: true)	{
 			state("power", label:'${currentValue}\nwatts', backgroundColor:"#ffffff")
@@ -531,7 +531,6 @@ def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(newState)		{
 	def oldState = device.currentValue('occupancy')
-log.debug "stateUpdate: newState: $newState | oldState: $oldState"
 	if (oldState != newState)	{
 		updateOccupancy(newState)
         if (parent)		{
@@ -539,7 +538,6 @@ log.debug "stateUpdate: newState: $newState | oldState: $oldState"
 //			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
 		}
 	}
-log.debug "stateUpdate: resetTile: $newState"
 	resetTile(newState)
 }
 

@@ -629,7 +629,11 @@ private pageRules()     {
     state.pList.each  { pL ->
         state.pEnum << [(pL.id):(pL.name)]
     }
-    if (state.pEnum)    state.pList = state.pEnum.sort { it.value };
+//    if (state.pEnum)    state.pList = state.pEnum.sort{ it.value };
+    state.pList = []
+    state.pEnum.each  { k, v ->
+        state.pList << [(k):v]
+    }
     state.pEnum = [:]
 	dynamicPage(name: "pageRules", title: "", install: false, uninstall: false)    {
 //        state.rules = [1:[ruleNo:1, name:'Rule 1', mode:location.currentMode, state:null, level:50, ct:2700, color:[saturation:80,hue:20]]]
@@ -1944,7 +1948,7 @@ def roomAwake()	  {
 def runInHandleSwitches(oldState = null, newState = null)     {
     ifDebug("runInHandleSwitches")
     if (!oldState || !newState)        {
-        ifDebug("runInHandleSwitches: child did not pass old and new state params in call!")
+        ifDebug("runInHandleSwitches: child did not pass old and new state params in call!", 'error')
         return
     }
     runIn(0, handleSwitches, [data: [oldState: oldState, newState: newState]])

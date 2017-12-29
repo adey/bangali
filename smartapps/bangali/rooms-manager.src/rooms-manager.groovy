@@ -294,8 +294,7 @@ def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
     def str = (presenceNames ? presenceNames.split(',') : [])
     def j = str.size()
-    if (i != j)
-    sendNotification("Count of presense sensors and names do not match!", [method: "push"])
+    if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
 		section   {
             input "speakerAnnounce", "bool", title: "Announce when presence sensors return?", required: false, multiple: false, defaultValue: false, submitOnChange: true
