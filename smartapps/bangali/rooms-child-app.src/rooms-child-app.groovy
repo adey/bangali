@@ -839,7 +839,7 @@ private pageRuleTimer(params)   {
     dynamicPage(name: "pageRuleTimer", title: "", install: false, uninstall: false)   {
         section()     {
             paragraph "these settings will temporarily replace the global settings when this rule is executed and reset back to the global settings when this rule no longer matches."
-            if (hasOccupiedDevice)
+            if (hasOccupiedDevice())
                 input "noMotion$ruleNo", "number", title: "Timeout after how many seconds when OCCUPIED?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             else
                 paragraph "Occupancy timeout after how many seconds?\nselect motion sensor or switch in occupied settings to set"
