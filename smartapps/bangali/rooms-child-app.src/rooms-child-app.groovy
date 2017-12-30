@@ -839,10 +839,10 @@ private pageRuleTimer(params)   {
     dynamicPage(name: "pageRuleTimer", title: "", install: false, uninstall: false)   {
         section()     {
             paragraph "these settings will temporarily replace the global settings when this rule is executed and reset back to the global settings when this rule no longer matches."
-            if (motionSensors)
-                input "noMotion$ruleNo", "number", title: "Motion timeout after how many seconds when OCCUPIED?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            if (hasOccupiedDevice)
+                input "noMotion$ruleNo", "number", title: "Timeout after how many seconds when OCCUPIED?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             else
-                paragraph "Motion timeout after how many seconds?\nselect motion sensor in occupied settings to set"
+                paragraph "Occupancy timeout after how many seconds?\nselect motion sensor or switch in occupied settings to set"
             input "noMotionEngaged$ruleNo", "number", title: "Require motion within how many seconds when ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "dimTimer$ruleNo", "number", title: "CHECKING state timer for how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
         }
@@ -1556,7 +1556,15 @@ def occupiedSwitchOnEventHandler(evt) {
             }
             stateChanged = true
         }
-        if (noMotion && newState == 'occupied') {
+        if (noMotion && newState == 'occupied' && !stateChanged) {
+            // If state didn't change, reset the timer unless motion sensor inactive will handle it
+            def resetTimer = true
+            if (motionSensors && whichNoMotion == lastMotionInactive) {
+                def motionValue = motionSensors.currentValue("motion")
+                def mV = motionValue.contains('active')
+                if (mV)
+                    resetTimer = false
+            }
             updateChildTimer(state.noMotion)
             runIn(state.noMotion, roomVacant)
         }
@@ -2086,6 +2094,12 @@ def handleSwitches(data)	{
                     def motionValue = motionSensors.currentValue("motion")
                     def mV = motionValue.contains('active')
                     if (whichNoMotion == lastMotionActive || (whichNoMotion == lastMotionInactive && !mV))      {
+                        updateChildTimer(state.noMotion)
+                        runIn(state.noMotion, roomVacant)
+                    }
+                } else {
+                    if (state.noMotion) {
+                        // If there are no motion sensors, we start the timer when we change to occupied.
                         updateChildTimer(state.noMotion)
                         runIn(state.noMotion, roomVacant)
                     }
