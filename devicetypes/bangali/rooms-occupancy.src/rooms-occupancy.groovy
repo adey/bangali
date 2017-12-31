@@ -22,6 +22,12 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.09.4
+*
+*   DONE:   12/30/2017
+*   1) updated device tiles layout and added a bunch of indicators.
+*   2) added checking state to room busy check.
+*
 *  Version: 0.09.2
 *
 *   DONE:   12/25/2017
@@ -288,6 +294,8 @@ metadata {
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
 		command "turnSwitchesAllOff"
+		command "turnAsleepSwitchesAllOn"
+		command "turnAsleepSwitchesAllOff"
 		command "updateOccupancy", ["string"]
 	}
 
@@ -314,7 +322,7 @@ metadata {
         }
 */
 // new style display
-		standardTile("occupancy", "device.occupancy", width: 4, height: 4, inactiveLabel: true, canChangeBackground: true)		{
+		standardTile("occupancy", "device.occupancy", width: 2, height: 2, inactiveLabel: true, canChangeBackground: true)		{
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
@@ -331,10 +339,10 @@ metadata {
 //		valueTile("statusFiller", "device.statusFiller", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
 //			state "statusFiller", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 //		}
-		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
+		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat")	{
 			state "timer", label:'${currentValue}', action: "turnOnAndOffSwitches", backgroundColor:"#ffffff"
 		}
-		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true)	{
+		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("timeFT", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 //
@@ -343,7 +351,7 @@ metadata {
 			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
 			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 		}
-		valueTile("luxInd", "device.luxInd", width: 1, height: 1, canChangeIcon: true)	{
+		valueTile("luxInd", "device.luxInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("lux", label:'${currentValue}\nlux', backgroundColor:"#ffffff")
 		}
 		standardTile("contactInd", "device.contactInd", width: 1, height: 1, canChangeIcon: true) {
@@ -352,27 +360,27 @@ metadata {
 			state("none", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#ffffff")
 		}
 		standardTile("switchInd", "device.switchInd", width: 1, height: 1, canChangeIcon: true) {
-			state "off", label: '${name}', action: "turnSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff"
-			state "on", label: '${name}', action: "turnSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC"
+			state("off", label: '${name}', action: "turnSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', action: "turnSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
 			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 		}
 		standardTile("presenceInd", "device.presenceInd", width: 1, height: 1, canChangeIcon: true) {
-			state("absent", label:'absent', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
+			state("absent", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 			state("present", label:'${name}', icon:"st.presence.tile.present", backgroundColor:"#00A0DC")
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
-		standardTile("musicInd", "device.musicInd", width: 1, height: 1, canChangeIcon: true) {
+		standardTile("musicInd", "device.musicInd", width: 1, height: 1, canChangeIcon: true)	{
 			state("none", label:'none', icon:"st.Electronics.electronics12", backgroundColor:"#ffffff")
-			state "pause", action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff"
-			state "play", action: "pauseMusic", icon: "st.sonos.pause-btn", backgroundColor: "#00A0DC"
+			state("pause", action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff")
+			state("play", action: "pauseMusic", icon: "st.sonos.pause-btn", backgroundColor: "#00A0DC")
 		}
-		valueTile("powerInd", "device.powerInd", width: 1, height: 1, canChangeIcon: true)	{
+		valueTile("powerInd", "device.powerInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("power", label:'${currentValue}\nwatts', backgroundColor:"#ffffff")
 		}
-		valueTile("pauseInd", "device.pauseInd", width: 1, height: 1, canChangeIcon: true)	{
+		valueTile("pauseInd", "device.pauseInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
 			state("pause", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
-		valueTile("temperatureInd", "device.temperatureInd", width: 1, height: 1, canChangeIcon: true)	{
+		valueTile("temperatureInd", "device.temperatureInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("temperature", label:'${currentValue}', unit:'', backgroundColors: [
 /*                														// Celsius Color Range
                 														[value:  0, color: "#153591"],
@@ -391,24 +399,65 @@ metadata {
                 														[value: 91, color: "#D04E00"],
                 														[value: 97, color: "#BC2323"]])
 		}
-		valueTile("maintinInd", "device.maintinInd", width: 1, height: 1, canChangeIcon: true)	{
-			state("maintain", label:'${currentValue}', unit:'', backgroundColors: [
+		valueTile("maintainInd", "device.maintainInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("temperature", label:'${currentValue}', backgroundColor:"#ffffff")
 /*                														// Celsius Color Range
-                														[value:  0, color: "#153591"],
+                														[[value:  0, color: "#153591"],
                 														[value:  7, color: "#1E9CBB"],
                 														[value: 15, color: "#90D2A7"],
                 														[value: 23, color: "#44B621"],
                 														[value: 29, color: "#F1D801"],
                 														[value: 33, color: "#D04E00"],
-                														[value: 36, color: "#BC2323"],*/
+                														[value: 36, color: "#BC2323"],
                 														// Fahrenheit Color Range
-                														[value: 32, color: "#153591"],
+                														[[value: 32, color: "#153591"],
                 														[value: 45, color: "#1E9CBB"],
                 														[value: 59, color: "#90D2A7"],
                 														[value: 73, color: "#44B621"],
                 														[value: 84, color: "#F1D801"],
                 														[value: 91, color: "#D04E00"],
-                														[value: 97, color: "#BC2323"]])
+                														[value: 97, color: "#BC2323"]])*/
+		}
+		standardTile("thermostatInd", "device.thermostatInd", width:1, height:1, canChangeIcon: true)	{
+			state("off", icon: "st.thermostat.heating-cooling-off", backgroundColor: "#ffffff")
+			state("auto", icon: "st.thermostat.auto", backgroundColor: "#ffffff")
+			state("autoCool", icon: "st.thermostat.auto-cool", backgroundColor: "#ffffff")
+			state("autoHeat", icon: "st.thermostat.heat", backgroundColor: "#ffffff")
+			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#153591")
+			state("heating", icon: "st.thermostat.heating", backgroundColor: "#BC2323")
+			state("none", label:'none', icon:"st.thermostat.thermostat-down", backgroundColor:"#ffffff")
+		}
+		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("rules", label:'Rules:\n${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("lastRuleInd", "device.lastRuleInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("lastRule", label:'Last:\n${currentValue}', backgroundColor:"#ffffff")
+		}
+		standardTile("eSwitchInd", "device.eSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+		}
+		standardTile("cSwitchInd", "device.cSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+		}
+		valueTile("noMotionEInd", "device.noMotionEInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("noMotionE", label:'${currentValue}\nsecs', backgroundColor:"#ffffff")
+		}
+		standardTile("aSwitchInd", "device.aSwitchInd", width: 1, height: 1, canChangeIcon: true) {
+			state("off", label: '${name}', action: "turnAsleepSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', action: "turnAsleepSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+		}
+		valueTile("aRoomInd", "device.aRoomInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
+			state("rooms", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		standardTile("aMotionInd", "device.aMotionInd", width: 1, height: 1, canChangeIcon: true) {
+			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
+			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
+			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 		}
 
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
@@ -488,7 +537,8 @@ metadata {
 		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
+		details (["occupancy", "occupied", "engaged", "vacant", "asleep", "locked", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "rulesInd", "cSwitchInd", "aRoomInd", "aMotionInd", "aSwitchInd", "thermostatInd", "lastRuleInd", "eSwitchInd", "noMotionEInd", "powerInd", "temperatureInd", "maintainInd"])
+//		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
 		// details (["occupancy", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
@@ -625,7 +675,7 @@ def updateMotionInd(motionOn)		{
 
 def updateLuxInd(lux)		{
 	if (lux == -1)
-		sendEvent(name: 'luxInd', value: 'no', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
+		sendEvent(name: 'luxInd', value: '--', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'luxInd', value: lux, descriptionText: "indicate lux value", isStateChange: true, displayed: false)
 }
@@ -679,9 +729,126 @@ def updateTimeInd(timeFromTo)		{
 def updateTemperatureInd(temp)		{
 	def tS = '°' + (location.temperatureScale ?: 'F')
 	if (temp == -1)
-		sendEvent(name: 'temperatureInd', value: '--°', unit: tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: '--', unit: tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'temperatureInd', value: temp, unit: tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
+}
+
+def updateMaintainInd(temp)		{
+	def tS = '°' + (location.temperatureScale ?: 'F')
+	if (temp == -1)
+		sendEvent(name: 'maintainInd', value: '--' + tS, descriptionText: "indicate no maintain temperature", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'maintainInd', value: temp + tS, descriptionText: "indicate maintain temperature value", isStateChange: true, displayed: false)
+}
+
+def updateThermostatInd(thermo)		{
+	def vV = 'none'; 	def dD = "indicate no thermostat setting";
+	switch(thermo)	{
+		case 0:
+			vV = 'off';			dD = "indicate thermostat not auto";
+			break
+		case 1:
+			vV = 'auto';		dD = "indicate thermostat auto";
+			break
+		case 2:
+			vV = 'autoCool';	dD = "indicate thermostat auto cool";
+			break
+		case 3:
+			vV = 'autoHeat';	dD = "indicate thermostat auto heat";
+			break
+		case 4:
+			vV = 'cooling';		dD = "indicate thermostat cooling";
+			break
+		case 5:
+			vV = 'heating';		dD = "indicate thermostat heating";
+			break
+	}
+	sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+}
+
+def updateRulesInd(rules)		{
+	if (rules == -1)
+		sendEvent(name: 'rulesInd', value: '0', descriptionText: "indicate no rules", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'rulesInd', value: rules, descriptionText: "indicate rules count", isStateChange: true, displayed: false)
+}
+
+def updateLastRuleInd(rule)		{
+	if (rule == -1)
+		sendEvent(name: 'lastRuleInd', value: '--', descriptionText: "indicate no rule executed", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'lastRuleInd', value: rule, descriptionText: "indicate rule number last executed", isStateChange: true, displayed: false)
+}
+
+def updatePauseInd(pMode)		{
+	if (pMode == -1)
+		sendEvent(name: 'pauseInd', value: '--', descriptionText: "indicate no pause modes", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'pauseInd', value: pMode, descriptionText: "indicate pause modes", isStateChange: true, displayed: false)
+}
+
+def updatePowerInd(power)		{
+	if (power == -1)
+		sendEvent(name: 'powerInd', value: '--', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'powerInd', value: power, descriptionText: "indicate lux value", isStateChange: true, displayed: false)
+}
+
+def updateESwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'eSwitchInd', value: 'on', descriptionText: "indicate engaged switch is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'eSwitchInd', value: 'off', descriptionText: "indicate engaged switch is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'eSwitchInd', value: 'none', descriptionText: "indicate no engaged switch", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateNoMotionEInd(noMotionE)		{
+	if (noMotionE == -1)
+		sendEvent(name: 'noMotionEInd', value: '--', descriptionText: "indicate no motion timer for engaged state", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'noMotionEInd', value: noMotionE, descriptionText: "indicate motion timer for engaged state", isStateChange: true, displayed: false)
+}
+
+def updateASwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'aSwitchInd', value: 'on', descriptionText: "indicate at least one asleep switch is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'aSwitchInd', value: 'off', descriptionText: "indicate all asleep switches is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'aSwitchInd', value: 'none', descriptionText: "indicate no asleep switches", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateAdjRoomsInd(aRoom)		{
+	if (aRoom == -1)
+		sendEvent(name: 'aRoomInd', value: '--', descriptionText: "indicate no adjacent rooms", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'aRoomInd', value: pMode, descriptionText: "indicate adjacent rooms", isStateChange: true, displayed: false)
+}
+
+def updateAdjMotionInd(motionOn)		{
+	switch(motionOn)	{
+		case 1:
+			sendEvent(name: 'aMotionInd', value: 'active', descriptionText: "indicate adjacent motion active", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'aMotionInd', value: 'inactive', descriptionText: "indicate adjacent motion inactive", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'aMotionInd', value: 'none', descriptionText: "indicate no adjacent motion sensor", isStateChange: true, displayed: false)
+			break
+	}
 }
 
 def turnSwitchesAllOn()		{
@@ -697,6 +864,14 @@ def turnSwitchesAllOff()		{
 		updateSwitchInd(0)
 	}
 }
+
+def turnAsleepSwitchesAllOn()	{
+log.debug "turnAsleepSwitchesAllOn"
+	if (parent)  parent.dimNightLights()  }
+
+def turnAsleepSwitchesAllOff()	{
+log.debug "turnAsleepSwitchesAllOff"
+	if (parent)  parent.nightSwitchesOff()  }
 
 def	turnOnAndOffSwitches()	{
 	updateTimer(-1)
