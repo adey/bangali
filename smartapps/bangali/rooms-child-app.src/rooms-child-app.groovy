@@ -1540,7 +1540,7 @@ def occupiedSwitchOnEventHandler(evt) {
 
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-    def roomState = child.getRoomState()
+    def roomState = child.currentValue('occupancy')
     if (['vacant','occupied','checking'].contains(roomState)) {
         def newState = roomState
         def stateChanged = false
