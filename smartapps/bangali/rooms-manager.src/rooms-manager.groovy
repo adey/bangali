@@ -263,7 +263,7 @@
 
 private isDebug()   {  return true  }
 
-private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
 
 definition (
     name: "rooms manager",
@@ -343,7 +343,7 @@ def updated()		{
                 subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
                 subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
             }
-            subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
+            if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
         }
         str = welcomeHome.split('&')
         state.welcomeHome1 = str[0]
@@ -356,9 +356,15 @@ def updated()		{
 }
 
 def initialize()	{
+    unsubscribe()
 	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
+        def childRoomDevice = child.getChildRoomDevice()
+        subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
+//        child.each  {
+//            ifDebug("$it")
+//        }
 	}
     state.whoCameHome = [:]
     state.whoCameHome.personsIn = []
@@ -366,13 +372,13 @@ def initialize()	{
     state.whoCameHome.personNames = [:]
 }
 
-def	presencePresentEventHandler(evt)     {
-    whoCameHome(evt.device)
+def buttonPushedEventHandler(evt)     {
+    ifDebug("rooms manager: name: $evt.name | value: $evt.value")
 }
 
-def	presenceNotPresentEventHandler(evt)     {
-    whoCameHome(evt.device, true)
-}
+def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
+
+def	presenceNotPresentEventHandler(evt)     {  whoCameHome(evt.device, true)  }
 
 def contactClosedEventHandler(evt = null)     {
     if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
@@ -393,7 +399,7 @@ def contactClosedEventHandler(evt = null)     {
 }
 
 def whoCameHome(presenceSensor, left = false)      {
-    if (!presenceSensor)      return;
+    if (!presenceSensor)    return;
     def presenceName = state.whoCameHome.personNames[(presenceSensor.getId())]
     if (!presenceName)      return;
     ifDebug("presenceName: $presenceName")
@@ -407,8 +413,7 @@ def whoCameHome(presenceSensor, left = false)      {
     if (!left)      {
         if (state.whoCameHome.personsIn)      {
             howLong = nowTime - state.whoCameHome.lastOne
-            if (howLong > 300000L)
-                state.whoCameHome.personsIn = []
+            if (howLong > 300000L)      state.whoCameHome.personsIn = [];
         }
         state.whoCameHome.lastOne = nowTime
         if (!state.whoCameHome.personsIn || !(state.whoCameHome.personsIn.contains(presenceName)))
@@ -422,10 +427,8 @@ def whoCameHome(presenceSensor, left = false)      {
 }
 
 def subscribeChildrenToEngaged(childID,roomID)     {
-    if (!state.onEngaged)
-        state.onEngaged = [:]
-    if (state.onEngaged[(roomID)])
-        state.onEngaged.remove(roomID)
+    if (!state.onEngaged)       state.onEngaged = [:];
+    if (state.onEngaged[(roomID)])      state.onEngaged.remove(roomID);
     state.onEngaged << [(roomID):(childID)]
 }
 
@@ -434,8 +437,7 @@ log.debug "notifyAnotherRoomEngaged: $roomID"
     def childID = state.onEngaged[(roomID)]
     if (childID)   {
         childApps.each	{ child ->
-            if (childID == child.id)
-                child.anotherRoomEngagedEventHandler()
+            if (childID == child.id)        child.anotherRoomEngagedEventHandler();
         }
     }
 }
@@ -443,8 +445,7 @@ log.debug "notifyAnotherRoomEngaged: $roomID"
 def getRoomNames(childID)    {
     def roomNames = [:]
     childApps.each	{ child ->
-        if (childID != child.id)
-            roomNames << [(child.id):(child.label)]
+        if (childID != child.id)        roomNames << [(child.id):(child.label)];
 	}
     return (roomNames.sort { it.value })
 }
@@ -452,8 +453,7 @@ def getRoomNames(childID)    {
 def getARoomName(childID)    {
     def roomName = null
     childApps.each	{ child ->
-        if (childID == child.id)
-            roomName = child.label
+        if (childID == child.id)        roomName = child.label;
 	}
     return roomName
 }
@@ -467,11 +467,9 @@ def handleAdjRooms()    {
         def childID = adjRoomDetails['childid']
         def adjRooms = adjRoomDetails['adjrooms']
         adjRoomDetailsMap << [(childID):(adjRooms)]
-        if (adjRooms)
-            skipAdjRoomsMotionCheck = false
+        if (adjRooms)       skipAdjRoomsMotionCheck = false;
     }
-    if (skipAdjRoomsMotionCheck)
-        return false
+    if (skipAdjRoomsMotionCheck)        return false;
     childApps.each	{ childAll ->
 //        def adjRoomDetails = childAll.getAdjRoomDetails()
         def childID = childAll.id
@@ -519,8 +517,7 @@ def processChildSwitches()      {
     int i = 1
     childApps.each	{ child ->
 //        runIn(i, child.switchesOnOrOff, [overwrite: false])
-        if (child.checkRoomModesAndDoW())
-            child.switchesOnOrOff()
+        if (child.checkRoomModesAndDoW())       child.switchesOnOrOff();
         i = i + 1
     }
 }
