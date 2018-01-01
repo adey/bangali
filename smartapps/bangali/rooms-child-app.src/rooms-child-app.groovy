@@ -1894,7 +1894,7 @@ private processCoolHeat()       {
             updateMaintainInd(rmCoolTemp)
         else if (maintainRoomTemp == '2')
             updateMaintainInd(roomHeatTemp)
-        else    {
+        else if (maintainRoomTemp == '3')       {
             def x = Math.abs(temperature - rmCoolTemp)
             def y = Math.abs(temperature - roomHeatTemp)
             if (x >= y)
