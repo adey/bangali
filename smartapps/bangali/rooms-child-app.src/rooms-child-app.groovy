@@ -1100,11 +1100,11 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
     def ind = -1
-    if (adjMotionSensors)      {
+/*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentValue("motion")
         if (devValue.contains('active'))    ind = 1;
         else                                ind = 0;
-    }
+    }*/
     child.updateAdjMotionInd(ind)
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
