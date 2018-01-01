@@ -447,7 +447,7 @@ private pageEngagedSettings() {
             paragraph "SETTINGS ARE IN ORDER OF PRIORITY IN WHICH THEY ARE CHECKED. FOR EXAMPLE, IF THERE IS BOTH AN ENGAGED SWITCH AND CONTACT SENSOR THE ENGAGED SWITCH WHEN ON WILL TAKE PRIORITY OVER THE CONTACT SENSOR BEING OPEN."
             if (motionSensors)
                 input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
-                                                                options: [[null:"No auto engaged"],[3:"Light traffic"],[5:"Medium Traffic"],[7:"Heavy Traffic"]]
+                                                                options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
             input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
@@ -1105,7 +1105,7 @@ def updateRoom(adjMotionSensors)     {
         if (devValue.contains('active'))    ind = 1;
         else                                ind = 0;
     }*/
-    child.updateAdjMotionInd(ind)
+//    child.updateAdjMotionInd(ind)
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
     state.switchesHasColorTemperature = [:]
