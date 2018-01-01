@@ -2084,7 +2084,7 @@ def roomAwake()	  {
 
 def runInHandleSwitches(oldState = null, newState = null)     {
     ifDebug("runInHandleSwitches")
-    if (!oldState || !newState)        {
+    if (!oldState && !newState)        {
         ifDebug("runInHandleSwitches: child did not pass old and new state params in call!", 'error')
         return
     }
