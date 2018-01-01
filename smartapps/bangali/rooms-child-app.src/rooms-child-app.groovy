@@ -469,7 +469,7 @@ private pageEngagedSettings() {
                 input "powerValue", "number", title: "Power value to set room to engaged?", required: false, multiple: false, defaultValue: null
             else
                 paragraph "Power value to set room to engaged?\nselect power device in power settings to set."
-            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: false, submitOnChange: true
+            input "contactSensor", "capability.contactSensor", title: "Contact sensor closes?", required: false, multiple: true, submitOnChange: true
             if (contactSensor)
                 input "contactSensorOutsideDoor", "bool", title: "Contact sensor on outside door?", required: false, multiple: false, defaultValue: false
             else
@@ -706,7 +706,7 @@ private pageRule(params)   {
     def ruleToTimeType = settings["toTimeType$ruleNo"]
     def ruleFromTimeHHmm = (settings["fromTime$ruleNo"] ? format24hrTime(timeToday(settings["fromTime$ruleNo"], location.timeZone)) : '')
     def ruleToTimeHHmm = (settings["toTime$ruleNo"] ? format24hrTime(timeToday(settings["toTime$ruleNo"], location.timeZone)) : '')
-    def ruleTimerOverride = (settings["noMotion$ruleNo"] || settings["noMotionEngaged$ruleNo"] || settings["dimTimer$ruleNo"])
+    def ruleTimerOverride = (settings["noMotion$ruleNo"] || settings["noMotionEngaged$ruleNo"] || settings["dimTimer$ruleNo"] || settings["noMotionAsleep$ruleNo"])
     def allActions = location.helloHome?.getPhrases()*.label
     if (allActions)
         allActions.sort();
@@ -765,7 +765,7 @@ private pageRule(params)   {
             input "switchesOff$ruleNo", "capability.switch", title: "Turn OFF which switches?", required: false, multiple: true
         }
         section("")     {
-        	href "pageRuleTimer", title: "Timer overrides", description: "${(ruleTimerOverride ? (settings["noMotion$ruleNo"] ?: '') + ', ' + (settings["noMotionEngaged$ruleNo"] ?: '') + ', ' + (settings["dimTimer$ruleNo"] ?: '') : 'Add timer overrides')}", params: [ruleNo: "$ruleNo"]
+        	href "pageRuleTimer", title: "Timer overrides", description: "${(ruleTimerOverride ? (settings["noMotion$ruleNo"] ?: '') + ', ' + (settings["noMotionEngaged$ruleNo"] ?: '') + ', ' + (settings["dimTimer$ruleNo"] ?: '')  + ', ' + (settings["noMotionAsleep$ruleNo"] ?: '') : 'Add timer overrides')}", params: [ruleNo: "$ruleNo"]
         }
     }
 }
@@ -845,6 +845,7 @@ private pageRuleTimer(params)   {
                 paragraph "Motion timeout after how many seconds?\nselect motion sensor in occupied settings to set"
             input "noMotionEngaged$ruleNo", "number", title: "Require motion within how many seconds when ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
             input "dimTimer$ruleNo", "number", title: "CHECKING state timer for how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
+            input "noMotionAsleep$ruleNo", "number", title: "Motion timeout for night switches when ASLEEP?", required: false, multiple: false, defaultValue: null, range: "5..99999"
         }
     }
 }
@@ -917,6 +918,7 @@ private pageAsleepSettings() {
             else
                 paragraph "Turn ON which Switches when room state is ASLEEP and there is Motion?\nselect motion sensor(s) above to set."
             if (nightSwitches)      {
+                input "noMotionAsleep", "number", title: "Motion timeout for night switches when ASLEEP?", required: false, multiple: false, defaultValue: null, range: "5..99999"
                 input "nightSetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
                                         options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
                 input "nightButton", "capability.button", title: "Button to toggle ASLEEP state Switches?", required: false, multiple: false, submitOnChange: true
@@ -961,7 +963,7 @@ private pageRoomTemperature() {
         section("MAINTAIN ROOM TEMPERATURE", hideable: false)		{
             input "tempSensors", "capability.temperatureMeasurement", title: "Which temperature sensor?", required: (['1', '2', '3'].contains(maintainRoomTemperature)), multiple: true, submitOnChange: true
             if (personsPresence)
-                input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: false, multiple: false, defaultValue: null,
+                input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: false, multiple: false, defaultValue: 4,
                                                                                 options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
             else
                 paragraph "Maintain room temperature?\nselect presence sensor(s) to set"
@@ -1055,6 +1057,7 @@ private pageAllSettings() {
                 ruleDesc = (thisRule.noMotion ? "$ruleDesc Occupied Timer=${thisRule.noMotion}" : "$ruleDesc")
                 ruleDesc = (thisRule.noMotionEngaged ? "$ruleDesc Engaged Timer=${thisRule.noMotionEngaged}" : "$ruleDesc")
                 ruleDesc = (thisRule.dimTimer ? "$ruleDesc Checking Timer=${thisRule.dimTimer}" : "$ruleDesc")
+                ruleDesc = (thisRule.noMotionAsleep ? "$ruleDesc Asleep Timer=${thisRule.noMotionAsleep}" : "$ruleDesc")
                 paragraph "$ruleDesc"
             }
         }
@@ -1147,6 +1150,7 @@ def updateRoom(adjMotionSensors)     {
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
     if (asleepButton)   subscribe(asleepButton, "button.pushed", asleepButtonPushedEventHandler);
     if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
+    state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     if (nightSwitches)   {
         nightSwitches.each      {
             if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
@@ -1192,7 +1196,8 @@ def updateIndicators()      {
     if (luxSensor)      lux = getIntfromStr((String) luxSensor.currentValue("illuminance"));
     child.updateLuxInd(lux)
     if (contactSensor)      {
-        ind = (contactSensor.currentValue("contact") == 'closed' ? (!contactSensorOutsideDoor ? 1 : 0) : (!contactSensorOutsideDoor ? 0 : 1))
+//        ind = (contactSensor.currentValue("contact") == 'closed' ? (!contactSensorOutsideDoor ? 1 : 0) : (!contactSensorOutsideDoor ? 0 : 1))
+        ind = (contactSensor.currentValue("contact").contains("open") ? 0 : 1)
 //        devValue = contactSensor.currentValue("contact");
 //        if (devValue.contains('closed') && !contactSensorOutsideDoor)    ind = 1;
 //        else                                                             ind = 0;
@@ -1416,11 +1421,12 @@ private getRule(ruleNo, checkState = true)     {
     def ruleNoMotion = settings["noMotion$ruleNo"]
     def ruleNoMotionEngaged = settings["noMotionEngaged$ruleNo"]
     def ruleDimTimer = settings["dimTimer$ruleNo"]
+    def ruleNoMotionAsleep = settings["noMotionAsleep$ruleNo"]
     if (!(ruleName || ruleDisabled || ruleMode || ruleState || ruleDayOfWeek || ruleLuxThreshold != null ||
                       ruleFromDate || ruleToDate || ruleFromTimeType || ruleToTimeType ||
                       rulePiston || ruleActions || ruleMusicAction ||
                       ruleSwitchesOn || ruleSetLevelTo || ruleSetColorTo || ruleSetColorTemperatureTo || ruleSwitchesOff ||
-                      ruleNoMotion || ruleNoMotionEngaged || ruleDimTimer))
+                      ruleNoMotion || ruleNoMotionEngaged || ruleDimTimer || ruleNoMotionAsleep))
         return null
 
     return [ruleNo:ruleNo, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
@@ -1430,7 +1436,7 @@ private getRule(ruleNo, checkState = true)     {
                                piston:rulePiston, actions:ruleActions, musicAction:ruleMusicAction,
                                switchesOn:ruleSwitchesOn, level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo, colorTemperature:ruleSetColorTemperatureTo,
                                switchesOff:ruleSwitchesOff,
-                               noMotion:ruleNoMotion, noMotionEngaged:ruleNoMotionEngaged, dimTimer:ruleDimTimer]
+                               noMotion:ruleNoMotion, noMotionEngaged:ruleNoMotionEngaged, dimTimer:ruleDimTimer, noMotionAsleep:ruleNoMotionAsleep]
 }
 
 def	modeEventHandler(evt)	{
@@ -1460,9 +1466,9 @@ def	motionActiveEventHandler(evt)	{
     if (roomState == 'asleep')		{
         if (nightSwitches)      {
             dimNightLights()
-            if (state.noMotion && whichNoMotion != lastMotionInactive)    {
+            if (state.noMotionAsleep && whichNoMotion != lastMotionInactive)    {
                 updateChildTimer(state.noMotion)
-                runIn(state.noMotion, nightSwitchesOff)
+                runIn(state.noMotionAsleep, nightSwitchesOff)
             }
         }
 		return
@@ -1476,7 +1482,7 @@ def	motionActiveEventHandler(evt)	{
         return
     }
     def cVContact = (contactSensor ? contactSensor.currentValue("contact") : null)
-    if (contactSensor && ((cVContact == 'closed' && !contactSensorOutsideDoor) || (cVContact == 'open' && contactSensorOutsideDoor)))      {
+    if (contactSensor && ((!cVContact.contains('open') && !contactSensorOutsideDoor) || (!cVContact.contains('closed') && contactSensorOutsideDoor)))      {
         if (['occupied', 'checking'].contains(roomState))
             child.generateEvent('engaged')
         else    {
@@ -1521,9 +1527,8 @@ def	motionInactiveEventHandler(evt)     {
     else    {
         if (roomState == 'asleep' && nightSwitches)     {
             if (whichNoMotion == lastMotionInactive)      {
-                if (state.noMotion)
-                    updateChildTimer(state.noMotion);
-                runIn((state.noMotion ?: 1), nightSwitchesOff)
+                if (state.noMotionAsleep)       updateChildTimer(state.noMotionAsleep);
+                runIn((state.noMotionAsleep ?: 1), nightSwitchesOff)
             }
         }
     }
@@ -1742,7 +1747,8 @@ def	engagedSwitchOffEventHandler(evt)	{
 def	contactOpenEventHandler(evt)	{
     ifDebug("contactOpenEventHandler")
     def child = getChildDevice(getRoom())
-    child.updateContactInd(0)
+    def cV = contactSensor.currentValue("contact")
+    child.updateContactInd(contactSensorOutsideDoor ? (cV.contains('open') ? 0 : 1) : 0)
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     def roomState = child.currentValue('occupancy')
@@ -1765,7 +1771,8 @@ def	contactOpenEventHandler(evt)	{
 def	contactClosedEventHandler(evt)     {
     ifDebug("contactClosedEventHandler")
     def child = getChildDevice(getRoom())
-    child.updateContactInd(1)
+    def cV = contactSensor.currentValue("contact")
+    child.updateContactInd(contactSensorOutsideDoor ? 0 : (cV.contains('open') ? 0 : 1))
     def roomState = child.currentValue('occupancy')
     if (contactSensor && resetAsleepWithContact && roomState == asleep)    unschedule("resetAsleep");
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
@@ -1894,7 +1901,7 @@ private processCoolHeat()       {
             updateMaintainInd(rmCoolTemp)
         else if (maintainRoomTemp == '2')
             updateMaintainInd(roomHeatTemp)
-        else    {
+        else if (maintainRoomTemp == '3')       {
             def x = Math.abs(temperature - rmCoolTemp)
             def y = Math.abs(temperature - roomHeatTemp)
             if (x >= y)
@@ -1911,7 +1918,7 @@ private updateMaintainInd(temp)   {
 }
 
 private updateThermostatInd()   {
-    ifDebug("updateTheromstatInd")
+    ifDebug("updateThermostatInd")
     def child = getChildDevice(getRoom())
     def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : null)
     def thermo = 9
@@ -1996,7 +2003,7 @@ private getIntfromStr(String mayOrMayNotBeDecimal)     {
     }
     else
         intValue = mayOrMayNotBeDecimal.toInteger()
-    ifDebug("intValue: $intValue")
+//    ifDebug("intValue: $intValue")
     return intValue
 }
 
@@ -2204,7 +2211,7 @@ def switchesOnOrOff()      {
         if (!turnedOn && allSwitchesOff)        {
             switches2Off()
             if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')
-                musicDevice.stop()
+                musicDevice.pause()
         }
     }
 }
@@ -2224,6 +2231,7 @@ private switches2On(passedRoomState = null)     {
     def child = getChildDevice(getRoom())
     child.updateNoMotionEInd(noMotionE)
     state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 5) // forces minimum of 5 seconds to allow for checking state
+    state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     if (state.rules)    {
         def currentMode = String.valueOf(location.currentMode)
         def roomState = (passedRoomState ?: getChildDevice(getRoom()).currentValue('occupancy'))
@@ -2292,6 +2300,7 @@ private switches2On(passedRoomState = null)     {
             child.updateNoMotionEInd(noMotionE)
         }
         if (thisRule.dimTimer)      state.dimTimer = ((thisRule.dimTimer && thisRule.dimTimer >= 5) ? thisRule.dimTimer as Integer : 5)
+        if (thisRule.noMotionAsleep)   state.noMotionAsleep = ((thisRule.noMotionAsleep && thisRule.noMotionAsleep >= 5) ? thisRule.noMotionAsleep as Integer : null)
         return true
     }
     else
@@ -2359,10 +2368,7 @@ private musicAction(thisRule)       {
             musicDevice.play()
 // to unmute or not?            musicDevice.unmute()
         }
-        else    {
-            if (thisRule.musicAction == '2')
-                musicDevice.pause()
-        }
+        else if (thisRule.musicAction == '2')       musicDevice.pause();
     }
 }
 
@@ -3121,12 +3127,13 @@ def getLastStateChild()     {
     return addRoom
 }
 
+def getChildRoomDevice()    {  return getChildDevice(getRoom())  }
+
 private checkRunDay(dayOfWeek = null)   {
     def thisDay = (new Date(now())).getDay()
-    if (dayOfWeek)
-        return (dayOfWeek.contains(thisDay))
-    else
-        return (state.dayOfWeek.contains(thisDay))
+//    if (dayOfWeek)  return (dayOfWeek.contains(thisDay))
+//    else            return (state.dayOfWeek.contains(thisDay))
+    return ("${dayOfWeek ?: state.dayOfWeek}".contains(thisDay))
 }
 
 def checkRoomModesAndDoW()      {

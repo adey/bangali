@@ -584,8 +584,8 @@ private	stateUpdate(newState)		{
 	if (oldState != newState)	{
 		updateOccupancy(newState)
         if (parent)		{
-			parent.runInHandleSwitches(oldState, newState);
-//			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
+//			parent.runInHandleSwitches(oldState, newState);
+			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
 		}
 	}
 	resetTile(newState)
@@ -832,7 +832,7 @@ def updateASwitchInd(switchOn)		{
 
 def updateAdjRoomsInd(aRoom)		{
 	if (aRoom == -1)
-		sendEvent(name: 'aRoomInd', value: '--', descriptionText: "indicate no adjacent rooms", isStateChange: true, displayed: false)
+		sendEvent(name: 'aRoomInd', value: 'no adjacent rooms', descriptionText: "indicate no adjacent rooms", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'aRoomInd', value: pMode, descriptionText: "indicate adjacent rooms", isStateChange: true, displayed: false)
 }
@@ -871,12 +871,12 @@ log.debug "turnAsleepSwitchesAllOn"
 
 def turnAsleepSwitchesAllOff()	{
 log.debug "turnAsleepSwitchesAllOff"
-	if (parent)  parent.nightSwitchesOff()  }
+	if (parent)  parent.nightSwitchesOff();
+}
 
 def	turnOnAndOffSwitches()	{
 	updateTimer(-1)
-	if (parent)
-		parent.switchesOnOrOff()
+	if (parent)		parent.switchesOnOrOff();
 }
 
 def updateTimer(timer = 0)		{
@@ -884,10 +884,7 @@ def updateTimer(timer = 0)		{
 		timer = state.timer
 	else
 		state.timer = timer
-	if (!timer)
-		sendEvent(name: "timer", value: '--', isStateChange: true, displayed: false)
-	else
-		sendEvent(name: "timer", value: timer, isStateChange: true, displayed: false)
+	sendEvent(name: "timer", value: (timer ?: '--'), isStateChange: true, displayed: false)
 }
 
 /*
