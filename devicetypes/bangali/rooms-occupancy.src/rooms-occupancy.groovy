@@ -584,8 +584,8 @@ private	stateUpdate(newState)		{
 	if (oldState != newState)	{
 		updateOccupancy(newState)
         if (parent)		{
-//			parent.runInHandleSwitches(oldState, newState);
-			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
+			parent.runInHandleSwitches(oldState, newState);
+//			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
 		}
 	}
 	resetTile(newState)
