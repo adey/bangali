@@ -1095,7 +1095,7 @@ def updateRoom(adjMotionSensors)     {
 	initialize()
     def child = getChildDevice(getRoom())
 	subscribe(location, modeEventHandler)
-    state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : 0)
+    state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : null)
     state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged : null)
 	if (motionSensors)	{
     	subscribe(motionSensors, "motion.active", motionActiveEventHandler)
@@ -1207,8 +1207,10 @@ def updateIndicators()      {
     if (luxSensor)      lux = getIntfromStr((String) luxSensor.currentValue("illuminance"));
     child.updateLuxInd(lux)
     if (contactSensor)      {
+        devValue = contactSensor.currentValue("contact")
+        ind = (devValue.contains('open') ? 0 : 1)
 //        ind = (contactSensor.currentValue("contact") == 'closed' ? (!contactSensorOutsideDoor ? 1 : 0) : (!contactSensorOutsideDoor ? 0 : 1))
-        ind = (contactSensor.currentValue("contact").contains("open") ? 0 : 1)
+//        ind = (contactSensor.currentValue("contact").contains('open') ? 0 : 1)
 //        devValue = contactSensor.currentValue("contact");
 //        if (devValue.contains('closed') && !contactSensorOutsideDoor)    ind = 1;
 //        else                                                             ind = 0;
@@ -1261,7 +1263,7 @@ def updateIndicators()      {
         }
     }
     child.updateAdjRoomsInd(aRoom)
-    def ind = -1
+    ind = -1
 /*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentValue("motion")
         if (devValue.contains('active'))    ind = 1;
@@ -1934,13 +1936,13 @@ def temperatureEventHandler(evt)    {
     processCoolHeat()
 }
 
-private processCoolHeat()       {
+def processCoolHeat()       {
     ifDebug("processCoolHeat")
     def temp = -1
     def child = getChildDevice(getRoom())
     if (!personsPresence || maintainRoomTemp == '4')    {
-        updateMaintainInd(temp)
-        updateThermostatInd()
+        updateMaintainIndP(temp)
+        updateThermostatIndP()
         return
     }
     def isHere = personsPresence.currentValue("presence").contains('present')
@@ -1955,7 +1957,7 @@ private processCoolHeat()       {
         if (temperature >= coolHigh && isHere)     {
             if (roomCoolSwitch.currentValue("switch") == 'off')     {
                 roomCoolSwitch.on()
-                child.updateMaintainInd(rmCoolTemp)
+                updateMaintainIndP(rmCoolTemp)
                 updateMaintainIndicator = false
             }
         }
@@ -1979,37 +1981,37 @@ private processCoolHeat()       {
             if (temperature <= heatLow && isHere)     {
                 if (roomHeatSwitch.currentValue("switch") == 'off') {
                     roomHeatSwitch.on()
-                    child.updateMaintainInd(roomHeatTemp)
+                    updateMaintainIndP(roomHeatTemp)
                     updateMaintainIndicator = false
                 }
             }
         }
     }
-    updateThermostatInd()
+    updateThermostatIndP()
     if (updateMaintainIndicator)    {
         if (maintainRoomTemp == '1')
-            updateMaintainInd(rmCoolTemp)
+            updateMaintainIndP(rmCoolTemp)
         else if (maintainRoomTemp == '2')
-            updateMaintainInd(roomHeatTemp)
+            updateMaintainIndP(roomHeatTemp)
         else if (maintainRoomTemp == '3')       {
             def x = Math.abs(temperature - rmCoolTemp)
             def y = Math.abs(temperature - roomHeatTemp)
             if (x >= y)
-                updateMaintainInd(roomHeatTemp)
+                updateMaintainIndP(roomHeatTemp)
             else
-                updateMaintainInd(rmCoolTemp)
+                updateMaintainIndP(rmCoolTemp)
         }
     }
 }
 
-private updateMaintainInd(temp)   {
-    ifDebug("updateMaintainInd: temp: $temp")
-    getChildDevice(getRoom()).updateMaintainInd(temp)
+private updateMaintainIndP(temp)   {
+    ifDebug("updateMaintainIndP: temp: $temp")
+    def child = getChildDevice(getRoom())
+    if (child)  child.updateMaintainIndC(temp)
 }
 
-private updateThermostatInd()   {
-    ifDebug("updateThermostatInd")
-    def child = getChildDevice(getRoom())
+private updateThermostatIndP()   {
+    ifDebug("updateThermostatIndP")
     def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : null)
     def thermo = 9
     if (roomCoolSwitch && roomCoolSwitch.currentValue("switch") == 'on')
@@ -2025,7 +2027,8 @@ private updateThermostatInd()   {
     else if (maintainRoomTemp == '2')
         thermo = 3
     ifDebug("updateTheromstatInd: thermo: $thermo")
-    child.updateThermostatInd(thermo)
+    def child = getChildDevice(getRoom())
+    if (child)  child.updateThermostatIndC(thermo)
 }
 
 def luxEventHandler(evt)    {
@@ -2125,7 +2128,7 @@ def powerEventHandler(evt)    {
         }
     }
     if (proccessSwitches && state.powerCheck && currentPower != state.previousPower)
-        switchesOnOrOff();
+        switchesOnOrOff()
     state.previousPower = currentPower
 }
 
@@ -2321,7 +2324,7 @@ private switches2On(passedRoomState = null)     {
     def turnOn = null
     def previousRuleLux = null
     def thisRule = [:]
-    state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : 0)
+    state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : null)
     state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged : null)
     def noMotionE = (state.noMotionEngaged ?: -1)
     def child = getChildDevice(getRoom())
@@ -2350,6 +2353,7 @@ private switches2On(passedRoomState = null)     {
             if (thisRule.mode && !thisRule.mode.contains(currentMode))      continue;
             if (thisRule.state && !thisRule.state.contains(roomState))      continue;
             if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
+            ifDebug("switches2On 4")
             if (thisRule.fromDate && thisRule.toDate)   {
                 def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
                 def tTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
@@ -2389,19 +2393,19 @@ private switches2On(passedRoomState = null)     {
         runActions(thisRule)
         executePiston(thisRule)
         musicAction(thisRule)
-        if (thisRule.noMotion)      state.noMotion = ((thisRule.noMotion && thisRule.noMotion >= 5) ? thisRule.noMotion as Integer : 0)
-        if (thisRule.noMotionEngaged)   {
-            state.noMotionEngaged = ((thisRule.noMotionEngaged && thisRule.noMotionEngaged >= 5) ? thisRule.noMotionEngaged as Integer : null)
+        if (thisRule.noMotion && thisRule.noMotion >= 5)      state.noMotion = thisRule.noMotion as Integer
+        if (thisRule.noMotionEngaged && thisRule.noMotionEngaged >= 5)      {
+            state.noMotionEngaged = thisRule.noMotionEngaged as Integer
             noMotionE = (state.noMotionEngaged ?: -1)
             child.updateNoMotionEInd(noMotionE)
         }
-        if (thisRule.dimTimer)      state.dimTimer = ((thisRule.dimTimer && thisRule.dimTimer >= 5) ? thisRule.dimTimer as Integer : 5)
-        if (thisRule.noMotionAsleep)   state.noMotionAsleep = ((thisRule.noMotionAsleep && thisRule.noMotionAsleep >= 5) ? thisRule.noMotionAsleep as Integer : null)
+        if (thisRule.dimTimer && thisRule.dimTimer >= 5)      state.dimTimer = thisRule.dimTimer as Integer
+        if (thisRule.noMotionAsleep && thisRule.noMotionAsleep >= 5)   state.noMotionAsleep = thisRule.noMotionAsleep as Integer
         return true
     }
     else
     {
-        getChildDevice(getRoom()).updateLastRuleInd(-1)
+        child.updateLastRuleInd(-1)
         return false
     }
 }
@@ -3227,9 +3231,9 @@ def getChildRoomDevice()    {  return getChildDevice(getRoom())  }
 
 private checkRunDay(dayOfWeek = null)   {
     def thisDay = (new Date(now())).getDay()
-//    if (dayOfWeek)  return (dayOfWeek.contains(thisDay))
-//    else            return (state.dayOfWeek.contains(thisDay))
-    return ("${dayOfWeek ?: state.dayOfWeek}".contains(thisDay))
+    if (dayOfWeek)  return (dayOfWeek.contains(thisDay))
+    else            return (state.dayOfWeek.contains(thisDay))
+//    return ("${dayOfWeek ?: state.dayOfWeek}".contains(thisDay))
 }
 
 def checkRoomModesAndDoW()      {

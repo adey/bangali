@@ -734,7 +734,7 @@ def updateTemperatureInd(temp)		{
 		sendEvent(name: 'temperatureInd', value: temp, unit: tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
 }
 
-def updateMaintainInd(temp)		{
+def updateMaintainIndC(temp)		{
 	def tS = '°' + (location.temperatureScale ?: 'F')
 	if (temp == -1)
 		sendEvent(name: 'maintainInd', value: '--' + tS, descriptionText: "indicate no maintain temperature", isStateChange: true, displayed: false)
@@ -742,7 +742,7 @@ def updateMaintainInd(temp)		{
 		sendEvent(name: 'maintainInd', value: temp + tS, descriptionText: "indicate maintain temperature value", isStateChange: true, displayed: false)
 }
 
-def updateThermostatInd(thermo)		{
+def updateThermostatIndC(thermo)		{
 	def vV = 'none'; 	def dD = "indicate no thermostat setting";
 	switch(thermo)	{
 		case 0:
