@@ -1087,7 +1087,7 @@ def updated()	{
 def updateRoom(adjMotionSensors)     {
     ifDebug("updateRoom")
 	initialize()
-//    def child = getChildDevice(getRoom()) returns null here sometimes dont uncomment
+    def child = getChildDevice(getRoom())
 	subscribe(location, modeEventHandler)
     state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : 0)
     state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged : null)
@@ -1243,7 +1243,7 @@ def updateIndicators()      {
         }
     }
     child.updateAdjRoomsInd(aRoom)
-    def ind = -1
+    ind = -1
 /*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentValue("motion")
         if (devValue.contains('active'))    ind = 1;
@@ -1865,7 +1865,7 @@ private processCoolHeat()       {
         if (temperature >= coolHigh && isHere)     {
             if (roomCoolSwitch.currentValue("switch") == 'off')     {
                 roomCoolSwitch.on()
-                updateMaintainInd(rmCoolTemp)
+                child.updateMaintainInd(rmCoolTemp)
                 updateMaintainIndicator = false
             }
         }
@@ -1889,7 +1889,7 @@ private processCoolHeat()       {
             if (temperature <= heatLow && isHere)     {
                 if (roomHeatSwitch.currentValue("switch") == 'off') {
                     roomHeatSwitch.on()
-                    updateMaintainInd(roomHeatTemp)
+                    child.updateMaintainInd(roomHeatTemp)
                     updateMaintainIndicator = false
                 }
             }
@@ -1919,6 +1919,7 @@ private updateMaintainInd(temp)   {
 
 private updateThermostatInd()   {
     ifDebug("updateThermostatInd")
+    def child = getChildDevice(getRoom())
     def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : null)
     def thermo = 9
     if (roomCoolSwitch && roomCoolSwitch.currentValue("switch") == 'on')
@@ -1934,7 +1935,7 @@ private updateThermostatInd()   {
     else if (maintainRoomTemp == '2')
         thermo = 3
     ifDebug("updateTheromstatInd: thermo: $thermo")
-    getChildDevice(getRoom()).updateThermostatInd(thermo)
+    child.updateThermostatInd(thermo)
 }
 
 def luxEventHandler(evt)    {
