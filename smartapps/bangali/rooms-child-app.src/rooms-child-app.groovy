@@ -1141,10 +1141,10 @@ def updateRoom(adjMotionSensors)     {
     	subscribe(personsPresence, "presence.present", presencePresentEventHandler)
         subscribe(personsPresence, "presence.not present", presenceNotPresentEventHandler)
     }
-    if (anotherRoomEngaged)     {
+//    if (anotherRoomEngaged)     {
         parent.subscribeChildrenToEngaged(app.id, anotherRoomEngaged)
 //        subsribe(anotherRoomEngaged, "occupancy", anotherRoomEventHandler)
-    }
+//    }
     if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
     if (luxSensor)      {
         subscribe(luxSensor, "illuminance", luxEventHandler)
@@ -2353,7 +2353,6 @@ private switches2On(passedRoomState = null)     {
             if (thisRule.mode && !thisRule.mode.contains(currentMode))      continue;
             if (thisRule.state && !thisRule.state.contains(roomState))      continue;
             if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
-            ifDebug("switches2On 4")
             if (thisRule.fromDate && thisRule.toDate)   {
                 def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
                 def tTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
@@ -2393,14 +2392,14 @@ private switches2On(passedRoomState = null)     {
         runActions(thisRule)
         executePiston(thisRule)
         musicAction(thisRule)
-        if (thisRule.noMotion && thisRule.noMotion >= 5)      state.noMotion = thisRule.noMotion as Integer
+        if (thisRule.noMotion && thisRule.noMotion >= 5)      state.noMotion = thisRule.noMotion as Integer;
         if (thisRule.noMotionEngaged && thisRule.noMotionEngaged >= 5)      {
             state.noMotionEngaged = thisRule.noMotionEngaged as Integer
             noMotionE = (state.noMotionEngaged ?: -1)
             child.updateNoMotionEInd(noMotionE)
         }
-        if (thisRule.dimTimer && thisRule.dimTimer >= 5)      state.dimTimer = thisRule.dimTimer as Integer
-        if (thisRule.noMotionAsleep && thisRule.noMotionAsleep >= 5)   state.noMotionAsleep = thisRule.noMotionAsleep as Integer
+        if (thisRule.dimTimer && thisRule.dimTimer >= 5)      state.dimTimer = thisRule.dimTimer as Integer;
+        if (thisRule.noMotionAsleep && thisRule.noMotionAsleep >= 5)        state.noMotionAsleep = thisRule.noMotionAsleep as Integer;
         return true
     }
     else

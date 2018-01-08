@@ -426,14 +426,17 @@ def whoCameHome(presenceSensor, left = false)      {
     }
 }
 
-def subscribeChildrenToEngaged(childID,roomID)     {
+def subscribeChildrenToEngaged(childID, roomID)     {
+    ifDebug("subscribeChildrenToEngaged: childID: $childID | roomID: $roomID")
     if (!state.onEngaged)       state.onEngaged = [:];
-    if (state.onEngaged[(roomID)])      state.onEngaged.remove(roomID);
-    state.onEngaged << [(roomID):(childID)]
+    if (roomID)     {
+        if (state.onEngaged[(roomID)])      state.onEngaged.remove(roomID);
+        state.onEngaged << [(roomID):(childID)]
+    }
 }
 
 def notifyAnotherRoomEngaged(roomID)   {
-log.debug "notifyAnotherRoomEngaged: $roomID"
+    ifDebug("notifyAnotherRoomEngaged: $roomID")
     def childID = state.onEngaged[(roomID)]
     if (childID)   {
         childApps.each	{ child ->
