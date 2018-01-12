@@ -2801,15 +2801,16 @@ def unDimLights()       {
     if (!dimTimer || !dimByLevel || !state.preDimLevel)      return;
     def switchesThatAreOn = whichSwitchesAreOn()
     ifDebug("undim switchesThatAreOn: $switchesThatAreOn")
-    switchesThatAreOn.each      {
-        if (it.currentValue("switch") == 'on')      {
-            if (it.hasCommand("setLevel"))     {
-                def newLevel = state.preDimLevel[(it.getId())]
-                ifDebug("newLevel: it: $it | $newLevel")
-                if (newLevel > 0)       it.setLevel(newLevel);
+    if (switchesThatAreOn)
+        switchesThatAreOn.each      {
+            if (it.currentValue("switch") == 'on')      {
+                if (it.hasCommand("setLevel"))     {
+                    def newLevel = state.preDimLevel[(it.getId())]
+                    ifDebug("newLevel: it: $it | $newLevel")
+                    if (newLevel > 0)       it.setLevel(newLevel);
+                }
             }
         }
-    }
     updateChildTimer(0)
     state.preDimLevel = [:]
 }
@@ -2817,9 +2818,11 @@ def unDimLights()       {
 def switches2Off()       {
     ifDebug("switches2Off")
     def switchesThatAreOn = whichSwitchesAreOn()
-    switchesThatAreOn.each      {
-        if (it.currentSwitch != 'off')      it.off();
-    }
+    ifDebug("switches2Off: switchesThatAreOn: $switchesThatAreOn")
+    if (switchesThatAreOn)
+        switchesThatAreOn.each      {
+            if (it.currentSwitch != 'off')      it.off();
+        }
 }
 
 private previousStateStack(previousState)    {
