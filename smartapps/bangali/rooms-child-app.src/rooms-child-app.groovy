@@ -449,7 +449,7 @@ private pageOccupiedSettings()      {
                 paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
         section("SWITCH CONFIGURATION FOR OCCUPIED STATE:", hideable:false)	{
-            input "occSwitches", "capability.switch", title: "Which switches?", required:false, multiple: true, submitOnChange: true
+            input "occSwitches", "capability.switch", title: "Switch turns ON?", required:false, multiple: true, submitOnChange: true
         }
         section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hedeable:fase) {
             if (hasOccupiedDevice())
@@ -1135,7 +1135,7 @@ def updated()	{
 def updateRoom(adjMotionSensors)     {
     ifDebug("updateRoom")
 	initialize()
-    def child = getChildDevice(getRoom())
+//    def child = getChildDevice(getRoom())
 	subscribe(location, modeEventHandler)
     state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : null)
     state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged : null)
@@ -1151,13 +1151,13 @@ def updateRoom(adjMotionSensors)     {
     		subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
     		subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
     }
-    def ind = -1
+//    def ind = -1
 /*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentValue("motion")
         if (devValue.contains('active'))    ind = 1;
         else                                ind = 0;
     }*/
-    child.updateAdjMotionInd(ind)
+//    child.updateAdjMotionInd(ind)
 
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
@@ -2457,7 +2457,8 @@ private processRules(passedRoomState = null)     {
                 }
                 ruleHasTime = true
             }
-//            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
+            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
+            ifDebug("timedRulesOnly: $timedRulesOnly | ruleHasTime: $ruleHasTime")
             if (timedRulesOnly && !ruleHasTime)     continue;
             if (thisRule.luxThreshold != null)      {
                 if (previousRuleLux == thisRule.luxThreshold)   {

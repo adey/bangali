@@ -459,30 +459,30 @@ metadata {
 			state("lastRule", label:'Last:\n${currentValue}', backgroundColor:"#ffffff")
 		}
 		standardTile("eSwitchInd", "device.eSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 		}
 		standardTile("cSwitchInd", "device.cSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 		}
 		valueTile("noMotionEInd", "device.noMotionEInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("noMotionE", label:'${currentValue}\nsecs', backgroundColor:"#ffffff")
 		}
 		standardTile("aSwitchInd", "device.aSwitchInd", width: 1, height: 1, canChangeIcon: true) {
+			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 			state("off", label: '${name}', action: "turnAsleepSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', action: "turnAsleepSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 		}
 		valueTile("aRoomInd", "device.aRoomInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
 			state("rooms", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		standardTile("aMotionInd", "device.aMotionInd", width: 1, height: 1, canChangeIcon: true) {
+			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
-			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 		}
 
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
