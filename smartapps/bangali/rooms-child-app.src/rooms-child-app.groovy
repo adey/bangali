@@ -1122,6 +1122,7 @@ def updated()	{
         ifDebug("no adjacent rooms")
         updateRoom(null)
     }
+    ifDebug("updated: adjRoomNames")
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
     def busyCheckDisplay = (busyCheck == lightTraffic ? ['Light traffic'] : (busyCheck == mediumTraffic ? ['Medium traffic'] : (busyCheck == heavyTraffic ? ['Heavy traffic'] : [])))
@@ -1130,6 +1131,7 @@ def updated()	{
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
     def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
+    ifDebug("updated: exit")
 }
 
 def updateRoom(adjMotionSensors)     {
@@ -1172,6 +1174,7 @@ def updateRoom(adjMotionSensors)     {
     	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.closed" : "contact.open"), contactOpenEventHandler)
     	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.open" : "contact.closed"), contactClosedEventHandler)
 	}
+    ifDebug("updateRoom: at musicDevice")
     if (musicDevice && musicEngaged)       {
         subscribe(musicDevice, "status.playing", musicPlayingEventHandler)
         subscribe(musicDevice, "status.paused", musicStoppedEventHandler)
@@ -1204,6 +1207,7 @@ def updateRoom(adjMotionSensors)     {
     }
     else
         state.previousPower = null
+    ifDebug("updateRoom: at asleepSensor")
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
     if (asleepButton)   subscribe(asleepButton, "button.pushed", asleepButtonPushedEventHandler);
     if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
@@ -1232,9 +1236,11 @@ def updateRoom(adjMotionSensors)     {
     updateSwitchAttributesToStateAndSubscribe()
     switchesOnOrOff()
     processCoolHeat()
+    ifDebug("updateRoom: at runIn")
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
-}
+    ifDebug("updateRoom: exit")
+}}
 
 def	initialize()	{ unsubscribe(); unschedule(); state.remove("pList") }
 
