@@ -22,6 +22,31 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.09.7
+*
+*   DONE:   1/11/2018
+*   1) addeed night switches control from device tiles indicators
+*   2) added setting to keep room in engaged state based on continuous presence and not just presence change.
+*   3) refactored how another room engaged works and checks for continuous presence before reseting room state.
+// TODO
+*   4) added resetting of asleep state to engaged state reset. will probably make that an option later.
+// TODO
+*   5) started work on adding thermostate to maintain room temperature. going to change this to use rules
+*       which will require a significant change to how rules work so wanted to push everything else out before
+*       starting the work to change maintain room temperature to use rules.
+*   6) added another optimization when getting rules to allow getting conditions only.
+*   7) move is busy check to motion handler instead of downstream.
+*   8) added multiple rule processing with the following evaluation logic:
+*       a) if matching rules have no lux and no time all of those rules will be executed.
+*       b) if matching rules has lux the rule with the lowest lux value < current lux value will be
+*           executed. if there are multiple matching rules with the same lux value all of them will be executed.
+*       c) if matching rules has time all rules that match that current time will be executed.
+*       d) if matching rules have lux and time the rule with the lowest lux value < current lux value and
+*           matching time will be executed. if there are multiple matching rules with the same lux
+*           value and matching time all of them will be executed.
+*   9) timer indicator now uses minutes when time is over 60 seconds.
+*   10) fixed a few small bugs here and there.
+*
 *  Version: 0.09.4
 *
 *   DONE:   12/30/2017
@@ -561,6 +586,9 @@ def	initialize()	{
 	state.timer = 0
 }
 
+def on()		{  occupied()  }
+def	off()		{  vacant()  }
+
 def occupied()	{	stateUpdate('occupied')		}
 
 def checking()	{	stateUpdate('checking')		}
@@ -867,11 +895,18 @@ def turnSwitchesAllOff()		{
 
 def turnAsleepSwitchesAllOn()	{
 log.debug "turnAsleepSwitchesAllOn"
-	if (parent)  parent.dimNightLights()  }
+	if (parent)	{
+		parent.dimNightLights()
+		updateASwitchInd(1)
+	}
+}
 
 def turnAsleepSwitchesAllOff()	{
 log.debug "turnAsleepSwitchesAllOff"
-	if (parent)  parent.nightSwitchesOff();
+	if (parent)		{
+		parent.nightSwitchesOff()
+		updateASwitchInd(0)
+	}
 }
 
 def	turnOnAndOffSwitches()	{
