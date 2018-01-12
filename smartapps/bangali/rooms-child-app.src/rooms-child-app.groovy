@@ -1240,7 +1240,7 @@ def updateRoom(adjMotionSensors)     {
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
     ifDebug("updateRoom: exit")
-}}
+}
 
 def	initialize()	{ unsubscribe(); unschedule(); state.remove("pList") }
 
