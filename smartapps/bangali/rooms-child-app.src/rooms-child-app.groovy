@@ -1118,11 +1118,10 @@ def installed()		{}
 def updated()	{
     ifDebug("updated")
     if (!childCreated())    spawnChildDevice(app.label);
-    if (!(parent.handleAdjRooms()))     {
+    if (!parent || !parent.handleAdjRooms())     {
         ifDebug("no adjacent rooms")
         updateRoom(null)
     }
-    ifDebug("updated: adjRoomNames")
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
     def busyCheckDisplay = (busyCheck == lightTraffic ? ['Light traffic'] : (busyCheck == mediumTraffic ? ['Medium traffic'] : (busyCheck == heavyTraffic ? ['Heavy traffic'] : [])))
@@ -1131,7 +1130,6 @@ def updated()	{
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
     def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
-    ifDebug("updated: exit")
 }
 
 def updateRoom(adjMotionSensors)     {
@@ -1174,7 +1172,6 @@ def updateRoom(adjMotionSensors)     {
     	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.closed" : "contact.open"), contactOpenEventHandler)
     	subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.open" : "contact.closed"), contactClosedEventHandler)
 	}
-    ifDebug("updateRoom: at musicDevice")
     if (musicDevice && musicEngaged)       {
         subscribe(musicDevice, "status.playing", musicPlayingEventHandler)
         subscribe(musicDevice, "status.paused", musicStoppedEventHandler)
@@ -1207,7 +1204,6 @@ def updateRoom(adjMotionSensors)     {
     }
     else
         state.previousPower = null
-    ifDebug("updateRoom: at asleepSensor")
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
     if (asleepButton)   subscribe(asleepButton, "button.pushed", asleepButtonPushedEventHandler);
     if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
@@ -1235,11 +1231,9 @@ def updateRoom(adjMotionSensors)     {
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
     switchesOnOrOff()
-    processCoolHeat()
-    ifDebug("updateRoom: at runIn")
+    runIn(0, processCoolHeat)
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
-    ifDebug("updateRoom: exit")
 }
 
 def	initialize()	{ unsubscribe(); unschedule(); state.remove("pList") }
@@ -2019,13 +2013,13 @@ def processCoolHeat()       {
     ifDebug("processCoolHeat")
     def temp = -1
     def child = getChildDevice(getRoom())
-    def isHere = personsPresence?.currentValue("presence")?.contains('present')
+    def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : false)
     if ((checkPresence && !isHere) || maintainRoomTemp == '4')    {
         updateMaintainIndP(temp)
-        updateThermostatIndP()
+        updateThermostatIndP(isHere)
         return
     }
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     def temperature = getAvgTemperature()
     def rmCoolTemp
     def updateMaintainIndicator = true
@@ -2034,7 +2028,7 @@ def processCoolHeat()       {
         def coolHigh = rmCoolTemp + 0.5
         def coolLow = rmCoolTemp - 0.5
         if (temperature >= coolHigh && (!checkPresence || (checkPresence && isHere)))     {
-            if (roomCoolSwitch.currentValue("switch") == 'off')     {
+            if (roomCoolSwitch?.currentValue("switch") == 'off')     {
                 roomCoolSwitch.on()
                 updateMaintainIndP(rmCoolTemp)
                 updateMaintainIndicator = false
@@ -2042,7 +2036,7 @@ def processCoolHeat()       {
         }
         else        {
             if (temperature <= coolLow && (!checkPresence || (checkPresence && !isHere)))         {
-                if (roomCoolSwitch.currentValue("switch") == 'on')  {
+                if (roomCoolSwitch?.currentValue("switch") == 'on')  {
                     roomCoolSwitch.off()
                 }
             }
@@ -2052,13 +2046,13 @@ def processCoolHeat()       {
         def heatHigh = roomHeatTemp + 0.5
         def heatLow = roomHeatTemp - 0.5
         if (temperature >= heatHigh && (!checkPresence || (checkPresence && !isHere)))     {
-            if (roomHeatSwitch.currentValue("switch") == 'on')      {
+            if (roomHeatSwitch?.currentValue("switch") == 'on')      {
                 roomHeatSwitch.off()
             }
         }
         else        {
             if (temperature <= heatLow && (!checkPresence || (checkPresence && isHere)))        {
-                if (roomHeatSwitch.currentValue("switch") == 'off') {
+                if (roomHeatSwitch?.currentValue("switch") == 'off') {
                     roomHeatSwitch.on()
                     updateMaintainIndP(roomHeatTemp)
                     updateMaintainIndicator = false
@@ -2066,7 +2060,7 @@ def processCoolHeat()       {
             }
         }
     }
-    updateThermostatIndP()
+    updateThermostatIndP(isHere)
     if (updateMaintainIndicator)    {
         if (maintainRoomTemp == '1')
             updateMaintainIndP(rmCoolTemp)
@@ -2089,9 +2083,8 @@ private updateMaintainIndP(temp)   {
     if (child)  child.updateMaintainIndC(temp)
 }
 
-private updateThermostatIndP()   {
+private updateThermostatIndP(isHere)   {
     ifDebug("updateThermostatIndP")
-    def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : null)
     def thermo = 9
     if (roomCoolSwitch && roomCoolSwitch.currentValue("switch") == 'on')
         thermo = 4
@@ -2463,8 +2456,8 @@ private processRules(passedRoomState = null)     {
                 }
                 ruleHasTime = true
             }
-            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
-            ifDebug("timedRulesOnly: $timedRulesOnly | ruleHasTime: $ruleHasTime")
+//            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
+//            ifDebug("timedRulesOnly: $timedRulesOnly | ruleHasTime: $ruleHasTime")
             if (timedRulesOnly && !ruleHasTime)     continue;
             if (thisRule.luxThreshold != null)      {
                 if (previousRuleLux == thisRule.luxThreshold)   {
@@ -2773,6 +2766,7 @@ private whichSwitchesAreOn()   {
             }
         }
     }
+    ifDebug("whichSwitchesAreOn: $switchesThatAreOn")
     return switchesThatAreOn
 }
 
@@ -2781,16 +2775,17 @@ def dimLights()     {
     state.preDimLevel = [:]
     if (!state.dimTimer || !state.dimByLevel)       return;
     def switchesThatAreOn = whichSwitchesAreOn()
-    switchesThatAreOn.each      {
-        if (it.currentValue("switch") == 'on')      {
-            if (it.hasCommand("setLevel"))     {
-                def currentLevel = it.currentValue("level")
-                def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
-                it.setLevel(newLevel)
-                state.preDimLevel << [(it.getId()):currentLevel]
+    if (switchesThatAreOn)
+        switchesThatAreOn.each      {
+            if (it.currentValue("switch") == 'on')      {
+                if (it.hasCommand("setLevel"))     {
+                    def currentLevel = it.currentValue("level")
+                    def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
+                    it.setLevel(newLevel)
+                    state.preDimLevel << [(it.getId()):currentLevel]
+                }
             }
         }
-    }
 }
 
 //def forceSwitches2Off()     {  switches2Off(allSwitchesOff)  }
@@ -2800,7 +2795,6 @@ def unDimLights()       {
     ifDebug("state.preDimLevel: $state.preDimLevel")
     if (!dimTimer || !dimByLevel || !state.preDimLevel)      return;
     def switchesThatAreOn = whichSwitchesAreOn()
-    ifDebug("undim switchesThatAreOn: $switchesThatAreOn")
     if (switchesThatAreOn)
         switchesThatAreOn.each      {
             if (it.currentValue("switch") == 'on')      {
@@ -2818,7 +2812,6 @@ def unDimLights()       {
 def switches2Off()       {
     ifDebug("switches2Off")
     def switchesThatAreOn = whichSwitchesAreOn()
-    ifDebug("switches2Off: switchesThatAreOn: $switchesThatAreOn")
     if (switchesThatAreOn)
         switchesThatAreOn.each      {
             if (it.currentSwitch != 'off')      it.off();
@@ -3277,7 +3270,7 @@ def getAdjMotionSensors()  {
 
 def getAdjRoomDetails()  {
     def adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-ifDebug("childid: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
+ifDebug("getAdjRoomDetails: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
 /*    if (motionSensors)   {
         def motionSensorsList = []
         def motionSensorsNameList = []

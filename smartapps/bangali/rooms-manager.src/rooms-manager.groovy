@@ -503,6 +503,7 @@ def getARoomName(childID)    {
 }
 
 def handleAdjRooms()    {
+log.debug "handleAdjRooms"
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
     def skipAdjRoomsMotionCheck = true
     def adjRoomDetailsMap = [:]
