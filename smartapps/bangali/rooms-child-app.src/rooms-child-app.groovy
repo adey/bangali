@@ -825,8 +825,11 @@ private pageRuleDate(params)   {
     def ruleToDate = settings["toDate$ruleNo"]
 //    if ((ruleFromDate && ruleToDate) && (!dateInputValid(ruleFromDate, true) || !dateInputValid(ruleToDate, false)))
     if (ruleFromDate && ruleToDate)     {
-        def fTime = dateInputValid(ruleFromDate, true)
-        def tTime = dateInputValid(ruleToDate, false)
+//        def fTime = dateInputValid(ruleFromDate, true)
+//        def tTime = dateInputValid(ruleToDate, false)
+        def rD = dateInputValid(ruleFromDate, ruleToDate)
+        def fTime = rD[0]
+        def tTime = rD[1]
         def fTime2
         def tTime2
         if (fTime && tTime)     {
@@ -838,7 +841,8 @@ private pageRuleDate(params)   {
     }
     dynamicPage(name: "pageRuleDate", title: "", install: false, uninstall: false)   {
         section     {
-            paragraph 'NO WAY TO VALIDATE DATE FORMAT ON INPUT DUE TO ST LIMITATION. IF INVALID DATE IS ENTERED IN EITHER FROM OR TO FEILD DATE CHECKING WILL BE SKIPPED.'
+            paragraph 'NO WAY TO VALIDATE DATE FORMAT ON INPUT. IF INVALID DATE CHECKING FOR DATE WILL BE SKIPPED.'
+            paragraph 'Date formats below support following special values for year to enable dynamic date ranges:\n"yyyy" = this year\n"YYYY" = next year'
             input "fromDate$ruleNo", "text", title: "From date? (yyyy/MM/dd format)", required: (ruleToDate ? true : false), multiple: false, defaultValue: null, submitOnChange: true
             input "toDate$ruleNo", "text", title: "To date? (yyyy/MM/dd format)", required: (ruleFromDate ? true : false), multiple: false, defaultValue: null, submitOnChange: true
         }
@@ -895,7 +899,8 @@ private pageRuleTimer(params)   {
     }
 }
 
-private dateInputValid(dateInput, isStartDate)       {
+/*
+private dateInputValid(dateInput, isStartDate)      {
     if (!dateInput || dateInput.size() < 8 || dateInput.size() > 10)    return null;
     def dI = Date.parse("yyyy/M/d HH:mm:ss z", dateInput + (isStartDate ? ' 00:00:00 ' : ' 23:59:59 ') + location.timeZone.getDisplayName())
 //    ifDebug("$dI")
@@ -903,6 +908,60 @@ private dateInputValid(dateInput, isStartDate)       {
     if (!dP)    return null;
 //    ifDebug("$dP")
     return dP
+}
+*/
+
+private dateInputValid(dateInputStart, dateInputEnd)       {
+    ifDebug("dateInputValid")
+    def returnDates = [null, null]
+    if ((!dateInputStart || dateInputStart.size() < 8 || dateInputStart.size() > 10) ||
+        (!dateInputEnd || dateInputEnd.size() < 8 || dateInputEnd.size() > 10))
+        return returnDates
+    if (dateInputStart.toLowerCase().substring(0, 5) == 'yyyy/' || dateInputEnd.toLowerCase().substring(0, 5) == 'yyyy/')     {
+        def dateIS = yearTranslate(dateInputStart)
+        def dIS = Date.parse("yyyy/M/d HH:mm:ss z", dateIS + ' 00:00:00 ' + location.timeZone.getDisplayName())
+        def dateIE = yearTranslate(dateInputEnd)
+        def dIE = Date.parse("yyyy/M/d HH:mm:ss z", dateIE + ' 23:59:59 ' + location.timeZone.getDisplayName())
+        def cDate = new Date(now())
+        if (cDate > dIE)
+            use(TimeCategory)   {
+                dIS = dIS + 1.year
+                dIE = dIE + 1.year
+            }
+        def dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssZ")
+        def dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssZ")
+        if (!dPS || !dPE)    return returnDates;
+        returnDates = [dPS, dPE]
+    }
+    else    {
+        def dIS = Date.parse("yyyy/M/d HH:mm:ss z", dateInputStart + ' 00:00:00 ' + location.timeZone.getDisplayName())
+//    ifDebug("$dI")
+        def dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssZ")
+        def dIE = Date.parse("yyyy/M/d HH:mm:ss z", dateInputEnd + ' 23:59:59 ' + location.timeZone.getDisplayName())
+//    ifDebug("$dI")
+        def dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssZ")
+//    ifDebug("$dP")
+        if (!dPS || !dPE)    return returnDates;
+        returnDates = [dPS, dPE]
+    }
+    ifDebug("returnDates: $returnDates")
+    return returnDates
+}
+
+private yearTranslate(dateP)        {
+    ifDebug("yearTranslate")
+    def returnDate
+    def cDate = new Date(now())
+    def thisYear = cDate.getAt(Calendar.YEAR)
+    def nextYear = thisYear + 1
+    if (dateP.substring(0,5) == 'yyyy/')
+        returnDate = thisYear + dateP.substring(4)
+    else if (dateP.substring(0,5) == 'YYYY/')
+        returnDate = nextYear + dateP.substring(4)
+    else
+        returnDate = dateP
+    ifDebug("yearTranslate: returnDate: $returnDate")
+    return returnDate
 }
 
 private pageAsleepSettings() {
@@ -1080,8 +1139,11 @@ private pageAllSettings() {
                 ruleDesc = (thisRule.dayOfWeek ? "$ruleDesc Days of Week=$thisRule.dayOfWeek" : "$ruleDesc")
                 ruleDesc = (thisRule.luxThreshold != null ? "$ruleDesc Lux=$thisRule.luxThreshold" : "$ruleDesc")
                 if (thisRule.fromDate && thisRule.toDate)        {
-                    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
-                    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
+//                    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
+//                    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
+                    def rD = dateInputValid(settings["fromDate$ruleNo"], settings["toDate$ruleNo"])
+                    def ruleFromDate = rD[0]
+                    def ruleToDate = rD[1]
                     if (ruleFromDate && ruleToDate)     {
                         ruleDesc = (thisRule.fromDate ? "$ruleDesc From=${settings["fromDate$ruleNo"]}" : "$ruleDesc")
                         ruleDesc = (thisRule.toDate ? "$ruleDesc To=${settings["toDate$ruleNo"]}" : "$ruleDesc")
@@ -1273,42 +1335,39 @@ def updateIndicators()      {
     else
         ind = -1;
     child.updatePresenceInd(ind)
-    def temp = -1
-    if (tempSensors)    temp = getAvgTemperature();
-    child.updateTemperatureInd(temp)
+    ind = -1
+    if (tempSensors)    ind = getAvgTemperature();
+    child.updateTemperatureInd(ind)
 //    temp = -1
 //    child.updateMaintainInd(temp)
-    def rulesInd
-    if (!state.rules)
-        rulesInd = -1
-    else
-        rulesInd = state.rules.size()
+    ind = (state.rules ? state.rules.size() : -1)
     child.updateRulesInd(rulesInd)
-    def ruleNo = -1
-    child.updateLastRuleInd(ruleNo)
-    def power = -1
-    if (powerDevice)    power = powerDevice.currentValue("power");
-    child.updatePowerInd(power)
-    def pMode = -1
+    ind = -1
+    child.updateLastRuleInd(ind)
+    ind = -1
+    if (powerDevice)    ind = powerDevice.currentValue("power");
+    child.updatePowerInd(ind)
+    ind = -1
     if (pauseModes)     {
-        pMode = ''
+        ind = ''
         pauseModes.each     {
-            pMode = pMode + (pMode.size() > 0 ? ', ' : '') + it
+            ind = ind + (ind.size() > 0 ? ', ' : '') + it
         }
     }
-    child.updatePauseInd(pMode)
+    child.updatePauseInd(ind)
     child.updateESwitchInd(isAnyESwitchOn())
     def noMotionE = (state.noMotionEngaged ?: -1)
     child.updateNoMotionEInd(noMotionE)
+    child.updateOSwitchInd(isAnyOccupiedSwitchOn())
     child.updateASwitchInd(isAnyASwitchOn())
-    def aRoom = -1
+    ind = -1
     if (adjRooms)     {
-        aRoom = ''
+        ind = ''
         adjRooms.each     {
-            aRoom = aRoom + (aRoom.size() > 0 ? ', ' : '') + it
+            ind = ind + (ind.size() > 0 ? ', ' : '') + it
         }
     }
-    child.updateAdjRoomsInd(aRoom)
+    child.updateAdjRoomsInd(ind)
     ind = -1
 /*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentValue("motion")
@@ -1353,11 +1412,15 @@ private isAnySwitchOn()   {
 
 private isAnyOccupiedSwitchOn() {
     ifDebug("isAnyOccupiedSwitchOn")
-    def v = false
-    if (occSwitches) {
-        v = occSwitches.currentValue("switch").contains('on')
+//    def v = false
+//    if (occSwitches)    v = occSwitches.currentValue("switch").contains('on');
+//    return v
+    def ind = -1
+    if (occSwitches)      {
+        def devValue = occSwitches.currentValue("switch")
+        ind = (devValue.contains('on') ? 1 : 0)
     }
-    return v
+    return ind
 }
 
 // Returns true if there is a contactSensor and the current state of contactSensor matches engaged state
@@ -1365,7 +1428,7 @@ private isContactSensorEngaged() {
 	ifDebug("isContactSensorEngaged")
 	def s = false
     if (contactSensor) {
-        if (contactSensor.currentValue("contact") == 'closed') {
+        if (!contactSensor.currentValue("contact").contains('open')) {
             s = !contactSensorOutsideDoor ? true : false
         } else {
             s = contactSensorOutsideDoor ? true : false
@@ -1479,8 +1542,11 @@ private getRule(ruleNo, checkState = true, getConditionsOnly = false)     {
     else
         ruleDayOfWeek = null
     def ruleLuxThreshold = settings["luxThreshold$ruleNo"]
-    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
-    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
+//    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
+//    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
+    def rD = dateInputValid(settings["fromDate$ruleNo"], settings["toDate$ruleNo"])
+    def ruleFromDate = rD[0]
+    def ruleToDate = rD[1]
     def ruleFromTimeType = settings["fromTimeType$ruleNo"]
     def ruleFromTime = settings["fromTime$ruleNo"]
     def ruleToTimeType = settings["toTimeType$ruleNo"]
@@ -1668,26 +1734,23 @@ def adjMotionInactiveEventHandler(evt)      {
 
 def occupiedSwitchOnEventHandler(evt) {
     ifDebug("occupiedSwitchOnEventHandler")
-    log.trace "occupiedSwitchOnEventHandler"
+//    log.trace "occupiedSwitchOnEventHandler"
     // occupied Switch is turned on
     def child = getChildDevice(getRoom())
-
+    child.updateOSwitchInd(isAnyOccupiedSwitchOn())
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
     def roomState = child.currentValue('occupancy')
     if (['vacant','occupied','checking'].contains(roomState)) {
         def newState = roomState
         def stateChanged = false
-        if (roomState == 'vacant') {
-            newState='occupied'
+        if (roomState == 'vacant')      {
+            newState = 'occupied'
             stateChanged = true
         }
-        if (roomState == 'checking') {
-            if (contactSensor && isContactSensorEngaged()) {
-                newState = "engaged"
-            } else {
-                newState='occupied'
-            }
+        if (roomState == 'checking')    {
+            if (contactSensor && isContactSensorEngaged())      newState = 'engaged';
+            else                                                newState = 'occupied';
             stateChanged = true
         }
         if (noMotion && newState == 'occupied' && !stateChanged) {
@@ -1702,9 +1765,7 @@ def occupiedSwitchOnEventHandler(evt) {
             updateChildTimer(state.noMotion)
             runIn(state.noMotion, roomVacant)
         }
-        if (stateChanged)
-            child.generateEvent(newState)
-
+        if (stateChanged)       child.generateEvent(newState);
     }
 }
 
@@ -1712,6 +1773,10 @@ def occupiedSwitchOffEventHandler(evt) {
     ifDebug("occupiedSwitchOffEventHandler")
     // occupied Switch is turned off
     def child = getChildDevice(getRoom())
+    child.updateOSwitchInd(isAnyOccupiedSwitchOn())
+    if (pauseModes && pauseModes.contains(location.currentMode))        return;
+    if (state.dayOfWeek && !(checkRunDay()))        return;
+    if (!isAnyOccupiedSwitchOn())       child.generateEvent('checking');
 }
 
 def	switchOnEventHandler(evt)       {

@@ -463,7 +463,7 @@ metadata {
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
 		}
-		standardTile("cSwitchInd", "device.cSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+		standardTile("oSwitchInd", "device.oSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
 			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
@@ -562,7 +562,7 @@ metadata {
 		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancy", "occupied", "engaged", "vacant", "asleep", "locked", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "rulesInd", "cSwitchInd", "aRoomInd", "aMotionInd", "aSwitchInd", "thermostatInd", "lastRuleInd", "eSwitchInd", "noMotionEInd", "powerInd", "temperatureInd", "maintainInd"])
+		details (["occupancy", "occupied", "engaged", "vacant", "asleep", "locked", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "rulesInd", "oSwitchInd", "aRoomInd", "aMotionInd", "aSwitchInd", "thermostatInd", "lastRuleInd", "eSwitchInd", "noMotionEInd", "powerInd", "temperatureInd", "maintainInd"])
 //		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
@@ -842,6 +842,20 @@ def updateNoMotionEInd(noMotionE)		{
 		sendEvent(name: 'noMotionEInd', value: '--', descriptionText: "indicate no motion timer for engaged state", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'noMotionEInd', value: noMotionE, descriptionText: "indicate motion timer for engaged state", isStateChange: true, displayed: false)
+}
+
+def updateOSwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'oSwitchInd', value: 'on', descriptionText: "indicate at least one occupied switch is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'oSwitchInd', value: 'off', descriptionText: "indicate all occupied switches is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'oSwitchInd', value: 'none', descriptionText: "indicate no occupied switches", isStateChange: true, displayed: false)
+			break
+	}
 }
 
 def updateASwitchInd(switchOn)		{
