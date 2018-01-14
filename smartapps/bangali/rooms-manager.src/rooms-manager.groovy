@@ -18,6 +18,29 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.09.2
+*
+*   DONE:   12/25/2017
+*   1) added option to temporarily override motion timers with rules.
+*   2) added support for button to set room to asleep.
+*   3) added checks for interval processing of rules.
+*   4) some optimizations and bug fix.
+*
+*  Version: 0.09.0
+*
+*   DONE:   12/23/2017
+*   1) added color coding for temperature indicator. since ST does not allow device handler display to be conditional
+*       for celcius color coding user will need to edit the DTH and uncomment the celcius section and comment the
+*       Fahrenheit values.
+*   2) added support for room AC and heater support to maintain room temperature. support for thermostat is coming.
+*   3) moved all stanalone devices to their own settings page.
+*   4) added setting to indiciate if contact sensor is on inside door or outside. e.g. contact sesnor on garage door
+*       would be an outside door contact sesnor. this reverses the occupancy logic so when contact sensor is open
+*       the door is engaged or occupied instead of when the door is closed.
+*   5) added support for button to set room to vacant.
+*   6) moved webCoRE_init call to the bottom of the updated() method.
+*   7) couple of bug fixes.
+*
 *  Version: 0.08.6
 *
 *   DONE:   12/17/2017
@@ -240,7 +263,7 @@
 
 private isDebug()   {  return true  }
 
-private ifDebug(msg = null)     {  if (msg && isDebug()) log.debug msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
 
 definition (
     name: "rooms manager",
@@ -262,7 +285,7 @@ preferences	{
 def mainPage()  {
     dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings") {
 		section {
-            app(name: "Rooms Manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
+            app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
 	}
 }
@@ -271,8 +294,7 @@ def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
     def str = (presenceNames ? presenceNames.split(',') : [])
     def j = str.size()
-    if (i != j)
-    sendNotification("Count of presense sensors and names do not match!", [method: "push"])
+    if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
 		section   {
             input "speakerAnnounce", "bool", title: "Announce when presence sensors return?", required: false, multiple: false, defaultValue: false, submitOnChange: true
@@ -321,7 +343,7 @@ def updated()		{
                 subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
                 subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
             }
-            subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
+            if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
         }
         str = welcomeHome.split('&')
         state.welcomeHome1 = str[0]
@@ -334,9 +356,15 @@ def updated()		{
 }
 
 def initialize()	{
+    unsubscribe()
 	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
+        def childRoomDevice = child.getChildRoomDevice()
+        subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
+//        child.each  {
+//            ifDebug("$it")
+//        }
 	}
     state.whoCameHome = [:]
     state.whoCameHome.personsIn = []
@@ -344,13 +372,13 @@ def initialize()	{
     state.whoCameHome.personNames = [:]
 }
 
-def	presencePresentEventHandler(evt)     {
-    whoCameHome(evt.device)
+def buttonPushedEventHandler(evt)     {
+    ifDebug("rooms manager: name: $evt.name | value: $evt.value")
 }
 
-def	presenceNotPresentEventHandler(evt)     {
-    whoCameHome(evt.device, true)
-}
+def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
+
+def	presenceNotPresentEventHandler(evt)     {  whoCameHome(evt.device, true)  }
 
 def contactClosedEventHandler(evt = null)     {
     if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
@@ -371,7 +399,7 @@ def contactClosedEventHandler(evt = null)     {
 }
 
 def whoCameHome(presenceSensor, left = false)      {
-    if (!presenceSensor)      return;
+    if (!presenceSensor)    return;
     def presenceName = state.whoCameHome.personNames[(presenceSensor.getId())]
     if (!presenceName)      return;
     ifDebug("presenceName: $presenceName")
@@ -385,8 +413,7 @@ def whoCameHome(presenceSensor, left = false)      {
     if (!left)      {
         if (state.whoCameHome.personsIn)      {
             howLong = nowTime - state.whoCameHome.lastOne
-            if (howLong > 300000L)
-                state.whoCameHome.personsIn = []
+            if (howLong > 300000L)      state.whoCameHome.personsIn = [];
         }
         state.whoCameHome.lastOne = nowTime
         if (!state.whoCameHome.personsIn || !(state.whoCameHome.personsIn.contains(presenceName)))
@@ -399,21 +426,21 @@ def whoCameHome(presenceSensor, left = false)      {
     }
 }
 
-def subscribeChildrenToEngaged(childID,roomID)     {
-    if (!state.onEngaged)
-        state.onEngaged = [:]
-    if (state.onEngaged[(roomID)])
-        state.onEngaged.remove(roomID)
-    state.onEngaged << [(roomID):(childID)]
+def subscribeChildrenToEngaged(childID, roomID)     {
+    ifDebug("subscribeChildrenToEngaged: childID: $childID | roomID: $roomID")
+    if (!state.onEngaged)       state.onEngaged = [:];
+    if (roomID)     {
+        if (state.onEngaged[(roomID)])      state.onEngaged.remove(roomID);
+        state.onEngaged << [(roomID):(childID)]
+    }
 }
 
 def notifyAnotherRoomEngaged(roomID)   {
-log.debug "notifyAnotherRoomEngaged: $roomID"
+    ifDebug("notifyAnotherRoomEngaged: $roomID")
     def childID = state.onEngaged[(roomID)]
     if (childID)   {
         childApps.each	{ child ->
-            if (childID == child.id)
-                child.anotherRoomEngagedEventHandler()
+            if (childID == child.id)        child.anotherRoomEngagedEventHandler();
         }
     }
 }
@@ -421,8 +448,7 @@ log.debug "notifyAnotherRoomEngaged: $roomID"
 def getRoomNames(childID)    {
     def roomNames = [:]
     childApps.each	{ child ->
-        if (childID != child.id)
-            roomNames << [(child.id):(child.label)]
+        if (childID != child.id)        roomNames << [(child.id):(child.label)];
 	}
     return (roomNames.sort { it.value })
 }
@@ -430,8 +456,7 @@ def getRoomNames(childID)    {
 def getARoomName(childID)    {
     def roomName = null
     childApps.each	{ child ->
-        if (childID == child.id)
-            roomName = child.label
+        if (childID == child.id)        roomName = child.label;
 	}
     return roomName
 }
@@ -445,11 +470,9 @@ def handleAdjRooms()    {
         def childID = adjRoomDetails['childid']
         def adjRooms = adjRoomDetails['adjrooms']
         adjRoomDetailsMap << [(childID):(adjRooms)]
-        if (adjRooms)
-            skipAdjRoomsMotionCheck = false
+        if (adjRooms)       skipAdjRoomsMotionCheck = false;
     }
-    if (skipAdjRoomsMotionCheck)
-        return false
+    if (skipAdjRoomsMotionCheck)        return false;
     childApps.each	{ childAll ->
 //        def adjRoomDetails = childAll.getAdjRoomDetails()
         def childID = childAll.id
@@ -496,8 +519,8 @@ def getLastStateDate(childID)      {
 def processChildSwitches()      {
     int i = 1
     childApps.each	{ child ->
-//        runIn(i, child.turnOnAndOffSwitches, [overwrite: false])
-        child.turnOnAndOffSwitches()
+//        runIn(i, child.switchesOnOrOff, [overwrite: false])
+        if (child.checkRoomModesAndDoW())       child.switchesOnOrOff();
         i = i + 1
     }
 }
