@@ -18,6 +18,37 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.09.7
+*
+*   DONE:   1/11/2018
+*   1) addeed night switches control from device tiles indicators
+*   2) added setting to keep room in engaged state based on continuous presence and not just presence change.
+*   3) refactored how another room engaged works and checks for continuous presence before reseting room state.
+// TODO
+*   4) added resetting of asleep state to engaged state reset. will probably make that an option later.
+// TODO
+*   5) started work on adding thermostate to maintain room temperature. going to change this to use rules
+*       which will require a significant change to how rules work so wanted to push everything else out before
+*       starting the work to change maintain room temperature to use rules.
+*   6) added another optimization when getting rules to allow getting conditions only.
+*   7) move is busy check to motion handler instead of downstream.
+*   8) added multiple rule processing with the following evaluation logic:
+*       a) if matching rules have no lux and no time all of those rules will be executed.
+*       b) if matching rules has lux the rule with the lowest lux value < current lux value will be
+*           executed. if there are multiple matching rules with the same lux value all of them will be executed.
+*       c) if matching rules has time all rules that match that current time will be executed.
+*       d) if matching rules have lux and time the rule with the lowest lux value < current lux value and
+*           matching time will be executed. if there are multiple matching rules with the same lux
+*           value and matching time all of them will be executed.
+*   9) timer indicator now uses minutes when time is over 60 seconds.
+*   10) fixed a few small bugs here and there.
+*
+*  Version: 0.09.4
+*
+*   DONE:   12/30/2017
+*   1) updated device tiles layout and added a bunch of indicators.
+*   2) added checking state to room busy check.
+*
 *  Version: 0.09.2
 *
 *   DONE:   12/25/2017
@@ -360,11 +391,9 @@ def initialize()	{
 	log.info "rooms manager: there are ${childApps.size()} rooms."
 	childApps.each	{ child ->
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
-        def childRoomDevice = child.getChildRoomDevice()
+        def childRoomDevice = getChildRoomDeviceObject(child.id)
+        ifDebug("initialize: childRoomDevice: $childRoomDevice")
         subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
-//        child.each  {
-//            ifDebug("$it")
-//        }
 	}
     state.whoCameHome = [:]
     state.whoCameHome.personsIn = []
@@ -373,7 +402,16 @@ def initialize()	{
 }
 
 def buttonPushedEventHandler(evt)     {
-    ifDebug("rooms manager: name: $evt.name | value: $evt.value")
+    ifDebug("buttonPushedEventHandler")
+}
+
+def getChildRoomDeviceObject(childID)     {
+    def roomDeviceObject = null
+    childApps.each	{ child ->
+        if (childID == child.id)        roomDeviceObject = child.getChildRoomDevice();
+	}
+    ifDebug("getChildRoomDeviceObject: childID: $childID | roomDeviceObject: $roomDeviceObject")
+    return roomDeviceObject
 }
 
 def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
@@ -426,6 +464,7 @@ def whoCameHome(presenceSensor, left = false)      {
     }
 }
 
+/*
 def subscribeChildrenToEngaged(childID, roomID)     {
     ifDebug("subscribeChildrenToEngaged: childID: $childID | roomID: $roomID")
     if (!state.onEngaged)       state.onEngaged = [:];
@@ -434,6 +473,7 @@ def subscribeChildrenToEngaged(childID, roomID)     {
         state.onEngaged << [(roomID):(childID)]
     }
 }
+
 
 def notifyAnotherRoomEngaged(roomID)   {
     ifDebug("notifyAnotherRoomEngaged: $roomID")
@@ -444,6 +484,7 @@ def notifyAnotherRoomEngaged(roomID)   {
         }
     }
 }
+*/
 
 def getRoomNames(childID)    {
     def roomNames = [:]
@@ -462,6 +503,7 @@ def getARoomName(childID)    {
 }
 
 def handleAdjRooms()    {
+log.debug "handleAdjRooms"
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
     def skipAdjRoomsMotionCheck = true
     def adjRoomDetailsMap = [:]
