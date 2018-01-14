@@ -25,7 +25,7 @@
 *  Version: 0.09.9
 *
 *   DONE:   1/14/2018
-*   1) added variables years to date filter.
+*   1) added variable years to date filter.
 *
 *  Version: 0.09.8
 *
