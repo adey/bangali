@@ -595,6 +595,9 @@ private pageOtherDevicesSettings()       {
         section("POWER METER:", hideable: false)      {
             input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
         }
+        section("SPEECH RECOGNITION:", hideable: false)      {
+            input "speechDevice", "capability.speechRecognition", title: "Which speech device?", required: false, multiple: false
+        }
 	}
 }
 
@@ -1271,6 +1274,7 @@ def updateRoom(adjMotionSensors)     {
     }
     else
         state.previousPower = null
+    if (speechDevice)   subscribe(speechDevice, "phraseSpoken", speechEventHandler);
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
     if (asleepButton)   subscribe(asleepButton, "button.pushed", asleepButtonPushedEventHandler);
     if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
@@ -2274,6 +2278,11 @@ def powerEventHandler(evt)    {
     state.previousPower = currentPower
 }
 
+def speechEventHandler(evt)       {
+    ifDebug("speechEventHandler")
+    ifDebug("evt.name: $evt.name | evt.value: $evt.value")
+}
+
 //private luxFell(currentLux, luxThreshold)   {   return (currentLux <= luxThreshold && state.previousLux > luxThreshold)  }
 
 //private luxRose(currentLux, luxThreshold)   {   return (currentLux > luxThreshold && state.previousLux <= luxThreshold)  }
@@ -2348,8 +2357,8 @@ def handleSwitches(data)	{
     }
     else    {
         unscheduleAll("handle switches")
-        if (oldState == 'checking')
-            unDimLights()
+// TODO temporarily removed undimming lights because of ongoing issues with ST firmware release 0.20.12
+        if (oldState == 'checking')     unDimLights();
     }
     def child = getChildDevice(getRoom())
     if (['engaged', 'occupied', 'asleep', 'vacant'].contains(newState))     {
@@ -2400,6 +2409,7 @@ def handleSwitches(data)	{
     }
     else    {
         if (newState == 'checking')     {
+// TODO temporarily removed dimming lights because of ongoing issues with ST firmware release 0.20.12
             dimLights()
             def dT = state.dimTimer ?: 1
             if (dT > 5)     updateChildTimer(dT);
@@ -2817,7 +2827,7 @@ private calculateLightLevel()       {
     return lD
 }
 
-private whichSwitchesAreOn()   {
+private whichSwitchesAreOn(toTurnOff = false)   {
     ifDebug("whichSwitchesAreOn")
     def switchesThatAreOn = []
     def switchesThatAreOnID = []
@@ -2829,7 +2839,8 @@ private whichSwitchesAreOn()   {
         if (thisRule.switchesOn)      {
             thisRule.switchesOn.each        {
                 def itID = it.getId()
-                if (it.currentSwitch == 'on' && !switchesThatAreOnID.contains(itID))    {
+// TODO temporarily added toTurnOff to remove light on check because of ongoing issues with ST firmware release 0.20.12
+                if ((toTurnOff || it.currentSwitch == 'on') && !switchesThatAreOnID.contains(itID))    {
                     switchesThatAreOn << it
                     switchesThatAreOnID << itID
                 }
@@ -2881,7 +2892,7 @@ def unDimLights()       {
 
 def switches2Off()       {
     ifDebug("switches2Off")
-    def switchesThatAreOn = whichSwitchesAreOn()
+    def switchesThatAreOn = whichSwitchesAreOn(true)
     if (switchesThatAreOn)
         switchesThatAreOn.each      {
             if (it.currentSwitch != 'off')      it.off();
