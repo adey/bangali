@@ -324,6 +324,7 @@ import groovy.transform.Field
 @Field final String vacant   = 'vacant'
 @Field final String checking = 'checking'
 
+// @Field final String noTraffic       = '0'
 @Field final int lightTraffic   = 5
 @Field final int mediumTraffic  = 7
 @Field final int heavyTraffic   = 9
@@ -493,7 +494,7 @@ private pageEngagedSettings() {
             paragraph "SETTINGS ARE IN ORDER OF PRIORITY IN WHICH THEY ARE CHECKED. FOR EXAMPLE, IF THERE IS BOTH AN ENGAGED SWITCH AND CONTACT SENSOR THE ENGAGED SWITCH WHEN ON WILL TAKE PRIORITY OVER THE CONTACT SENSOR BEING OPEN."
             if (motionSensors)
                 input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: null,
-                                                                options: [[null:"No auto engaged"],[lightTraffic:"Light traffic"],[mediumTraffic:"Medium Traffic"],[heavyTraffic:"Heavy Traffic"]]
+                            options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
             input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
@@ -503,7 +504,7 @@ private pageEngagedSettings() {
                 paragraph "Button number?\nselect button to set"
             if (personsPresence)    {
                 input "presenceAction", "enum", title: "Presence Sensor actions?", required: true, multiple: false, defaultValue: 3,
-                                                    options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
+                            options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
                 input "presenceActionContinuous", "bool", title: "Keep room engaged when presence sensor present?", required: false, multiple: false, defaultValue: false
             }
             else    {
@@ -2900,6 +2901,7 @@ def switches2Off()       {
 }
 
 private previousStateStack(previousState)    {
+    ifDebug("previousStateStack")
     def i
     def timeIs = now()
     def removeHowOld = (state.noMotion ? ((state.noMotion + state.dimTimer) * 10) : (180 * 10))
