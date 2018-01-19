@@ -22,6 +22,11 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.10.0
+*
+*   DONE:   1/18/2018
+*   1) added one page easy settings for first time users.
+*
 *  Version: 0.09.9
 *
 *   DONE:   1/14/2018
@@ -345,15 +350,12 @@ definition	(
 
 preferences {
 	page(name: "roomName", title: "Room Name and Settings")
+    page(name: "pageOnePager", title: "Easy Settings")
     page(name: "pageOccupiedSettings", title: "Occupied State Settings")
     page(name: "pageEngagedSettings", title: "Engaged State Settings")
     page(name: "pageCheckingSettings", title: "Checking State Settings")
     page(name: "pageVacantSettings", title: "Vacant State Settings")
     page(name: "pageOtherDevicesSettings", title: "Other Devices")
-//    page(name: "pagePresenceSettings", title: "Presence Settings")
-//    page(name: "pageLuxTimeSettings", title: "Lux Settings")
-//    page(name: "pageSpeakerSettings", title: "Speaker Settings")
-//    page(name: "pagePowerSettings", title: "Power Settings")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageRules", title: "Maintain Lighting Rules")
     page(name: "pageRule", title: "Edit Lighting Rule")
@@ -386,61 +388,99 @@ def roomName()	{
 				label title: "Room Name:", required: true
             else
                 paragraph "Room Name:\n${app.label}"
+            input "onePager", "bool", title: "Switch to easy settings?", required: false, multiple: false, defaultValue: false, submitOnChange: true
 		}
-        section		{
-            paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WHEN THAT MAKES SENSE."
+        if (onePager)       {
+            section("") {
+    				href "pageOnePager", title: "EASY SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure")
+    		}
         }
-        section("") {
-				href "pageOccupiedSettings", title: "OCCUPIED SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageCheckingSettings", title: "CHECKING SETTINGS", description: ((dimTimer || dimByLevel) ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageVacantSettings", title: "VACANT SETTINGS", description: (turnOffMusic ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageOtherDevicesSettings", title: "OTHER DEVICES", description: (otherDevicesSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-/*
-        section("") {
-				href "pagePresenceSettings", title: "PRESENCE SETTING", description: (personsPresence ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageLuxTimeSettings", title: "LUX SETTING", description: (luxAndTimeSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageSpeakerSettings", title: "SPEAKER SETTING", description: (musicDevice ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pagePowerSettings", title: "POWER SETTING", description: (powerMeter ? "Tap to change existing settings" : "Tap to configure")
-		}
-*/
-        section("") {
-				href "pageAutoLevelSettings", title: "AUTO LEVEL 'AL' SETTINGS", description: (autoLevelSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageRules", title: "RULES (lights/switches, pistons & more ...)", description: "Maintain rules"
-		}
-        section("") {
-				href "pageAsleepSettings", title: "ASLEEP SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageAdjacentRooms", title: "ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageRoomTemperature", title: "ROOM TEMPERATURE SETTINGS", description: (tempSensors || maintainRoomTemp ? "Tap to change existing settings" : "Tap to configure")
-		}
-        section("") {
-				href "pageGeneralSettings", title: "MODE AND OTHER SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure")
-		}
+        else    {
+            section		{
+                paragraph "FOLLOWING SETTINGS ARE ALL OPTIONAL. CORRESPONDING ACTIONS WILL BE SKIPPED WHEN SETTING IS BLANK. WHEN SPECIFIED SETTINGS WORK IN COMBINATION WHEN THAT MAKES SENSE."
+            }
+            section("") {
+    				href "pageOccupiedSettings", title: "OCCUPIED SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageCheckingSettings", title: "CHECKING SETTINGS", description: ((dimTimer || dimByLevel) ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageVacantSettings", title: "VACANT SETTINGS", description: (turnOffMusic ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageOtherDevicesSettings", title: "OTHER DEVICES", description: (otherDevicesSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageAutoLevelSettings", title: "AUTO LEVEL 'AL' SETTINGS", description: (autoLevelSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageRules", title: "RULES (lights/switches, pistons & more ...)", description: "Maintain rules"
+    		}
+            section("") {
+    				href "pageAsleepSettings", title: "ASLEEP SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageAdjacentRooms", title: "ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageRoomTemperature", title: "ROOM TEMPERATURE SETTINGS", description: (tempSensors || maintainRoomTemp ? "Tap to change existing settings" : "Tap to configure")
+    		}
+            section("") {
+    				href "pageGeneralSettings", title: "MODE AND OTHER SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure")
+    		}
+        }
         section("") {
 				href "pageAllSettings", title: "VIEW ALL SETTINGS", description: "Tap to view all settings"
 		}
         remove("Remove Room", "Remove Room ${app.label}")
+	}
+}
+
+private pageOnePager()      {
+	dynamicPage(name: "pageOnePager", title: "", install: false, uninstall: false)     {
+        section("MOTION SENSOR FOR OCCUPIED STATE:", hideable: false)        {
+            input "motionSensors", "capability.motionSensor", title: "Which motion sensor(s)?", required: true, multiple: true, submitOnChange: true
+        }
+        section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hideable:fase) {
+            if (motionSensors)
+                input "noMotion", "number", title: "After how many seconds?", required: true, multiple: false, defaultValue: 300, range: "5..99999", submitOnChange: true
+            else
+                paragraph "After how many seconds?\nselect motion sensor(s) above to set"
+        }
+        section("CHANGE ROOM TO 'ENGAGED' WHEN?", hideable: false)		{
+            if (motionSensors)
+                input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: 7,
+                            options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
+            else
+                paragraph "When room is busy?\nselect motion sensor(s) above to set."
+        }
+        section("TIMEOUT CONFIGURATION FOR ENGAGED STATE:", hideable:false) {
+            if (motionSensors)
+                input "noMotionEngaged", "number", title: "After how many seconds?", required: false, multiple: false, defaultValue: 1800, range: "5..99999", submitOnChange: true
+            else
+                paragraph "After how many seconds?\nselect motion sensor(s) above to set"
+        }
+        section("TIMEOUT CONFIGURATION FOR CHECKING STATE:", hideable: false)		{
+            input "dimTimer", "number", title: "After how many seconds?", required: true, multiple: false, defaultValue: 90, range: "5..99999", submitOnChange: true
+            if (dimTimer)
+                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
+                                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+            else
+                paragraph "Dim lights by what level?\nselect timer seconds above to set"
+        }
+        section("STATES and SWITCHES:", hideable:false)     {
+            input "state1", "enum", title: "Which state?", required: true, multiple: true, options: [occupied, engaged], defaultValue: [occupied, engaged]
+            input "switchesOn1", "capability.switch", title: "Turn ON which switches?", required: true, multiple: true
+            input "setLevelTo1", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
+                options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+        }
+        section("TURN OFF ALL SWITCHES ON NO RULE MATCH?", hideable: false)		{
+            input "allSwitchesOff", "bool", title: "Turn OFF all switches?", required: true, multiple: false, defaultValue: true
+        }
 	}
 }
 
@@ -457,12 +497,11 @@ private pageOccupiedSettings()      {
         section("SWITCH CONFIGURATION FOR OCCUPIED STATE:", hideable:false)	{
             input "occSwitches", "capability.switch", title: "Switch turns ON?", required:false, multiple: true, submitOnChange: true
         }
-        section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hedeable:fase) {
+        section("TIMEOUT CONFIGURATION FOR OCCUPIED STATE:", hideable:fase) {
             if (hasOccupiedDevice())
                 input "noMotion", "number", title: "Occupancy timeout after how many seconds?", required: false, multiple: false, defaultValue: null, range: "5..99999", submitOnChange: true
             else
                 paragraph "Occupancy timeout after how many seconds?\nselect device above to set"
-
         }
 	}
 }
@@ -601,40 +640,6 @@ private pageOtherDevicesSettings()       {
         }
 	}
 }
-
-/*
-private pagePresenceSettings()       {
-	dynamicPage(name: "pagePresenceSettings", title: "", install: false, uninstall: false)      {
-		section("PRESENCE SETTING:", hideable: false)      {
-            input "personsPresence", "capability.presenceSensors", title: "Presence sensors?", required: false, multiple: true, submitOnChange: true
-        }
-	}
-}
-
-private pageLuxTimeSettings()       {
-	dynamicPage(name: "pageLuxTimeSettings", title: "", install: false, uninstall: false)      {
-		section("LUX SENSOR FOR USE WITH SETTINGS BELOW AND/OR RULES:", hideable: false)      {
-            input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
-        }
-	}
-}
-
-private pageSpeakerSettings()       {
-	dynamicPage(name: "pageSpeakerSettings", title: "", install: false, uninstall: false)      {
-		section("SPEAKER SETTING:", hideable: false)      {
-            input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false
-        }
-	}
-}
-
-private pagePowerSettings()       {
-	dynamicPage(name: "pagePowerSettings", title: "", install: false, uninstall: false)      {
-		section("POWER METER SETTINGS:", hideable: false)      {
-            input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
-        }
-	}
-}
-*/
 
 private pageAutoLevelSettings()     {
     ifDebug("pageAutoLevelSettings")
