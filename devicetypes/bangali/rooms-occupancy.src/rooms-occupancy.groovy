@@ -306,6 +306,7 @@ metadata {
 		capability "Button"
 		capability "Sensor"
 		capability "Switch"
+		capability "Beacon"
 		attribute "occupancy", "string"
 		command "occupied"
         command "checking"
