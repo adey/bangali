@@ -795,11 +795,11 @@ private pageRule(params)   {
             input "dayOfWeek$ruleNo", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
                     options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                           [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
-            if (['1', '2', '3'].contains(maintainRoomTemp))
-                input "type$ruleNo", "enum", title: "Rule type?", required: true, multiple: false, defaultValue: null, options: [[null:"Execution Rule"],[t:"Temperature Rule"]], submitOnChange: true
-            else
-                input "type$ruleNo", "enum", title: "Rule type?", required: true, multiple: false, defaultValue: null
-            if (!ruleType)      {
+//            if (['1', '2', '3'].contains(maintainRoomTemp))
+//                input "type$ruleNo", "enum", title: "Rule type?", required: true, multiple: false, defaultValue: null, options: [[null:"Execution Rule"],[t:"Temperature Rule"]], submitOnChange: true
+//            else
+                input "type$ruleNo", "enum", title: "Rule type?", required: true, multiple: false, defaultValue: null, options: [[e:"Execution Rule"],[t:"Temperature Rule"]], submitOnChange: true
+            if (ruleType != 't')      {
                 if (luxSensor)
                     input "luxThreshold$ruleNo", "number", title: "What lux value?", required: false, multiple: false, defaultValue: null, range: "0..*"
                 else
@@ -807,7 +807,7 @@ private pageRule(params)   {
             }
         }
 
-        if (!ruleType)      {
+        if (ruleType != 't')      {
             section("") {
         	   href "pageRuleDate", title: "Date filter", description: "${(settings["fromDate$ruleNo"] || settings["toDate$ruleNo"] ? settings["fromDate$ruleNo"] + ' - ' + settings["toDate$ruleNo"] : 'Add date filtering')}", params: [ruleNo: "$ruleNo"]
             }
@@ -817,7 +817,7 @@ private pageRule(params)   {
             href "pageRuleTime", title: "Time filter", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset")) + ' - ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset")) : 'Add time filtering')}", params: [ruleNo: "$ruleNo"]
         }
 
-        if (!ruleType)      {
+        if (ruleType != 't')      {
             section()     {
                 input "piston$ruleNo", "enum", title: "Piston to execute?", required: false, multiple: false, defaultValue: null, options: state.pList
                 input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
@@ -1497,12 +1497,11 @@ def updateRulesToState()    {
             state.maxRuleNo = i   // cant use yet because for existing rooms value will not be populated
             if (!state.rules)   state.rules = [:];
             state.rules << ["$ruleNo":[isRule:true]]
-            if (!thisRule.ruleType)       state.execute = true
+            if (!thisRule.ruleType || thisRule.ruleType == 'e')       state.execute = true
             else if (thisRule.ruleType == 't')       state.maintainRoomTemp = true
             if (thisRule.level == 'AL')     state.ruleHasAL = true
             if (thisRule.state && thisRule.state.contains('vacant'))    state.vacant = true
             if (thisRule.fromTimeType && thisRule.toTimeType)           state.timeCheck = true
-            if (thisRule.ruleType == 't')       state.maintainRoomTemp = true
         }
     }
 }
@@ -1545,8 +1544,10 @@ private getNextRule(ruleNo, ruleType = '*', getConditionsOnly = false)     {
 private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = false)     {
     if (!ruleNo)        return null
     if (checkState && (!state.rules || !state.rules[ruleNo]))      return null;
+    if (ruleTypeP == 'e') ruleTypeP = null;
     if ((!ruleTypeP && !state.execute) || (ruleTypeP == 't' && !state.maintainRoomTemp))    return null;
     def ruleType = settings["type$ruleNo"]
+    if (ruleType == 'e') ruleType = null;
     if (ruleTypeP != '*' && ruleType != ruleTypeP)      return null;
     def ruleName = settings["name$ruleNo"]
     def ruleDisabled = settings["disabled$ruleNo"]
@@ -1568,8 +1569,8 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 //    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
 //    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
     def rD = dateInputValid(settings["fromDate$ruleNo"], settings["toDate$ruleNo"])
-    def ruleFromDate = (ruleTypeP != 't' ? rD[0] : null)
-    def ruleToDate = (ruleTypeP != 't' ? rD[1] : null)
+    def ruleFromDate = (ruleType != 't' ? rD[0] : null)
+    def ruleToDate = (ruleType != 't' ? rD[1] : null)
     def ruleFromTimeType = settings["fromTimeType$ruleNo"]
     def ruleFromTime = settings["fromTime$ruleNo"]
     def ruleToTimeType = settings["toTimeType$ruleNo"]
@@ -1618,7 +1619,7 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
                           ruleNoMotion || ruleNoMotionEngaged || ruleDimTimer || ruleNoMotionAsleep))
                 return null
             else
-                return [ruleNo:ruleNo, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
+                return [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
                         luxThreshold:ruleLuxThreshold,
                         fromDate:ruleFromDate, toDate:ruleToDate,
                         fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime,
