@@ -22,6 +22,11 @@
 *  Name: Room Child App
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 *
+*  Version: 0.10.5
+*
+*   DONE:   1/23/2018
+*   1) added rules support for maintaining temperature.
+*
 *  Version: 0.10.0
 *
 *   DONE:   1/18/2018

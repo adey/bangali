@@ -22,6 +22,26 @@
 *  Name: Room Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
+*  Version: 0.10.5
+*
+*   DONE:   1/23/2018
+*   1) added rules support for maintaining temperature.
+*
+*  Version: 0.10.0
+*
+*   DONE:   1/18/2018
+*   1) added one page easy settings for first time users.
+*
+*  Version: 0.09.9
+*
+*   DONE:   1/14/2018
+*   1) added variable years to date filter.
+*
+*  Version: 0.09.8
+*
+*   MERGED:   1/12/2018
+*   1) added switches for occupied state and corresponding settings by https://github.com/TonyFleisher.
+*
 *  Version: 0.09.7
 *
 *   DONE:   1/11/2018
