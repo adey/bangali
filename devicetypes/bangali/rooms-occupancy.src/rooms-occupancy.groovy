@@ -449,8 +449,8 @@ metadata {
 			state("auto", icon: "st.thermostat.auto", backgroundColor: "#ffffff")
 			state("autoCool", icon: "st.thermostat.auto-cool", backgroundColor: "#ffffff")
 			state("autoHeat", icon: "st.thermostat.heat", backgroundColor: "#ffffff")
-			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#153591")
-			state("heating", icon: "st.thermostat.heating", backgroundColor: "#BC2323")
+			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#5DADE2")
+			state("heating", icon: "st.thermostat.heating", backgroundColor: "#CD6155")
 			state("none", label:'none', icon:"st.thermostat.thermostat-down", backgroundColor:"#ffffff")
 		}
 		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
