@@ -18,6 +18,39 @@
 *  Name: Room Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
+*  Version: 0.10.7
+*
+*   DONE:   1/26/2018
+*   1) added support for switch to set room to locked.
+*   2) added support for random welcome home and left home messages. multiple messages can be specified delimited
+*       by comma and one of them will be randomly picked when making the annoucement.
+*   3) added support for switch to set room to asleep.
+*
+*  Version: 0.10.6
+*
+*   DONE:   1/24/2018
+*   1) added support for power value to set room to asleep.
+*
+*  Version: 0.10.5
+*
+*   DONE:   1/23/2018
+*   1) added rules support for maintaining temperature.
+*
+*  Version: 0.10.0
+*
+*   DONE:   1/18/2018
+*   1) added one page easy settings for first time users.
+*
+*  Version: 0.09.9
+*
+*   DONE:   1/14/2018
+*   1) added variable years to date filter.
+*
+*  Version: 0.09.8
+*
+*   MERGED:   1/12/2018
+*   1) added switches for occupied state and corresponding settings by https://github.com/TonyFleisher.
+*
 *  Version: 0.09.7
 *
 *   DONE:   1/11/2018
@@ -359,30 +392,7 @@ def updated()		{
 	unsubscribe()
     unschedule()
 	initialize()
-    if (speakerAnnounce)    {
-        def i = presenceSensors.size()
-        def str = presenceNames.split(',')
-        def j = str.size()
-//        ifDebug("i: $i | str: $str | j: $j")
-        if (i == j)     {
-            i = 0
-            presenceSensors.each        {
-                state.whoCameHome.personNames << [(it.getId()):(i < j ? str[i].trim() : '')]
-                i = i + 1
-            }
-            if (presenceSensors)     {
-                subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
-                subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
-            }
-            if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
-        }
-        str = welcomeHome.split('&')
-        state.welcomeHome1 = str[0]
-        state.welcomeHome2 = (str.size() >= 2 ? str[1] : '')
-        str = leftHome.split('&')
-        state.leftHome1 = str[0]
-        state.leftHome2 = (str.size() >= 2 ? str[1] : '')
-    }
+    announceSetup()
     runEvery15Minutes(processChildSwitches)
 }
 
@@ -399,6 +409,45 @@ def initialize()	{
     state.whoCameHome.personsIn = []
     state.whoCameHome.personsOut = []
     state.whoCameHome.personNames = [:]
+}
+
+private announceSetup() {
+    if (!speakerAnnounce)   return;
+    def i = presenceSensors.size()
+    def str = presenceNames.split(',')
+    def j = str.size()
+    if (i == j)     {
+        i = 0
+        presenceSensors.each        {
+            state.whoCameHome.personNames << [(it.getId()):(i < j ? str[i].trim() : '')]
+            i = i + 1
+        }
+        if (presenceSensors)     {
+            subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
+            subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
+        }
+        if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler)
+    }
+    state.welcomeHome1 = [:]
+    state.welcomeHome2 = [:]
+    str = welcomeHome.split(',')
+    i = 0
+    str.each    {
+        def str2 = it.split('&')
+        state.welcomeHome1[i] = str2[0]
+        state.welcomeHome2[i] = (str2.size() > 1 ? str2[1] : '')
+        i = i + 1
+    }
+    state.leftHome1 = [:]
+    state.leftHome2 = [:]
+    str = leftHome.split(',')
+    i = 0
+    str.each    {
+        def str2 = it.split('&')
+        state.leftHome1[i] = str2[0]
+        state.leftHome2[i] = (str2.size() > 1 ? str2[1] : '')
+        i = i + 1
+    }
 }
 
 def buttonPushedEventHandler(evt)     {
@@ -423,12 +472,17 @@ def contactClosedEventHandler(evt = null)     {
     def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
     def i = str.size()
     def j = 1
-    def persons = (evt ? state.welcomeHome1 : state.leftHome1) + ' '
+    def k = (state.welcomeHome1 ? Math.abs(new Random().nextInt() % state.welcomeHome1.size()) : 0) + ''
+    def l = (state.leftHome1 ? Math.abs(new Random().nextInt() % state.leftHome1.size()) : 0) + ''
+//    ifDebug("k: $k ${state.welcomeHome1[(k)]} | l: $l ${state.leftHome1[(l)]}")
+    def persons = (evt ? state.welcomeHome1[(k)] : state.leftHome1[(l)]) + ' '
     str.each      {
         persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
         j = j + 1
     }
-    persons = persons + ' ' + (evt ? state.welcomeHome2 : state.leftHome2)
+    persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)])
+//    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
+    ifDebug("message: $persons")
     speakerDevices.playTextAndResume(persons, speakerVolume as Integer)
     if (evt)
         state.whoCameHome.personsIn = []
