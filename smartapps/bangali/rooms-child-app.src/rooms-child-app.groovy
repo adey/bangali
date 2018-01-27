@@ -1299,8 +1299,8 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
     if (occSwitches) {
-    		subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
-    		subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
+    	subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
+    	subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
     }
 //    def ind = -1
 /*    if (adjMotionSensors)      {
@@ -1309,7 +1309,7 @@ def updateRoom(adjMotionSensors)     {
         else                                ind = 0;
     }*/
 //    child.updateAdjMotionInd(ind)
-
+    ifDebug("updateRoom 2")
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
     state.switchesHasColorTemperature = [:]
@@ -1343,6 +1343,7 @@ def updateRoom(adjMotionSensors)     {
         }
     }
     if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
+    ifDebug("updateRoom 3")
     if (luxSensor)      {
         subscribe(luxSensor, "illuminance", luxEventHandler)
         state.previousLux = getIntfromStr((String) luxSensor.currentValue("illuminance"))
@@ -1371,6 +1372,7 @@ def updateRoom(adjMotionSensors)     {
     }
     state.nightSetLevelTo = (nightSetLevelTo ? nightSetLevelTo as Integer : null)
     state.noAsleep = ((noAsleep && noAsleep >= 1) ? (noAsleep * 60 * 60) : 0)
+    ifDebug("updateRoom 4")
     if (lockedSwitch)      {
     	subscribe(lockedSwitch, "switch.on", lockedSwitchOnEventHandler)
     	subscribe(lockedSwitch, "switch.off", lockedSwitchOffEventHandler)
@@ -1391,6 +1393,7 @@ def updateRoom(adjMotionSensors)     {
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
 //    switchesOnOrOff()
+    ifDebug("updateRoom runIns")
     runIn(0, processCoolHeat)
     runIn(1, scheduleFromToTimes)
     runIn(3, updateIndicators)
