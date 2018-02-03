@@ -767,7 +767,7 @@ private pageRules()     {
                     def ruleNo = String.valueOf(i)
                     def thisRule = getRule(ruleNo, '*', false)
                     if (thisRule)   {
-                        def ruleDesc = "$ruleNo: $ruleName -"
+                        def ruleDesc = "$ruleNo: $thisRule.name -"
                         ruleDesc = (thisRule.mode ? "$ruleDesc Mode=$thisRule.mode" : "$ruleDesc")
                         ruleDesc = (thisRule.state ? "$ruleDesc State=$thisRule.state" : "$ruleDesc")
 //                        ruleDesc = (thisRule.luxThreshold != null ? "$ruleDesc Lux=$thisRule.luxThreshold" : (luxThreshold ? "$ruleDesc Lux=$luxThreshold" : "$ruleDesc"))
