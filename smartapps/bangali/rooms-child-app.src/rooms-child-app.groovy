@@ -1396,7 +1396,7 @@ def updateRoom(adjMotionSensors)     {
         }
     }
     if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
-    if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", buttonPushedVacantEventHandler);
+    if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", vacantSwitchOffEventHandler);
     ifDebug("updateRoom 3")
     if (luxSensor)      {
         subscribe(luxSensor, "illuminance", luxEventHandler)
@@ -1974,7 +1974,6 @@ def	buttonPushedVacantEventHandler(evt)     {
     if (!evt.data)      return;
     def eD = new groovy.json.JsonSlurper().parseText(evt.data)
     assert eD instanceof Map
-    ifDebug("eD: $eD | buttonIsVacant: $buttonIsVacant")
     if (!eD || (buttonIsVacant && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsVacant as Integer))     return;
     def child = getChildDevice(getRoom())
     def roomState = child.currentValue('occupancy')
@@ -1985,6 +1984,16 @@ def	buttonPushedVacantEventHandler(evt)     {
         if (roomState == vacant)
             child.generateEvent('checking')
     }*/
+}
+
+def	vacantSwitchOffEventHandler(evt)     {
+    ifDebug("vacantSwitchOffEventHandler")
+    if (pauseModes && pauseModes.contains(location.currentMode))   return;
+    if (state.dayOfWeek && !(checkRunDay()))    return;
+    def child = getChildDevice(getRoom())
+    def roomState = child.currentValue('occupancy')
+    if (['engaged', 'occupied', 'checking'].contains(roomState))
+        child.generateEvent('vacant')
 }
 
 def	buttonPushedAsleepEventHandler(evt)     {
