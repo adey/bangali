@@ -1919,7 +1919,8 @@ def occupiedSwitchOffEventHandler(evt) {
     child.updateOSwitchInd(isAnyOccupiedSwitchOn())
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-    if (!isAnyOccupiedSwitchOn())       child.generateEvent('checking');
+    def roomState = child.currentValue('occupancy')
+    if (roomState == 'occupied' && !occSwitches.currentValue("switch").contains('on'))       child.generateEvent('checking');
 }
 
 def	switchOnEventHandler(evt)       {
