@@ -1974,6 +1974,7 @@ def	buttonPushedVacantEventHandler(evt)     {
     if (!evt.data)      return;
     def eD = new groovy.json.JsonSlurper().parseText(evt.data)
     assert eD instanceof Map
+    ifDebug("eD: $eD | buttonIsVacant: $buttonIsVacant")
     if (!eD || (buttonIsVacant && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsVacant as Integer))     return;
     def child = getChildDevice(getRoom())
     def roomState = child.currentValue('occupancy')
