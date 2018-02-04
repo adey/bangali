@@ -3643,18 +3643,19 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 
 def getAdjMotionSensors()  {
     ifDebug("getAdjMotionSensors")
-    if (motionSensors)   {
+/*    if (motionSensors)   {
         def motionSensorsList = []
         motionSensors.each   {  motionSensorsList << it }
         return motionSensorsList
     }
     else
-        return null
+        return null*/
+    return motionsensors
 }
 
 def getAdjRoomDetails()  {
     def adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-ifDebug("getAdjRoomDetails: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
+    ifDebug("getAdjRoomDetails: ${adjRoomDetails['childid']} | adjrooms: ${adjRoomDetails['adjrooms']}")
 /*    if (motionSensors)   {
         def motionSensorsList = []
         def motionSensorsNameList = []
