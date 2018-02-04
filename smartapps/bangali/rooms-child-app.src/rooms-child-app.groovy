@@ -1322,19 +1322,26 @@ def installed()		{}
 def updated()	{
     ifDebug("updated")
     if (!childCreated())    spawnChildDevice(app.label);
+    ifDebug("updated 1")
     if (!parent || !parent.handleAdjRooms())     {
         ifDebug("no adjacent rooms")
         updateRoom(null)
     }
+    ifDebug("updated 2")
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
+    ifDebug("updated 3")
     def busyCheckDisplay = (busyCheck == lightTraffic ? ['Light traffic'] : (busyCheck == mediumTraffic ? ['Medium traffic'] : (busyCheck == heavyTraffic ? ['Heavy traffic'] : [])))
     def devicesMap = ['busyCheck':busyCheckDisplay, 'engagedButton':engagedButton, 'presence':personsPresence, 'engagedSwitch':engagedSwitch, 'contactSensor':contactSensor,
                       'motionSensors':motionSensors, 'luxSensor':luxSensor, 'adjRoomNames':adjRoomNames,
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
+    ifDebug("updated 4")
     def child = getChildDevice(getRoom())
+    ifDebug("updated $child")
     child.deviceList(devicesMap)
+    ifDebug("updated 5")
     child.vacant()
+    ifDebug("updated 6")
 }
 
 def updateRoom(adjMotionSensors)     {
