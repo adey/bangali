@@ -375,16 +375,16 @@ def pageSpeakerSettings()   {
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
 		section   {
-            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: true, multiple: true, submitOnChange: true
+            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             if (speakerDevices)     {
-                input "speakerVolume", "number", title: "Speaker volume?", required: true, multiple: false, defaultValue: 33, range: "1..100"
+                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             }
             else        {
                 paragraph "Speaker volume?\nselect speaker(s) to set."
                 paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
             }
-            if (speakerAnnounce)    {
+            if (speakerDevices && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
                 input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
                 input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)", required: true, multiple: true
@@ -409,7 +409,7 @@ def pageSpeakerSettings()   {
                 paragraph "Announce time?\nselect speaker devices to set."
         }
         section     {
-            if (speakerAnnounce || timeAnnounce != '4')        {
+            if (speakerAnnounce || ['1', '2', '3'].contains(timeAnnounce))        {
                 input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
                 input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
             }
