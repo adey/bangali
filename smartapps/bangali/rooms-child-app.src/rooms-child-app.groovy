@@ -1334,6 +1334,7 @@ def updated()	{
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
     def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
+    child.vacant()
 }
 
 def updateRoom(adjMotionSensors)     {
@@ -2767,7 +2768,7 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     if (state.rules)    {
         def currentMode = String.valueOf(location.currentMode)
-        def roomState = (passedRoomState ?: getChildDevice(getRoom()).currentValue('occupancy'))
+        def roomState = (passedRoomState ?: child.currentValue('occupancy'))
         def nowTime	= now() + 1000
         def nowDate = new Date(nowTime)
         def sunriseAndSunset = getSunriseAndSunset()
