@@ -19,8 +19,59 @@
 *	formatDuration(...) code by ady624 for webCoRE. adpated by me to work here. original code can be found at:
 *		https://github.com/ady624/webCoRE/blob/master/smartapps/ady624/webcore-piston.src/webcore-piston.groovy
 *
-*  Name: Room Occupancy
+*  Name: Rooms Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+*
+*****************************************************************************************************************/
+
+public static String version()      {  return "v0.11.0"  }
+private static boolean isDebug()    {  return true  }
+
+/*****************************************************************************************************************
+*
+*  Version: 0.11.0
+*
+*   DONE:   2/1/2018
+// TODO
+*   1) added support for time announce function. straightforward annoucement for now but likely to get fancier ;-)
+*   2) added rule name to display in rules page.
+*   3) added support for power value stays below a certain number of seconds before triggering engaged or asleep.
+*   4) added support for vacant switch. except this sets room to vacant when turned OFF not ON.
+*   5) changed speaker device to music player in the rooms setup.
+*   6) added support in rules to control window shade.
+*
+*  Version: 0.10.7
+*
+*   DONE:   1/26/2018
+*   1) added support for switch to set room to locked.
+*   2) added support for random welcome home and left home messages. multiple messages can be specified delimited
+*       by comma and one of them will be randomly picked when making the annoucement.
+*   3) added support for switch to set room to asleep.
+*
+*  Version: 0.10.6
+*
+*   DONE:   1/24/2018
+*   1) added support for power value to set room to asleep.
+*
+*  Version: 0.10.5
+*
+*   DONE:   1/23/2018
+*   1) added rules support for maintaining temperature.
+*
+*  Version: 0.10.0
+*
+*   DONE:   1/18/2018
+*   1) added one page easy settings for first time users.
+*
+*  Version: 0.09.9
+*
+*   DONE:   1/14/2018
+*   1) added variable years to date filter.
+*
+*  Version: 0.09.8
+*
+*   MERGED:   1/12/2018
+*   1) added switches for occupied state and corresponding settings by https://github.com/TonyFleisher.
 *
 *  Version: 0.09.7
 *
@@ -449,8 +500,8 @@ metadata {
 			state("auto", icon: "st.thermostat.auto", backgroundColor: "#ffffff")
 			state("autoCool", icon: "st.thermostat.auto-cool", backgroundColor: "#ffffff")
 			state("autoHeat", icon: "st.thermostat.heat", backgroundColor: "#ffffff")
-			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#153591")
-			state("heating", icon: "st.thermostat.heating", backgroundColor: "#BC2323")
+			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#5DADE2")
+			state("heating", icon: "st.thermostat.heating", backgroundColor: "#CD6155")
 			state("none", label:'none', icon:"st.thermostat.thermostat-down", backgroundColor:"#ffffff")
 		}
 		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
@@ -624,7 +675,7 @@ private updateOccupancy(occupancy = null) 	{
 	occupancy = occupancy?.toLowerCase()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
 	if (!occupancy || !(buttonMap.containsKey(occupancy))) {
-    	log.debug "${device.displayName}: Missing or invalid parameter room occupancy: $occupancy"
+    	ifDebug("${device.displayName}: Missing or invalid parameter room occupancy: $occupancy")
         return
     }
 	sendEvent(name: "occupancy", value: occupancy, descriptionText: "${device.displayName} changed to ${occupancy}", isStateChange: true, displayed: true)
@@ -909,7 +960,7 @@ def turnSwitchesAllOff()		{
 }
 
 def turnAsleepSwitchesAllOn()	{
-log.debug "turnAsleepSwitchesAllOn"
+ 	ifDebug("turnAsleepSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
 		updateASwitchInd(1)
@@ -917,7 +968,7 @@ log.debug "turnAsleepSwitchesAllOn"
 }
 
 def turnAsleepSwitchesAllOff()	{
-log.debug "turnAsleepSwitchesAllOff"
+	ifDebug("turnAsleepSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
 		updateASwitchInd(0)
@@ -995,3 +1046,5 @@ private formatduration(long value, boolean friendly = false, granularity = 's', 
     return result
 }
 */
+
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
