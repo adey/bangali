@@ -1760,7 +1760,7 @@ def	motionActiveEventHandler(evt)	{
     child.updateMotionInd(1)
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (roomState == 'asleep')		{
         if (nightSwitches)      {
             dimNightLights()
@@ -1817,7 +1817,7 @@ def	motionInactiveEventHandler(evt)     {
     child.updateMotionInd(motionSensors.currentValue("motion").contains("active") ? 1 : 0)
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (['occupied'].contains(roomState))       {
         if (state.noMotion && whichNoMotion == lastMotionInactive)    {
             updateChildTimer(state.noMotion)
@@ -1840,7 +1840,7 @@ def adjMotionActiveEventHandler(evt)    {
     child.updateAdjMotionInd(1)
     if (pauseModes && pauseModes.contains(location.currentMode))    return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (adjRoomsMotion && roomState == 'occupied')      {
         def motionValue = motionSensors.currentValue("motion")
         def motionLastActivity = motionSensors.getLastActivity()
@@ -1884,7 +1884,7 @@ def occupiedSwitchOnEventHandler(evt) {
     child.updateOSwitchInd(isAnyOccupiedSwitchOn())
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (['vacant','occupied','checking'].contains(roomState)) {
         def newState = roomState
         def stateChanged = false
@@ -1920,7 +1920,7 @@ def occupiedSwitchOffEventHandler(evt) {
     child.updateOSwitchInd(isAnyOccupiedSwitchOn())
     if (pauseModes && pauseModes.contains(location.currentMode))        return;
     if (state.dayOfWeek && !(checkRunDay()))        return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (roomState == 'occupied' && !occSwitches.currentValue("switch").contains('on'))       child.generateEvent('checking');
 }
 
@@ -1958,7 +1958,7 @@ def	buttonPushedEventHandler(evt)     {
     if (!eD || (buttonIs && eD['buttonNumber'] != buttonIs as Integer))
     	return
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (roomState == 'engaged')     {
         if (resetEngagedDirectly)
             child.generateEvent('vacant')
@@ -1978,7 +1978,7 @@ def	buttonPushedVacantEventHandler(evt)     {
     assert eD instanceof Map
     if (!eD || (buttonIsVacant && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsVacant as Integer))     return;
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (['engaged', 'occupied', 'checking'].contains(roomState))
         child.generateEvent('vacant')
 // added 18-01-30: if room is already vacant or another state dont do anything
@@ -1993,7 +1993,7 @@ def	vacantSwitchOffEventHandler(evt)     {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (['engaged', 'occupied', 'checking'].contains(roomState))
         child.generateEvent('vacant')
 }
@@ -2008,7 +2008,7 @@ def	buttonPushedAsleepEventHandler(evt)     {
     if (!eD || (buttonIsAsleep && eD['buttonNumber'] != buttonIsAsleep as Integer))
     	return
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (['engaged', 'occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('asleep')
     else    {
@@ -2049,7 +2049,7 @@ def	anotherRoomEngagedButtonPushedEventHandler(evt)     {
     assert eD instanceof Map
     if (!eD || eD['buttonNumber'] < 8)     return;
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (['engaged', 'asleep'].contains(roomState))
         if (resetEngagedDirectly)
             child.generateEvent('vacant')
@@ -2064,7 +2064,7 @@ def	presencePresentEventHandler(evt)     {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (presenceActionArrival())      {
-        def roomState = child.currentValue('occupancy')
+        def roomState = child?.currentValue('occupancy')
         if (['occupied', 'checking', 'vacant'].contains(roomState))
             child.generateEvent('engaged')
     }
@@ -2079,7 +2079,7 @@ def	presenceNotPresentEventHandler(evt)     {
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (presenceActionDeparture())      {
-        def roomState = child.currentValue('occupancy')
+        def roomState = child?.currentValue('occupancy')
         if (['asleep', 'engaged', 'occupied'].contains(roomState))      {
             if (resetEngagedDirectly)
                 child.generateEvent('vacant')
@@ -2098,7 +2098,7 @@ def	engagedSwitchOnEventHandler(evt)     {
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && presenceActionContinuous && personsPresence.currentValue("presence").contains('present'))     return;
     if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)     return;
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (['occupied', 'checking', 'vacant'].contains(roomState))
         child.generateEvent('engaged')
 }
@@ -2113,7 +2113,7 @@ def	engagedSwitchOffEventHandler(evt)	{
     if (musicDevice && musicEngaged && musicDevice.currentValue("status") == 'playing')  return;
     if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)     return;
     if (engagedSwitch.currentValue("switch").contains('on'))        return;
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
     else    {
@@ -2129,7 +2129,7 @@ def	contactOpenEventHandler(evt)	{
     child.updateContactInd(contactSensorOutsideDoor ? (cV.contains('open') ? 0 : 1) : 0)
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (resetAsleepWithContact && roomState == asleep)    {
         updateChildTimer(25 * 60)
         runIn(25 * 60, resetAsleep)
@@ -2152,7 +2152,7 @@ def	contactClosedEventHandler(evt)     {
     def child = getChildDevice(getRoom())
     def cV = contactSensor.currentValue("contact")
     child.updateContactInd(contactSensorOutsideDoor ? 0 : (cV.contains('open') ? 0 : 1))
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (resetAsleepWithContact && roomState == asleep)      {
         unschedule('resetAsleep')
         updateChildTimer(0)
@@ -2175,7 +2175,7 @@ def	contactClosedEventHandler(evt)     {
 
 def resetAsleep()     {
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (roomState == asleep)    {
         unschedule('roomAwake')
         child.generateEvent('checking')
@@ -2191,7 +2191,7 @@ def musicPlayingEventHandler(evt)       {
     if (personsPresence && presenceActionContinuous && personsPresence.currentValue("presence").contains('present'))     return;
     if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
     if (roomState == 'occupied' || (!hasOccupiedDevice() && roomState == 'vacant'))
         child.generateEvent('engaged')
@@ -2210,7 +2210,7 @@ def musicStoppedEventHandler(evt)       {
     if (personsPresence && presenceActionContinuous && personsPresence.currentValue("presence").contains('present'))     return;
     if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
     else    {
@@ -2243,7 +2243,7 @@ def	asleepSwitchOffEventHandler(evt)	{
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     def child = getChildDevice(getRoom())
-    if (child.currentValue('occupancy') == 'asleep')
+    if (child?.currentValue('occupancy') == 'asleep')
         child.generateEvent('checking')
 }
 
@@ -2260,7 +2260,7 @@ def	lockedSwitchOffEventHandler(evt)	{
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     def child = getChildDevice(getRoom())
-    if (child.currentValue('occupancy') == 'locked')
+    if (child?.currentValue('occupancy') == 'locked')
         child.generateEvent('checking')
 }
 
@@ -2344,7 +2344,7 @@ def processCoolHeat()       {
         updateThermostatIndP(isHere)
         return
     }
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     def temperature = getAvgTemperature()
     def updateMaintainIndicator = true
     def turnOn = null
@@ -2524,7 +2524,7 @@ def powerEventHandler(evt)    {
     if (state.dayOfWeek && !(checkRunDay()))    return;
     if (personsPresence && presenceActionContinuous && personsPresence.currentValue("presence").contains('present'))     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (powerValueEngaged)     {
         if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged && ['occupied', 'checking', 'vacant'].contains(roomState))     {
             unschedule('powerStaysBelowEngaged')
@@ -2552,7 +2552,7 @@ def powerEventHandler(evt)    {
 
 def powerStaysBelowEngaged()   {
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (roomState == 'engaged')     {
         def cV = contactSensor?.currentValue("contact")
         if ((personsPresence && presenceActionContinuous && personsPresence.currentValue("presence").contains('present')) ||
@@ -2570,7 +2570,7 @@ def powerStaysBelowEngaged()   {
 
 def powerStaysBelowAsleep()   {
     def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (roomState == 'asleep')      child.generateEvent('checking');
 }
 
@@ -2587,7 +2587,7 @@ def speechEventHandler(evt)       {
 def roomVacant(forceVacant = false)	  {
     ifDebug("roomVacant")
     def child = getChildDevice(getRoom())
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     if (!forceVacant && motionSensors && ['engaged', 'occupied', 'checking'].contains(roomState))      {
         def motionValue = motionSensors.currentValue("motion")
         if (motionValue.contains('active'))     {
@@ -2604,7 +2604,7 @@ def roomVacant(forceVacant = false)	  {
 def roomAwake()	  {
     ifDebug("roomAwake")
 	def child = getChildDevice(getRoom())
-	def roomState = child.currentValue('occupancy')
+	def roomState = child?.currentValue('occupancy')
     def newState = null
     if (roomState == 'asleep')  newState = (state.dimTimer ? 'checking' : 'vacant');
     if (newState)   child.generateEvent(newState);
@@ -2737,7 +2737,7 @@ private switchesOn()	{
 def switchesOnOrOff(switchesOnly = false)      {
     ifDebug("switchesOnOrOff")
     def child = getChildDevice(getRoom())
-    def roomState = (child ? child.currentValue('occupancy') : null)
+    def roomState = child?.currentValue('occupancy')
     if (roomState && ['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))      {
         def turnedOn = processRules(roomState, switchesOnly)
         if (!turnedOn && allSwitchesOff)        {
@@ -2768,7 +2768,7 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     if (state.rules)    {
         def currentMode = String.valueOf(location.currentMode)
-        def roomState = (passedRoomState ?: child.currentValue('occupancy'))
+        def roomState = (passedRoomState ?: child?.currentValue('occupancy'))
         def nowTime	= now() + 1000
         def nowDate = new Date(nowTime)
         def sunriseAndSunset = getSunriseAndSunset()
@@ -3740,7 +3740,7 @@ def	nightButtonPushedEventHandler(evt)     {
     def nM = new groovy.json.JsonSlurper().parseText(evt.data)
     assert nM instanceof Map
     if (!nM || (nightButtonIs && nM['buttonNumber'] != nightButtonIs as Integer))       return;
-    def roomState = getChildDevice(getRoom()).currentValue('occupancy')
+    def roomState = getChildDevice(getRoom())?.currentValue('occupancy')
     if (nightSwitches && roomState == 'asleep')     {
         unscheduleAll("night button pushed handler")
         def switchValue = nightSwitches.currentValue("switch")
@@ -3789,7 +3789,7 @@ def sleepEventHandler(evt)		{
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
 	def child = getChildDevice(getRoom())
-    def roomState = child.currentValue('occupancy')
+    def roomState = child?.currentValue('occupancy')
     if (evt.value == "not sleeping")
     	child.generateEvent('checking')
     else    {
