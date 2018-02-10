@@ -2183,7 +2183,8 @@ def	contactOpenEventHandler(evt)	{
 def	contactClosedEventHandler(evt)     {
     ifDebug("contactClosedEventHandler")
     def child = getChildDevice(getRoom())
-    child.updateContactInd(contactSensorOutsideDoor ? 0 : (contactSensor.currentValue("contact").contains('open') ? 0 : 1))
+    def cV = contactSensor.currentValue("contact")
+    child.updateContactInd(contactSensorOutsideDoor ? 0 : (cV.contains('open') ? 0 : 1))
     def roomState = child?.currentValue('occupancy')
     if (resetAsleepWithContact && roomState == asleep)      {
         unschedule('resetAsleep')
@@ -2197,7 +2198,7 @@ def	contactClosedEventHandler(evt)     {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))      return;
 //    if (['occupied', 'checking'].contains(roomState) || (!motionSensors && roomState == 'vacant'))
     if (((!contactSensorOutsideDoor && !cV.contains('open')) || (contactSensorOutsideDoor && cV.contains('open'))) &&
-        (['occupied', 'checking'].contains(roomState)  || (!hasOccupiedDevice() && roomState == 'vacant')))
+        (['occupied', 'checking'].contains(roomState) || (!hasOccupiedDevice() && roomState == 'vacant')))
         child.generateEvent('engaged')
     else    {
         if (hasOccupiedDevice() && roomState == 'vacant')
