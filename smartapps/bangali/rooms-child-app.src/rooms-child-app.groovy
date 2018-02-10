@@ -24,10 +24,16 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.11.5"  }
+public static String version()      {  return "v0.12.0"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.12.0
+*
+*   DONE:   2/8/2018
+*   1) added alarm to rooms occupancy. tested somewhat. family kind of upset with me for random alarms going off :-(
+*   2) sunrise & sunset now support offset in minutes. so if you always wanted sunrise -30 or sunset +30 now you can.
 *
 *  Version: 0.11.5
 *
@@ -400,7 +406,7 @@ preferences {
     page(name: "pageVacantSettings", title: "Vacant State Settings")
     page(name: "pageOtherDevicesSettings", title: "Other Devices")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
-    page(name: "pageRules", title: "Maintain Lighting Rules")
+    page(name: "pageRules", title: "Maintain Rules")
     page(name: "pageRule", title: "Edit Lighting Rule")
     page(name: "pageRuleDate", title: "Edit Lighting Rule Date")
     page(name: "pageRuleTime", title: "Edit Lighting Rule Time")
@@ -836,6 +842,8 @@ private pageRule(params)   {
     def ruleToTimeType = settings["toTimeType$ruleNo"]
     def ruleFromTimeHHmm = (settings["fromTime$ruleNo"] ? format24hrTime(timeToday(settings["fromTime$ruleNo"], location.timeZone)) : '')
     def ruleToTimeHHmm = (settings["toTime$ruleNo"] ? format24hrTime(timeToday(settings["toTime$ruleNo"], location.timeZone)) : '')
+    def ruleFromTimeOffset = settings["fromTimeOffset$ruleNo"]
+    def ruleToTimeOffset = settings["toTimeOffset$ruleNo"]
     def ruleTimerOverride = (settings["noMotion$ruleNo"] || settings["noMotionEngaged$ruleNo"] || settings["dimTimer$ruleNo"] || settings["noMotionAsleep$ruleNo"])
     def allActions = location.helloHome?.getPhrases()*.label
     def ruleType = settings["type$ruleNo"]
@@ -871,7 +879,7 @@ private pageRule(params)   {
         }
 
         section("") {
-            href "pageRuleTime", title: "Time filter", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset")) + ' - ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset")) : 'Add time filtering')}", params: [ruleNo: "$ruleNo"]
+            href "pageRuleTime", title: "Time filter", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleFromTimeOffset ? " $ruleFromTimeOffset" : "")) + ' : ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleToTimeOffset ? " $ruleToTimeOffset" : "")) : 'Add time filtering')}", params: [ruleNo: "$ruleNo"]
         }
 
         if (ruleType != 't')      {
@@ -916,7 +924,7 @@ private pageRule(params)   {
                 if (['2', '3'].contains(maintainRoomTemp))
                     input "heatTemp$ruleNo", "decimal", title: "Heat to what temperature?", required: true, multiple: false, range: "32..99"
                 if (['1', '2', '3'].contains(maintainRoomTemp))
-                    input "tempRange$ruleNo", "decimal", title: "What temperature offset?", required: true, multiple: false, range: "1..3"
+                    input "tempRange$ruleNo", "decimal", title: "Within temperature range?", required: true, multiple: false, range: "1..3"
             }
         }
     }
@@ -972,16 +980,20 @@ private pageRuleTime(params)   {
                 input "fromTimeType$ruleNo", "enum", title: "Choose from time type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             if (ruleFromTimeType == '3')
                 input "fromTime$ruleNo", "time", title: "From time?", required: true, multiple: false, defaultValue: null
+            else if (ruleFromTimeType)
+                input "fromTimeOffset$ruleNo", "number", title: "Time offset?", required: false, multiple: false, defaultValue: 0, range: "-600..600"
             else
-                paragraph "From time?\nchange from time type to time to select"
+                paragraph "Choose from time type to select offset or time"
             if (ruleFromTimeType)
                 input "toTimeType$ruleNo", "enum", title: "Choose to time type?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             else
                 input "toTimeType$ruleNo", "enum", title: "Choose to time type?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Sunrise"],[2:"Sunset"],[3:"Time"]]
             if (ruleToTimeType == '3')
                 input "toTime$ruleNo", "time", title: "To time?", required: true, multiple: false, defaultValue: null
+            else if (ruleToTimeType)
+                input "toTimeOffset$ruleNo", "number", title: "Time offset?", required: false, multiple: false, defaultValue: 0, range: "-600..600"
             else
-                paragraph "To time?\nchange to time type to time to select"
+                paragraph "Choose to time type to select offset or time"
         }
     }
 }
@@ -1460,6 +1472,10 @@ def updateRoom(adjMotionSensors)     {
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
 //    switchesOnOrOff()
+    subscribe(location, "sunrise", scheduleFromToTimes)
+    subscribe(location, "sunset", scheduleFromToTimes)
+    def child = getChildDevice(getRoom())
+    child.setupAlarmC()
     ifDebug("updateRoom runIns")
     runIn(0, processCoolHeat)
     runIn(1, scheduleFromToTimes)
@@ -1689,8 +1705,10 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
     def ruleFromDate = (ruleType != 't' ? rD[0] : null)
     def ruleToDate = (ruleType != 't' ? rD[1] : null)
     def ruleFromTimeType = settings["fromTimeType$ruleNo"]
+    def ruleFromTimeOffset = settings["fromTimeOffset$ruleNo"]
     def ruleFromTime = settings["fromTime$ruleNo"]
     def ruleToTimeType = settings["toTimeType$ruleNo"]
+    def ruleToTimeOffset = settings["toTimeOffset$ruleNo"]
     def ruleToTime = settings["toTime$ruleNo"]
 
     if (ruleType == 't')    {
@@ -1702,7 +1720,8 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
             return null
         else
             return [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
-                    fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime,
+                    fromTimeType:ruleFromTimeType, fromTimeOffset:ruleFromTimeOffset, fromTime:ruleFromTime,
+                    toTimeType:ruleToTimeType, toTimeOffset:ruleToTimeOffset, toTime:ruleToTime,
                     coolTemp:ruleRoomCoolTemp, heatTemp:ruleRoomHeatTemp, tempRange:ruleTempRange]
     }
     else    {
@@ -1713,7 +1732,8 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
             else
                 return [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
                         luxThreshold:ruleLuxThreshold, fromDate:ruleFromDate, toDate:ruleToDate,
-                        fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime]
+                        fromTimeType:ruleFromTimeType, fromTimeOffset:ruleFromTimeOffset, fromTime:ruleFromTime,
+                        toTimeType:ruleToTimeType, toTimeOffset:ruleToTimeOffset, toTime:ruleToTime]
         }
         else        {
             def rulePiston = settings["piston$ruleNo"]
@@ -1740,7 +1760,8 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
                 return [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
                         luxThreshold:ruleLuxThreshold,
                         fromDate:ruleFromDate, toDate:ruleToDate,
-                        fromTimeType:ruleFromTimeType, fromTime:ruleFromTime, toTimeType:ruleToTimeType, toTime:ruleToTime,
+                        fromTimeType:ruleFromTimeType, fromTimeOffset:ruleFromTimeOffset, fromTime:ruleFromTime,
+                        toTimeType:ruleToTimeType, toTimeOffset:ruleToTimeOffset, toTime:ruleToTime,
                         piston:rulePiston, actions:ruleActions, musicAction:ruleMusicAction, shade:ruleShadePostion,
                         switchesOn:ruleSwitchesOn, level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo, colorTemperature:ruleSetColorTemperatureTo,
                         switchesOff:ruleSwitchesOff,
@@ -2368,6 +2389,7 @@ def processCoolHeat()       {
         def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
         def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         def timedRulesOnly = false
+        def sunriseTimeWithOff, sunsetTimeWithOff
         def i = 1
         for (; i < 11; i++)      {
             def ruleHasTime = false
@@ -2378,10 +2400,33 @@ def processCoolHeat()       {
             if (thisRule.mode && !thisRule.mode.contains(currentMode))      continue;
             if (thisRule.state && !thisRule.state.contains(roomState))      continue;
             if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
-            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
+// saved old time comparison while adding offset to sunrise / sunset
+/*            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
                 (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
                 def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTime : ( thisRule.fromTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.fromTime, location.timeZone)))
                 def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTime : ( thisRule.toTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.toTime, location.timeZone)))
+//                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
+                if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
+                if (!timedRulesOnly)    {
+                    turnOn = null
+                    timedRulesOnly = true
+                    i = 0
+                    continue
+                }
+                ruleHasTime = true
+            }*/
+            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
+                (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
+                if (thisRule.fromTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.fromTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunsetTime)
+                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.fromTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.fromTime, location.timeZone)))
+                if (thisRule.toTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.toTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
+                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
 //                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
                 if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
                 if (!timedRulesOnly)    {
@@ -2801,6 +2846,7 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
         def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
         def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         def timedRulesOnly = false
+        def sunriseTimeWithOff, sunsetTimeWithOff
         def i = 1
         for (; i < 11; i++)      {
 //        for (def rule in state.rules.sort{ it.key })    {
@@ -2829,8 +2875,16 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
             }
             if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
                 (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
-                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTime : ( thisRule.fromTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.fromTime, location.timeZone)))
-                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTime : ( thisRule.toTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.toTime, location.timeZone)))
+                if (thisRule.fromTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.fromTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunsetTime)
+                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.fromTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.fromTime, location.timeZone)))
+                if (thisRule.toTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.toTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
+                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
 //                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
                 if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
                 if (!timedRulesOnly)    {
@@ -3415,13 +3469,13 @@ private scheduleFromToTimes()       {
 }
 */
 
-def scheduleFromToTimes()       {
+def scheduleFromToTimes(evt = null)       {
     if (!state.rules || !state.timeCheck)       return;
     ifDebug("scheduleFromToTimes")
-    def sunriseFromSubscribed = false
-    def sunriseToSubscribed = false
-    def sunsetFromSubscribed = false
-    def sunsetToSubscribed = false
+//    def sunriseFromSubscribed = false
+//    def sunriseToSubscribed = false
+//    def sunsetFromSubscribed = false
+//    def sunsetToSubscribed = false
 /*    for (def rule in state.rules.sort{ it.key })        {
         def thisRule = rule.value
         if (thisRule.disabled)      continue
@@ -3446,7 +3500,7 @@ def scheduleFromToTimes()       {
                 sunsetToSubscribed = true
             }
     }*/
-    def i = 1
+/*    def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getNextRule(ruleNo, null, true)
@@ -3475,7 +3529,7 @@ def scheduleFromToTimes()       {
                 sunsetToSubscribed = true
             }
         }
-    }
+    }*/
     scheduleFromTime()
     scheduleToTime()
 }
@@ -3490,29 +3544,13 @@ private scheduleFromTime()      {
     def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
     def nextTimeType = null
     def nextTime = null
-/*    for (def rule in state.rules.sort{ it.key })        {
-        def thisRule = rule.value
-        if (thisRule.disabled)      continue
-        if (!thisRule.fromTimeType || thisRule.fromTimeType != timeTime() || !thisRule.fromTime || !thisRule.toTimeType)
-            continue
-        def fromTime = timeTodayAfter(nowDate, thisRule.fromTime, location.timeZone)
-        if (!nextTime)      {
-            nextTime = fromTime
-            continue
-        }
-        ifDebug("nowDate: $nowDate || nextTime: $nextTime || fromTime: $fromTime")
-        ifDebug("${timeOfDayIsBetween(nowDate, nextTime, fromTime, location.timeZone)}")
-        if (timeOfDayIsBetween(nowDate, nextTime, fromTime, location.timeZone))
-            nextTime = fromTime
-    }*/
+    def sunriseTimeWithOff, sunsetTimeWithOff
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getNextRule(ruleNo, null, true)
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
-//        def thisRule = getRule(ruleNo)
-//        if (!thisRule || thisRule.disabled)      continue;
         if (thisRule.fromDate && thisRule.toDate)       {
 //            ifDebug("scheduleFromTime: thisRule.fromDate: $thisRule.fromDate | thisRule.toDate: $thisRule.toDate")
             def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
@@ -3526,26 +3564,25 @@ private scheduleFromTime()      {
             }
         }
         if ((!thisRule.fromTimeType || (thisRule.fromTimeType == timeTime() && !thisRule.fromTime)) ||
-            (!thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))
+            (!thisRule.toTimeType || (thisRule.toTimeType == timeTime() && !thisRule.toTime)))
             continue
 //        def fromTime = timeTodayAfter(nowDate, thisRule.fromTime, location.timeZone)
-        def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTime : ( thisRule.fromTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.fromTime, location.timeZone)))
-//        ifDebug("scheduleFromTime 2: nowDate: $nowDate | nextTime: $nextTime | fTime: $fTime | tTime: $tTime")
-//        if (!nextTime || nowDate > nextTime || timeOfDayIsBetween(nowDate, nextTime, fTime, location.timeZone))      {
+        if (thisRule.fromTimeType == timeSunrise())
+            sunriseTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunriseTime)
+        else if (thisRule.fromTimeType == timeSunset())
+            sunsetTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunsetTime)
+        def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.fromTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.fromTime, location.timeZone)))
+//        ifDebug("nowDate: $nowDate | nextTime: $nextTime | fTime: $fTime")
         if (!nextTime || timeOfDayIsBetween(nowDate, nextTime, fTime, location.timeZone))      {
             nextTimeType = thisRule.fromTimeType
             nextTime = fTime
-//            continue
         }
-//        if (timeOfDayIsBetween(nowDate, nextTime, fTime, location.timeZone)) {
-//            nextTimeType = thisRule.fromTimeType
-//            nextTime = fTime
-//        }
     }
     if (nextTime)   {
         state.fTime = nextTime
         updateTimeFromToInd()
-        if (nextTimeType == timeTime())     schedule(nextTime, timeFromHandler);
+//        if (nextTimeType == timeTime())     schedule(nextTime, timeFromHandler);
+        schedule(nextTime, timeFromHandler);
     }
 }
 
@@ -3559,38 +3596,13 @@ private scheduleToTime()      {
     def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
     def nextTimeType = null
     def nextTime = null
-/*    for (def rule in state.rules.sort{ it.key })        {
-        def thisRule = rule.value
-        if (thisRule.disabled)      continue
-        if (!thisRule.toTimeType || thisRule.toTimeType != timeTime() || !thisRule.toTime || !thisRule.fromTimeType)
-            continue
-        def toTime = timeTodayAfter(nowDate, thisRule.toTime, location.timeZone)
-        if (!nextTime)      {
-            nextTime = toTime
-            continue
-        }
-        ifDebug("nowDate: $nowDate || nextTime: $nextTime || toTime: $toTime")
-        ifDebug("${timeOfDayIsBetween(nowDate, nextTime, toTime, location.timeZone)}")
-        if (timeOfDayIsBetween(nowDate, nextTime, toTime, location.timeZone))
-            nextTime = toTime
-    }*/
+    def sunriseTimeWithOff, sunsetTimeWithOff
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getNextRule(ruleNo, null, true)
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
-//        def thisRule = getRule(ruleNo)
-//        if (!thisRule || thisRule.disabled)      continue;
-/*        if (thisRule.fromDate && thisRule.toDate)       {
-            def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
-            def tTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
-            if (nowDate > tTime)        continue;
-            if (!nextTime || timeOfDayIsBetween(nowDate, nextTime, tTime, location.timeZone))   {
-                nextTime = tTime
-                nextTimeType = timeTime()
-            }
-        }*/
         if (thisRule.fromDate && thisRule.toDate)       {
 //            ifDebug("scheduleToTime: thisRule.fromDate: $thisRule.fromDate | thisRule.toDate: $thisRule.toDate")
             def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
@@ -3604,24 +3616,25 @@ private scheduleToTime()      {
             }
         }
         if ((!thisRule.fromTimeType || (thisRule.fromTimeType == timeTime() && !thisRule.fromTime)) ||
-            (!thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))
+            (!thisRule.toTimeType || (thisRule.toTimeType == timeTime() && !thisRule.toTime)))
             continue
 //        def toTime = timeTodayAfter(nowDate, thisRule.toTime, location.timeZone)
-        def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTime : ( thisRule.toTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.toTime, location.timeZone)))
+        if (thisRule.toTimeType == timeSunrise())
+            sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
+        else if (thisRule.toTimeType == timeSunset())
+            sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
+        def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
+//        ifDebug("nowDate: $nowDate | nextTime: $nextTime | tTime: $tTime")
         if (!nextTime || timeOfDayIsBetween(nowDate, nextTime, tTime, location.timeZone))      {
             nextTimeType = thisRule.toTimeType
             nextTime = tTime
-//            continue
         }
-//        if (timeOfDayIsBetween(nowDate, nextTime, tTime, location.timeZone))    {
-//            nextTimeType = thisRule.toTimeType
-//            nextTime = tTime
-//        }
     }
     if (nextTime)   {
         state.tTime = nextTime
         updateTimeFromToInd()
-        if (nextTimeType == timeTime())     schedule(nextTime, timeToHandler);
+//        if (nextTimeType == timeTime())     schedule(nextTime, timeToHandler);
+        schedule(nextTime, timeToHandler);
     }
 }
 
@@ -3632,7 +3645,7 @@ def timeFromHandler(evt = null)       {
 //    def child = getChildDevice(getRoom())
 //    def roomState = child.getRoomState()
 //    if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))
-        switchesOnOrOff()
+    switchesOnOrOff()
     scheduleFromToTimes()
 }
 
@@ -3643,7 +3656,7 @@ def timeToHandler(evt = null)       {
 //    def child = getChildDevice(getRoom())
 //    def roomState = child.getRoomState()
 //    if (['engaged', 'occupied', 'asleep', 'vacant'].contains(roomState))
-        switchesOnOrOff()
+    switchesOnOrOff()
     scheduleFromToTimes()
 }
 
@@ -3703,6 +3716,88 @@ def getLastStateChild()     {
 }
 
 def getChildRoomDevice()    {  return getChildDevice(getRoom())  }
+
+def setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)     {
+    if (alarmDisabled || !alarmTime || !musicDevice)    {
+        unschedule('ringAlarm')
+        return
+    }
+    setSoundURI(alarmSound)
+    state.alarm << [volume:alarmVolume]
+    state.alarm << [repeat:alarmRepeat]
+    if (alarmDayOfWeek)      {
+        state.alarm << [dayOfWeek:[]]
+        switch(dayOfWeek)       {
+            case '1':   case '2':   case '3':   case '4':   case '5':   case '6':   case '7':
+                        state.alarm << [dayOfWeek:(dayOfWeek)];                 break;
+            case '8':   [1,2,3,4,5].each    { state.alarm.dayOfWeek << it };    break;
+            case '9':   [6,7].each          { state.alarm.dayOfWeek << it };    break;
+            default:    state.alarm.dayOfWeek = null;                           break;
+        }
+    }
+    else
+        state.alarm.dayOfWeek = null
+    schedule(alarmTime, ringAlarm)
+}
+
+def setSoundURI(alarmSound)		{
+	switch (alarmSound) {
+		case '1':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/bell1.mp3", duration: "10"]
+			break;
+		case '2':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/bell2.mp3", duration: "10"]
+			break;
+		case '3':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/dogs.mp3", duration: "10"]
+			break;
+		case '4':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/alarm.mp3", duration: "17"]
+			break;
+		case '5':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/piano2.mp3", duration: "10"]
+			break;
+		case '6':
+			state.alarm = [uri: "http://s3.amazonaws.com/smartapp-media/sonos/lightsaber.mp3", duration: "10"]
+			break;
+		default:
+			state.alarm = [uri: "", duration: "0"]
+			break;
+	}
+}
+
+def ringAlarm(turnOff = false)		{
+	ifDebug("ringAlarm")
+    if (turnOff)    {
+        ifDebug("ringAlarm: turn alarm off")
+        musicDevice.nextTrack()
+        state.alarmRepeat = (state.alarm.repeat ?: 999) + 1
+        unschedule('repeatAlarm')
+        def child = getChildDevice(getRoom())
+        child.alarmOff(true)
+        return
+    }
+    if (!musicDevice)        return;
+	if (state.alarm.dayOfWeek)	{
+		def thisDay = (new Date(now())).getDay()
+	 	if (!state.alarm.dayOfWeek.contains(thisDay))		return;
+	}
+	state.alarmRepeat = 0
+    repeatAlarm()
+}
+
+def repeatAlarm()	{
+    def child = getChildDevice(getRoom())
+    child.alarmOn()
+	musicDevice.playTrackAndResume(state.alarm.uri, state.alarm.duration, state.alarm.volume)
+	state.alarmRepeat = state.alarmRepeat + 1
+	if (state.alarmRepeat <= state.alarm.repeat)    {
+        def secs = state.alarm.duration as Integer
+        runIn((secs + 5), repeatAlarm)
+    }
+    else
+        child.alarmOff(true)
+}
 
 private checkRunDay(dayOfWeek = null)   {
     def thisDay = (new Date(now())).getDay()

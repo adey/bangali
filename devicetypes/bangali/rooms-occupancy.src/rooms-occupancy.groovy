@@ -24,10 +24,25 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.11.0"  }
+public static String version()      {  return "v0.12.0"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.12.0
+*
+*   DONE:   2/8/2018
+*   1) added alarm to rooms occupancy. tested somewhat. family kind of upset with me for random alarms going off :-(
+*   2) sunrise & sunset now support offset in minutes. so if you always wanted sunrise -30 or sunset +30 now you can.
+*
+*  Version: 0.11.5
+*
+*   DONE:   2/5/2018
+*   1) added setting for locked state timeout setting.
+*   2) on motion active added check for power value to set room to engaged instead of occupied.
+*   3) on occupied switch check power value to set room to engaged instead of occupied.
+*   4) on contact close check for both occupied and checking state to set room to engaged.
+*   5) for motion inactive with multiple motion sensors check all sensors for active before setting timer.
 *
 *  Version: 0.11.0
 *
@@ -373,10 +388,25 @@ metadata {
 		command "turnSwitchesAllOff"
 		command "turnAsleepSwitchesAllOn"
 		command "turnAsleepSwitchesAllOff"
+		command "alarmOffAction"
 		command "updateOccupancy", ["string"]
 	}
 
 	simulator	{
+	}
+
+	preferences		{
+		section("Alarm Settings", hideable: false)		{
+			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false
+			input "alarmTime", "time", title: "Alarm Time?", required: false, multiple: false
+			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
+			input "alarmSound", "enum", title:"Sound?", required: (alarmTime ? true : false), multiple: false,
+								options: [[1:"Bell 1"], [2:"Bell 2"], [3:"Dogs Barking"], [4:"Fire Alarm"], [5:"Piano"], [6:"Lightsaber"]]
+			input "alarmRepeat", "number", title: "Repeat?", description: "1-999", required: (alarmTime ? true : false), range: "1..999"
+			input "alarmDayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
+								options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"], \
+										  [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
+		}
 	}
 
 	tiles(scale: 2)		{
@@ -399,7 +429,9 @@ metadata {
         }
 */
 // new style display
-		standardTile("occupancy", "device.occupancy", width: 2, height: 2, inactiveLabel: true, canChangeBackground: true)		{
+	//	standardTile("occupancy", "device.occupancy", width: 2, height: 2, inactiveLabel: true, canChangeBackground: true)		{
+		standardTile("occupancy", "device.occupancy", width: 2, height: 2, canChangeBackground: true)		{
+			state "alarm", label: 'Alarm!', icon:"st.alarm.beep.beep", action:"alarmOffAction", backgroundColor:"#ff8c00"
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
@@ -638,6 +670,13 @@ def updated()	{  initialize()  }
 def	initialize()	{
 	sendEvent(name: "numberOfButtons", value: 9)
 	state.timer = 0
+	setupAlarmC()
+}
+
+def setupAlarmC()	{
+	unschedule()
+	if (parent)
+		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)
 }
 
 def on()		{  occupied()  }
@@ -662,7 +701,9 @@ def engaged()	{	stateUpdate('engaged')		}
 def kaput()		{	stateUpdate('kaput')		}
 
 private	stateUpdate(newState)		{
-	def oldState = device.currentValue('occupancy')
+//	def oldState = device.currentValue('occupancy')
+	def oldState = state.oldState
+	state.oldState = newState
 	if (oldState != newState)	{
 		updateOccupancy(newState)
         if (parent)		{
@@ -684,6 +725,25 @@ private updateOccupancy(occupancy = null) 	{
     def button = buttonMap[occupancy]
 	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 	updateRoomStatusMsg()
+}
+
+def alarmOn()	{
+	sendEvent(name: "occupancy", value: 'alarm', descriptionText: "alarm is on", isStateChange: true, displayed: true)
+	runIn(2, alarmOff)
+}
+
+def alarmOff(endLoop = false)	{
+	if (device.currentValue('occupancy') == 'alarm' || endLoop)
+		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "alarm is off", isStateChange: true, displayed: true)
+	if (endLoop)	unschedule();
+	else			runIn(1, alarmOn);
+}
+
+def alarmOffAction()	{
+	ifDebug("alarmOffAction")
+	unschedule()
+	if (parent)		parent.ringAlarm(true);
+	alarmOff(true);
 }
 
 private updateRoomStatusMsg()		{
@@ -723,21 +783,6 @@ private	resetTile(occupancy)	{
 }
 
 def generateEvent(newState = null)		{
-//	if	(state && device.currentValue('occupancy') != state)
-/*
-	switch(state)		{
-		case 'occupied':		runIn(0, occupied);		break;
-		case 'vacant':			runIn(0, vacant);		break;
-		case 'checking':		runIn(0, checking);		break;
-		case 'engaged':			runIn(0, engaged);		break;
-		case 'locked':			runIn(0, locked);		break;
-		case 'reserved':		runIn(0, reserved);		break;
-		case 'kaput':			runIn(0, kaput);		break;
-		case 'donotdisturb':	runIn(0, donotdisturb);	break;
-		case 'asleep':			runIn(0, asleep);		break;
-		default:										break;
-	}
-*/
 	if (newState)		stateUpdate(newState);
 }
 
