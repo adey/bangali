@@ -381,19 +381,25 @@ def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
     def str = (presenceNames ? presenceNames.split(',') : [])
     def j = str.size()
-    if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
-    dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
+    if (presenceNames && i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
+    dynamicPage(name: "pageSpeakerSettings", title: "Presence & Announcement Settings", install: true, uninstall: true)     {
 		section   {
-            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+			input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: true, multiple: true
+			input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+			input "speechSynthesizers", "capability.speechSynthesis", title: "Which synthesizers?", required: false, multiple: true, submitOnChange: true
+			
             if (speakerDevices)     {
-                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
-                input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"			
             }
             else        {
                 paragraph "Speaker volume?\nselect speaker(s) to set."
-                paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
             }
-            if (speakerDevices && speakerAnnounce)    {
+			if (speakerDevices || speechSynthesizers)
+				input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+			else
+				paragraph "Announce when presence sensors arrive or depart?\nselect speaker/synths to set."
+
+			if ((speakerDevices || speechSynthesizers) && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
                 input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
                 input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)", required: true, multiple: true
@@ -411,11 +417,11 @@ def pageSpeakerSettings()   {
                 paragraph "Seconds after?\nselect announce to set."
                 paragraph "Left home announcement?\nselect announce to set."
             }
-            if (speakerDevices)
+            if (speakerDevices || speechSynthesizers)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
             else
-                paragraph "Announce time?\nselect speaker devices to set."
+                paragraph "Announce time?\nselect speakers/synths to set."
         }
         section     {
             if (speakerAnnounce || ['1', '2', '3'].contains(timeAnnounce))        {
@@ -531,7 +537,12 @@ def contactClosedEventHandler(evt = null)     {
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     if (intCurrentHH >= startHH && intCurrentHH <= endHH)
-        speakerDevices.playTextAndResume(persons, speakerVolume)
+    {
+    	if (speakerDevices)
+        	speakerDevices.playTextAndResume(persons, speakerVolume)
+        if (speechSynthesizers)
+        	speechSynthesizers.speak(persons)
+    }
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
 }
@@ -723,7 +734,10 @@ def tellTime()      {
 //        speakerDevices.playTrackAndResume("http://s3.amazonaws.com/smartapp-media/sonos/bell1.mp3",
 //                                            (intCurrentMM == 0 ? 10 : (intCurrentMM == 15 ? 4 : (intCurrentMM == 30 ? 6 : 8))), speakerVolume)
 //        pause(1000)
-        speakerDevices.playTextAndResume(timeString, speakerVolume)
+        if (speakerDevices)
+        	speakerDevices.playTextAndResume(timeString, speakerVolume)
+        if (speechSynthesizers)
+        	speechSynthesizers.speak(timeString)
     }
 }
 
