@@ -20,10 +20,19 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.11.0"  }
+public static String version()      {  return "v0.11.5"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.11.5
+*
+*   DONE:   2/5/2018
+*   1) added setting for locked state timeout setting.
+*   2) on motion active added check for power value to set room to engaged instead of occupied.
+*   3) on occupied switch check power value to set room to engaged instead of occupied.
+*   4) on contact close check for both occupied and checking state to set room to engaged.
+*   5) for motion inactive with multiple motion sensors check all sensors for active before setting timer.
 *
 *  Version: 0.11.0
 *
@@ -593,6 +602,7 @@ def getARoomName(childID)    {
     return roomName
 }
 
+/*
 def handleAdjRooms()    {
     ifDebug("handleAdjRooms")
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
@@ -622,6 +632,47 @@ def handleAdjRooms()    {
                             if (!(adjMotionSensorsNames.contains(motionSensorName)))   {
                                 adjMotionSensors << it
                                 adjMotionSensorsNames << motionSensorName
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        ifDebug("rooms manager: updating room $childAll.label")
+        ifDebug("$adjMotionSensors")
+        childAll.updateRoom(adjMotionSensors)
+    }
+    return true
+}
+*/
+
+def handleAdjRooms()    {
+    ifDebug("handleAdjRooms")
+//  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
+    def skipAdjRoomsMotionCheck = true
+    def adjRoomDetailsMap = [:]
+    childApps.each	{ childAll ->
+        def adjRooms = childAll.getAdjRoomsSetting()
+        adjRoomDetailsMap << [(childAll.id):(adjRooms)]
+        if (adjRooms)       skipAdjRoomsMotionCheck = false;
+    }
+    if (skipAdjRoomsMotionCheck)        return false;
+    childApps.each	{ childAll ->
+//        def adjRoomDetails = childAll.getAdjRoomDetails()
+        def childID = childAll.id
+        def adjRooms = adjRoomDetailsMap[childID]
+        def adjMotionSensors = []
+        def adjMotionSensorsIds = []
+        if (adjRooms)    {
+            childApps.each	{ child ->
+                if (childID != child.id && adjRooms.contains(child.id))      {
+                    def motionSensors = child.getAdjMotionSensors()
+                    if (motionSensors)  {
+                        motionSensors.each  {
+                            def motionSensorId = it.getId()
+                            if (!adjMotionSensorsIds.contains(motionSensorId))   {
+                                adjMotionSensors << it
+                                adjMotionSensorsIds << motionSensorId
                             }
                         }
                     }
