@@ -2395,9 +2395,9 @@ def processCoolHeat()       {
     if ((checkPresence && !isHere) || maintainRoomTemp == '4')    {
         if (checkPresence && !isHere)       {
             if (['1', '3'].contains(maintainRoomTemp))
-                "${(useThermostat ? roomThermostat : roomCoolSwitch)}".off()
+                (useThermostat ? roomThermostat.off() : roomCoolSwitch.off())
             if (['2', '3'].contains(maintainRoomTemp))
-                "${(useThermostat ? roomThermostat : roomHeatSwitch)}".off()
+                (useThermostat ? roomThermostat.off() : roomHeatSwitch.off())
         }
         updateMaintainIndP(temp)
         updateThermostatIndP(isHere)
@@ -2492,13 +2492,13 @@ def processCoolHeat()       {
                 }
             }
             else if (temperature <= coolLow)
-                "${(useThermostat ? roomThermostat : roomCoolSwitch)}".off()
+                (useThermostat ? roomThermostat.off() : roomCoolSwitch.off())
         }
         if (['2', '3'].contains(maintainRoomTemp))      {
             def heatHigh = thisRule.heatTemp + (tempRange / 2f).round(1)
             def heatLow = thisRule.heatTemp - (tempRange / 2f).round(1)
             if (temperature >= heatHigh)
-                "${(useThermostat ? roomThermostat : roomHeatSwitch)}".off()
+                (useThermostat ? roomThermostat.off() : roomHeatSwitch.off())
             else        {
                 if (temperature <= heatLow)        {
                     if (useThermostat)      {
