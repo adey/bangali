@@ -5,7 +5,7 @@
   "repoBranch": "master",
   "name": "Rooms Manager",
   "author": "bangali",
-  "description": "Manage lights, switches, temperature and more with rules driven by rooms occupancy.",
+  "description": "Manage room lights, switches, temperature and more with rules driven by rooms occupancy.",
   "category": "My Apps",
   "bannerUrl": "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancy@3x.png",
   "forumUrl": "https://community.smartthings.com/t/rooms-manager-smartapps-and-rooms-occupancy-dth-smarter-lighting-with-rules-driven-lighting-thermostat-routines-now-with-window-shade-control/",
