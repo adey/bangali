@@ -2393,6 +2393,12 @@ def processCoolHeat()       {
     def child = getChildDevice(getRoom())
     def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : false)
     if ((checkPresence && !isHere) || maintainRoomTemp == '4')    {
+        if (checkPresence && !isHere)       {
+            if (['1', '3'].contains(maintainRoomTemp))
+                "${(useThermostat ? roomThermostat : roomCoolSwitch)}".off()
+            if (['2', '3'].contains(maintainRoomTemp))
+                "${(useThermostat ? roomThermostat : roomHeatSwitch)}".off()
+        }
         updateMaintainIndP(temp)
         updateThermostatIndP(isHere)
         return
@@ -2471,7 +2477,7 @@ def processCoolHeat()       {
         if (['1', '3'].contains(maintainRoomTemp))      {
             def coolHigh = thisRule.coolTemp + (tempRange / 2f).round(1)
             def coolLow = thisRule.coolTemp - (tempRange / 2f).round(1)
-            if (temperature >= coolHigh && (!checkPresence || (checkPresence && isHere)))     {
+            if (temperature >= coolHigh)     {
                 if (useThermostat)      {
                     roomThermostat.setCoolingSetpoint(thisRule.coolTemp)
                     roomThermostat.setThermostatFanMode()
@@ -2485,28 +2491,16 @@ def processCoolHeat()       {
                     }
                 }
             }
-            else        {
-                if (temperature <= coolLow && (!checkPresence || (checkPresence && !isHere)))         {
-                    "${(useThermostat ? roomThermostat : roomCoolSwitch)}".off()
-//                    if (useThermostat)
-//                        roomThermostat.off()
-//                    else
-//                        roomCoolSwitch.off()
-                }
-            }
+            else if (temperature <= coolLow)
+                "${(useThermostat ? roomThermostat : roomCoolSwitch)}".off()
         }
         if (['2', '3'].contains(maintainRoomTemp))      {
             def heatHigh = thisRule.heatTemp + (tempRange / 2f).round(1)
             def heatLow = thisRule.heatTemp - (tempRange / 2f).round(1)
-            if (temperature >= heatHigh && (!checkPresence || (checkPresence && !isHere)))     {
+            if (temperature >= heatHigh)
                 "${(useThermostat ? roomThermostat : roomHeatSwitch)}".off()
-//                if (useThermostat)
-//                    roomThermostat.off()
-//                else
-//                    roomHeatSwitch.off()
-            }
             else        {
-                if (temperature <= heatLow && (!checkPresence || (checkPresence && isHere)))        {
+                if (temperature <= heatLow)        {
                     if (useThermostat)      {
                         roomThermostat.setHeatingSetpoint(thisRule.heatTemp)
                         roomThermostat.fanAuto()
