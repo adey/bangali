@@ -24,10 +24,16 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.12.0"  }
+public static String version()      {  return "v0.12.2"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.12.2
+*
+*   DONE:   2/1/2018
+*   1) added setting to require occupancy before triggering engaged state with power.
+*   2) couple of bug fixes.
 *
 *  Version: 0.12.0
 *
@@ -611,8 +617,12 @@ private pageEngagedSettings() {
             input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
             if (powerDevice)    {
                 if (!powerValueAsleep)      {
-                    input "powerValueEngaged", "number", title: "Power value to set room to ENGAGED state?", required: false, multiple: false, defaultValue: null, range: "0..99999", submitOnChange: true
-                    input "powerStays", "number", title: "Power stays below for how many seconds to reset ENGAGED state?", required: (powerValueEngaged ? true : false), multiple: false, defaultValue: null, range: "30..999"
+                    input "powerValueEngaged", "number", title: "Power value to set room to ENGAGED state?",
+                                                required: false, multiple: false, defaultValue: null, range: "0..99999", submitOnChange: true
+                    input "powerTriggerFromVacant", "bool", title: "Power value triggers ENGAGED from VACANT state?",
+                                                required: false, multiple: false, defaultValue: true
+                    input "powerStays", "number", title: "Power stays below for how many seconds to reset ENGAGED state?",
+                                                required: (powerValueEngaged ? true : false), multiple: false, defaultValue: null, range: "30..999"
                 }
                 else        {
                     paragraph "Power value to set room to ENGAGED state?\npower value is already used to set room to ASLEEP."
@@ -1148,8 +1158,12 @@ private pageAsleepSettings() {
             input "asleepSwitch", "capability.switch", title: "Which switch turns ON?", required:false, multiple: false
             if (powerDevice)    {
                 if (!powerValueEngaged)      {
-                    input "powerValueAsleep", "number", title: "Power value to set room to ASLEEP state?", required: false, multiple: false, defaultValue: null, range: "0..99999", submitOnChange: true
-                    input "powerStays", "number", title: "Power stays below for how many seconds to reset ASLEEP state?", required: (powerValueAsleep ? true : false), multiple: false, defaultValue: null, range: "30..999"
+                    input "powerValueAsleep", "number", title: "Power value to set room to ASLEEP state?",
+                                                required: false, multiple: false, defaultValue: null, range: "0..99999", submitOnChange: true
+                    input "powerTriggerFromVacant", "bool", title: "Power value triggers ASLEEP from VACANT state?",
+                                                required: false, multiple: false, defaultValue: true
+                    input "powerStays", "number", title: "Power stays below for how many seconds to reset ASLEEP state?",
+                                                required: (powerValueAsleep ? true : false), multiple: false, defaultValue: null, range: "30..999"
                 }
                 else        {
                     paragraph "Power value to set room to ASLEEP state?\npower value is already used to set room to ENGAGED."
@@ -1474,8 +1488,6 @@ def updateRoom(adjMotionSensors)     {
 //    switchesOnOrOff()
     subscribe(location, "sunrise", scheduleFromToTimes)
     subscribe(location, "sunset", scheduleFromToTimes)
-    def child = getChildDevice(getRoom())
-    child.setupAlarmC()
     ifDebug("updateRoom runIns")
     runIn(0, processCoolHeat)
     runIn(1, scheduleFromToTimes)
@@ -1538,6 +1550,7 @@ def updateIndicators()      {
         else                                ind = 0;
     }*/
     child.updateAdjMotionInd(ind)
+    child.setupAlarmC()
 }
 
 private getAvgTemperature()     {
@@ -1630,8 +1643,8 @@ def updateRulesToState()    {
             state.maxRuleNo = i   // cant use yet because for existing rooms value will not be populated
             if (!state.rules)   state.rules = [:];
             state.rules << ["$ruleNo":[isRule:true]]
-            if (!thisRule.ruleType || thisRule.ruleType == 'e')       state.execute = true
-            else if (thisRule.ruleType == 't')       state.maintainRoomTemp = true
+            if (!thisRule.type || thisRule.type == 'e')     state.execute = true
+            else if (thisRule.type == 't')      state.maintainRoomTemp = true
             if (thisRule.level == 'AL')     state.ruleHasAL = true
             if (thisRule.state && thisRule.state.contains('vacant'))    state.vacant = true
             if (thisRule.fromTimeType && thisRule.toTimeType)           state.timeCheck = true
@@ -1677,10 +1690,10 @@ private getNextRule(ruleNo, ruleType = '*', getConditionsOnly = false)     {
 private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = false)     {
     if (!ruleNo)        return null
     if (checkState && (!state.rules || !state.rules[ruleNo]))      return null;
-    if (ruleTypeP == 'e') ruleTypeP = null;
-    if ((!ruleTypeP && !state.execute) || (ruleTypeP == 't' && !state.maintainRoomTemp))    return null;
+    if (ruleTypeP == 'e')   ruleTypeP = null;
+    if (checkState && ((!ruleTypeP && !state.execute) || (ruleTypeP == 't' && !state.maintainRoomTemp)))    return null;
     def ruleType = settings["type$ruleNo"]
-    if (ruleType == 'e') ruleType = null;
+    if (ruleType == 'e')    ruleType = null;
     if (ruleTypeP != '*' && ruleType != ruleTypeP)      return null;
     def ruleName = settings["name$ruleNo"]
     def ruleDisabled = settings["disabled$ruleNo"]
@@ -1833,8 +1846,12 @@ def	motionActiveEventHandler(evt)	{
                 child.generateEvent('engaged')
             }
             else*/
-            if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)
+            if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged &&
+                (powerTriggerFromVacant || roomState != 'vacant'))
                 child.generateEvent('engaged')
+            else if (powerDevice && powerValueAsleep && powerDevice.currentValue("power") >= powerValueAsleep &&
+                    (powerTriggerFromVacant || roomState != 'vacant'))
+                child.generateEvent('asleep')
             else
                 child.generateEvent('occupied')
         }
@@ -1920,7 +1937,8 @@ def occupiedSwitchOnEventHandler(evt) {
     def roomState = child?.currentValue('occupancy')
     if (['vacant','occupied','checking'].contains(roomState)) {
         def newState = roomState
-        if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)
+        if (powerDevice && powerValueEngaged && (powerTriggerFromVacant || roomState != 'vacant')
+            && powerDevice.currentValue("power") >= powerValueEngaged)
             newState = 'engaged'
         else    {
             if (roomState == 'vacant')
@@ -2159,7 +2177,8 @@ def	engagedSwitchOffEventHandler(evt)	{
 def	contactOpenEventHandler(evt)	{
     ifDebug("contactOpenEventHandler")
     def child = getChildDevice(getRoom())
-    child.updateContactInd(contactSensorOutsideDoor ? (contactSensor.currentValue("contact").contains('open') ? 0 : 1) : 0)
+    def cV = contactSensor.currentValue("contact")
+    child.updateContactInd(contactSensorOutsideDoor ? (cV.contains('open') ? 0 : 1) : 0)
     if (pauseModes && pauseModes.contains(location.currentMode))   return;
     if (state.dayOfWeek && !(checkRunDay()))    return;
     def roomState = child?.currentValue('occupancy')
@@ -2172,7 +2191,8 @@ def	contactOpenEventHandler(evt)	{
     if (musicDevice && musicEngaged && musicDevice.currentValue("status") == 'playing')  return;
     if (powerDevice && powerValueEngaged && powerDevice.currentValue("power") >= powerValueEngaged)     return;
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
-    if (resetEngagedDirectly && roomState == 'engaged')
+    if (((!contactSensorOutsideDoor && cV.contains('open')) || (contactSensorOutsideDoor && !cV.contains('open'))) &&
+        resetEngagedDirectly && roomState == 'engaged')
         child.generateEvent('vacant')
     else    {
         if (['engaged', 'occupied', 'vacant'].contains(roomState))
@@ -2446,11 +2466,11 @@ def processCoolHeat()       {
     }
     ifDebug("processCoolHeat: rule: $turnOn")
     if (turnOn)     {
-        thisRule = getRule(it, 't')
+        thisRule = getRule(turnOn, 't')
         def tempRange = thisRule.tempRange
         if (['1', '3'].contains(maintainRoomTemp))      {
-            def coolHigh = thisRule.coolTemp + (tempRange / 2).round(1)
-            def coolLow = thisRule.coolTemp - (tempRange / 2).round(1)
+            def coolHigh = thisRule.coolTemp + (tempRange / 2f).round(1)
+            def coolLow = thisRule.coolTemp - (tempRange / 2f).round(1)
             if (temperature >= coolHigh && (!checkPresence || (checkPresence && isHere)))     {
                 if (useThermostat)      {
                     roomThermostat.setCoolingSetpoint(thisRule.coolTemp)
@@ -2476,8 +2496,8 @@ def processCoolHeat()       {
             }
         }
         if (['2', '3'].contains(maintainRoomTemp))      {
-            def heatHigh = thisRule.heatTemp + (tempRange / 2).round(1)
-            def heatLow = thisRule.heatTemp - (tempRange / 2).round(1)
+            def heatHigh = thisRule.heatTemp + (tempRange / 2f).round(1)
+            def heatLow = thisRule.heatTemp - (tempRange / 2f).round(1)
             if (temperature >= heatHigh && (!checkPresence || (checkPresence && !isHere)))     {
                 "${(useThermostat ? roomThermostat : roomHeatSwitch)}".off()
 //                if (useThermostat)
@@ -2583,7 +2603,8 @@ def powerEventHandler(evt)    {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
     def roomState = child?.currentValue('occupancy')
     if (powerValueEngaged)     {
-        if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged && ['occupied', 'checking', 'vacant'].contains(roomState))     {
+        if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged
+            && ['occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))     {
             unschedule('powerStaysBelowEngaged')
             child.generateEvent('engaged')
         }
@@ -2594,12 +2615,13 @@ def powerEventHandler(evt)    {
     }
     else    {
         if (powerValueAsleep)     {
-            if (currentPower >= powerValueAsleep && state.previousPower < powerValueAsleep && ['engaged', 'occupied', 'checking', 'vacant'].contains(roomState))    {
+            if (currentPower >= powerValueAsleep && state.previousPower < powerValueAsleep
+                && ['engaged', 'occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))    {
                 unschedule('powerStaysBelowAsleep')
                 child.generateEvent('asleep')
             }
             else    {
-                if (currentPower < powerValueEngaged && state.previousPower >= powerValueEngaged && roomState == 'asleep')
+                if (currentPower < powerValueAsleep && state.previousPower >= powerValueAsleep && roomState == 'asleep')
                     runIn(powerStays, powerStaysBelowAsleep)
             }
         }
@@ -3728,7 +3750,7 @@ def setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, 
     state.alarm << [repeat:alarmRepeat]
     if (alarmDayOfWeek)      {
         state.alarm << [dayOfWeek:[]]
-        switch(dayOfWeek)       {
+        switch(alarmDayOfWeek)       {
             case '1':   case '2':   case '3':   case '4':   case '5':   case '6':   case '7':
                         state.alarm << [dayOfWeek:(dayOfWeek)];                 break;
             case '8':   [1,2,3,4,5].each    { state.alarm.dayOfWeek << it };    break;
