@@ -29,9 +29,15 @@ private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
 *
+*  Version: 0.12.5
+*
+*   DONE:   2/11/2018
+*   1) added setting for dim to level if no bulb is on in checking state.
+*   2) added temperature offset between thermostat and room temperature sesnor.
+*
 *  Version: 0.12.2
 *
-*   DONE:   2/1/2018
+*   DONE:   2/10/2018
 *   1) added setting to require occupancy before triggering engaged state with power.
 *   2) couple of bug fixes.
 *
@@ -1236,13 +1242,17 @@ private pageRoomTemperature() {
                                                                             options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
             if (['1', '2', '3'].contains(maintainRoomTemp))     {
                 input "useThermostat", "bool", title: "Use thermostat? (otherwise uses room ac and/or heater)", required: true, multiple: false, defaultValue: false, submitOnChange: true
+                if (useThermostat)      {
+                    input "roomThermostat", "capability.thermostat", title: "Which thermostat?", required: true, multiple: false
+                    input "thermoToTempSensor", "number", title: "Delta (room temperature - thermostat temperature)?",
+                                    description: "if room sensor reads 2° lower than thermostat set this to -2 and so on.",
+                                    required: false, multiple: false, defaultValue: 0, range: "-15..15"
+                }
                 if (personsPresence)
                     input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
                 else
                     paragraph "Check presence before maintaining temperature?\nselect presence sensor(s) to set"
                 input "outTempSensor", "capability.temperatureMeasurement", title: "Which outdoor temperature sensor?", required: false, multiple: false
-                if (useThermostat)
-                    input "roomThermostat", "capability.thermostat", title: "Which thermostat?", required: true, multiple: false
             }
             if (!useThermostat && ['1', '3'].contains(maintainRoomTemp))      {
                 input "roomCoolSwitch", "capability.switch", title: "Which switch to turn on AC?", required: true, multiple: false, range: "32..99"
@@ -1528,7 +1538,7 @@ def updateIndicators()      {
 //    temp = -1
 //    child.updateMaintainInd(temp)
     ind = (state.rules ? state.rules.size() : -1)
-    child.updateRulesInd(rulesInd)
+    child.updateRulesInd(ind)
     ind = -1
     child.updateLastRuleInd(ind)
     ind = (powerDevice ? powerDevice.currentValue("power") : -1);
@@ -2490,7 +2500,7 @@ def processCoolHeat()       {
             def coolLow = thisRule.coolTemp - (tempRange / 2f).round(1)
             if (temperature >= coolHigh)     {
                 if (useThermostat)      {
-                    roomThermostat.setCoolingSetpoint(thisRule.coolTemp)
+                    roomThermostat.setCoolingSetpoint(thisRule.coolTemp - thermoToTempSensor)
                     roomThermostat.setThermostatFanMode()
                     roomThermostat.cool()
                 }
@@ -2513,7 +2523,7 @@ def processCoolHeat()       {
             else        {
                 if (temperature <= heatLow)        {
                     if (useThermostat)      {
-                        roomThermostat.setHeatingSetpoint(thisRule.heatTemp)
+                        roomThermostat.setHeatingSetpoint(thisRule.heatTemp - thermoToTempSensor)
                         roomThermostat.fanAuto()
                         roomThermostat.heat()
                     }
