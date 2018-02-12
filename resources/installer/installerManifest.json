@@ -29,7 +29,7 @@
       "iconUrl": "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancy.png",
       "published": true,
       "oAuth": false,
-      "version": "0.12.2",
+      "version": "0.11.5",
       "appSettings": {
           "clientId":"",
           "clientSecret": "",
@@ -43,7 +43,7 @@
         "iconUrl": "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancy.png",
         "published": true,
         "oAuth": false,
-        "version": "0.12.2",
+        "version": "0.12.5",
         "appSettings": {
             "devOpt": ""
         },
@@ -57,7 +57,7 @@
       "name": "rooms occupancy",
       "iconUrl": "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancy.png",
       "published": true,
-      "version": "0.12.2",
+      "version": "0.12.0",
       "appUrl": "devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy",
       "optional": false
     }
