@@ -526,11 +526,16 @@ private pageOnePager()      {
         }
         section("Timeout configuration for CHECKING state:", hideable: false)		{
             input "dimTimer", "number", title: "After how many seconds?", required: true, multiple: false, defaultValue: 90, range: "5..99999", submitOnChange: true
-            if (dimTimer)
-                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
-                                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
-            else
-                paragraph "Dim lights by what level?\nselect timer seconds above to set"
+            if (dimTimer)       {
+                input "dimByLevel", "enum", title: "If any light is on dim by what level?", required: false, multiple: false, defaultValue: null,
+                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+                input "dimToLevel", "enum", title: "If no light is on turn on room lights and dim to what level?", required: false, multiple: false, defaultValue: null,
+                                    options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+            }
+            else    {
+                paragraph "If any light is on dim by what level?\nselect timer seconds above to set"
+                paragraph "If no light is on turn on room lights and dim to what level?\nselect timer seconds above to set"
+            }
         }
         section("States and switches:", hideable:false)     {
             input "state1", "enum", title: "Which state?", required: true, multiple: true, options: [occupied, engaged], defaultValue: [occupied, engaged]
@@ -649,11 +654,16 @@ private pageCheckingSettings()      {
 	dynamicPage(name: "pageCheckingSettings", title: "", install: false, uninstall: false)     {
         section("CHECKING state timer before room changes to VACANT:", hideable: false)		{
             input "dimTimer", "number", title: "For how many seconds? (this value should be higher than your motion sensor blind window. recommended value 2 x motion sensor blind window. this also doubles as the dim timer to dim lights for same number of seconds.)", required: false, multiple: false, defaultValue: 5, range: "5..99999", submitOnChange: true
-            if (dimTimer)
-                input "dimByLevel", "enum", title: "Dim lights by what level?", required: false, multiple: false, defaultValue: null,
-                                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
-            else
-                paragraph "Dim lights by what level?\nselect timer seconds above to set"
+            if (dimTimer)       {
+                input "dimByLevel", "enum", title: "If any light is on dim by what level?", required: false, multiple: false, defaultValue: null,
+                                    options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+                input "dimToLevel", "enum", title: "If no light is on turn on room lights and dim to what level?", required: false, multiple: false, defaultValue: null,
+                                    options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
+            }
+            else    {
+                paragraph "If any light is on dim by what level?\nselect timer seconds above to set"
+                paragraph "If no light is on turn on room lights and dim to what level?\nselect timer seconds above to set"
+            }
         }
 	}
 }
@@ -1406,6 +1416,7 @@ def updateRoom(adjMotionSensors)     {
     state.switchesHasColorTemperature = [:]
     state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 5) // forces minimum of 5 seconds to allow for checking state
     state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel as Integer : null)
+    state.dimToLevel = ((state.dimTimer && dimToLevel) ? dimToLevel as Integer : null)
     if (engagedSwitch)      {
     	subscribe(engagedSwitch, "switch.on", engagedSwitchOnEventHandler)
     	subscribe(engagedSwitch, "switch.off", engagedSwitchOffEventHandler)
@@ -3246,9 +3257,9 @@ private whichSwitchesAreOn(returnAllSwitches = false)   {
 def dimLights()     {
     ifDebug("dim lights")
     state.preDimLevel = [:]
-    if (!state.dimTimer || !state.dimByLevel)       return;
+    if (!state.dimTimer || (!state.dimByLevel && ! state.dimToLevel))       return;
     def switchesThatAreOn = whichSwitchesAreOn()
-    if (switchesThatAreOn)
+    if (switchesThatAreOn && state.dimByLevel)
         switchesThatAreOn.each      {
             if (it.currentValue("switch") == 'on')      {
                 if (it.hasCommand("setLevel"))     {
@@ -3259,13 +3270,26 @@ def dimLights()     {
                 }
             }
         }
+    else    {
+        def allSwitches = whichSwitchesAreOn(true)
+        if (allSwitches && state.dimToLevel)
+            allSwitches.each      {
+                if (it.hasCommand("setLevel"))     {
+                    it.on()
+                    def currentLevel = it.currentValue("level")
+//                    def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
+                    it.setLevel(state.dimToLevel)
+                    state.preDimLevel << [(it.getId()):currentLevel]
+                }
+            }
+    }
     pause(100)
 }
 
 def unDimLights()       {
     ifDebug("unDimLights")
     ifDebug("state.preDimLevel: $state.preDimLevel")
-    if (!dimTimer || !dimByLevel || !state.preDimLevel)      return;
+    if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel) || !state.preDimLevel)      return;
     def switchesThatAreOn = whichSwitchesAreOn()
     if (switchesThatAreOn)
         switchesThatAreOn.each      {
