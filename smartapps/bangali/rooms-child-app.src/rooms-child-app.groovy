@@ -2783,13 +2783,13 @@ def handleSwitches(data)	{
                             runIn(state.noMotion, roomVacant)
                         }
                     }
-                }
-                else    {
+                    else    {
 //                    if (state.noMotion) {
                         // If there are no motion sensors, we start the timer when we change to occupied.
                         updateChildTimer(state.noMotion)
                         runIn(state.noMotion, roomVacant)
 //                    }
+                    }
                 }
             }
         }
