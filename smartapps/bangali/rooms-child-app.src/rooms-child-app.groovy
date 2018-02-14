@@ -2439,7 +2439,7 @@ def processCoolHeat()       {
             def coolLow = thisRule.coolTemp - tempRange
             ifDebug ("Temperature: ${temperature} Lower limit: ${coolLow}, Upper Limit: ${coolHigh}, cooling: ${state.coolingActive}")
             if (temperature >= coolHigh && (!checkPresence || (checkPresence && isHere)) && (!state.coolingActive))     
-            	setTemp("coolon", thisRule.coolTemp)
+            	setTemp("coolon", coolLow)
             else
                 if (temperature <= coolLow && state.coolingActive)
                 	setTemp("cooloff") 
@@ -2453,7 +2453,7 @@ def processCoolHeat()       {
                 setTemp("heatoff")		                
             else        
                 if (temperature <= heatLow && (!checkPresence || (checkPresence && isHere)) && !(state.heatingActive))    
-                	setTemp("heaton", thisRule.heatTemp)
+                	setTemp("heaton", heatHigh)
 		}                     
         
         updateThermostatIndP(isHere)
