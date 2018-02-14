@@ -2521,7 +2521,7 @@ private setTemp(command, temp = null)
             if (useThermostat)      {
 				if (thermostatActive()) 
 					break													
-                setpoint = temp - thermoToTempSensor + thermostatOffset
+                setpoint = temp - thermoToTempSensor - thermostatOffset
                 roomThermostat.setCoolingSetpoint(setpoint)
                 //roomThermostat.setThermostatFanMode()
                 roomThermostat.cool()
