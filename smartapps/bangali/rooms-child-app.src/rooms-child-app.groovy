@@ -1241,18 +1241,21 @@ private pageRoomTemperature() {
             input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: false, multiple: false, defaultValue: 4,
                                                                             options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
             if (['1', '2', '3'].contains(maintainRoomTemp))     {
+				if (personsPresence)
+				input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
+			else
+				paragraph "Check presence before maintaining temperature?\nselect presence sensor(s) to set"
                 input "useThermostat", "bool", title: "Use thermostat? (otherwise uses room ac and/or heater)", required: true, multiple: false, defaultValue: false, submitOnChange: true
-                if (useThermostat)      {
+                //input "outTempSensor", "capability.temperatureMeasurement", title: "Which outdoor temperature sensor?", required: false, multiple: false
+                if (useThermostat) {
                     input "roomThermostat", "capability.thermostat", title: "Which thermostat?", required: true, multiple: false
-                    input "thermoToTempSensor", "number", title: "Delta (room temperature - thermostat temperature)?",
-                                    description: "if room sensor reads 2° lower than thermostat set this to -2 and so on.",
-                                    required: false, multiple: false, defaultValue: 0, range: "-15..15"
+					input "thermoToTempSensor", "number", title: "Room sensor temperature - thermostat temperature = ? (typical delta)",
+					description: "Use to compensate for differences ",
+					required: true, multiple: false, defaultValue: 0, range: "-15..15"
+					input "thermostatOffset", "number", title: "Temporary extra thermostat offset to force HVAC activation?", 
+					description: "Adds/subtracts to/from thermostat setting", 
+					required: true, multiple: false, range: "0..9", defaultValue: 3
                 }
-                if (personsPresence)
-                    input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
-                else
-                    paragraph "Check presence before maintaining temperature?\nselect presence sensor(s) to set"
-                input "outTempSensor", "capability.temperatureMeasurement", title: "Which outdoor temperature sensor?", required: false, multiple: false
             }
             if (!useThermostat && ['1', '3'].contains(maintainRoomTemp))      {
                 input "roomCoolSwitch", "capability.switch", title: "Which switch to turn on AC?", required: true, multiple: false, range: "32..99"
@@ -2410,133 +2413,49 @@ def processCoolHeat()       {
 
 def processCoolHeat()       {
     ifDebug("processCoolHeat")
-    def temp = -1
-    def child = getChildDevice(getRoom())
+       
+    //Need to stop things even if nobody's in
     def isHere = (personsPresence ? personsPresence.currentValue("presence").contains('present') : false)
     if ((checkPresence && !isHere) || maintainRoomTemp == '4')    {
-        if (checkPresence && !isHere)       {
-            if (['1', '3'].contains(maintainRoomTemp))
-                (useThermostat ? roomThermostat.off() : roomCoolSwitch.off())
-            if (['2', '3'].contains(maintainRoomTemp))
-                (useThermostat ? roomThermostat.off() : roomHeatSwitch.off())
-        }
         updateMaintainIndP(temp)
         updateThermostatIndP(isHere)
-        return
     }
-    def roomState = child?.currentValue('occupancy')
+    if (maintainRoomTemp == '4')
+    	return
+       
     def temperature = getAvgTemperature()
     def updateMaintainIndicator = true
-    def turnOn = null
-    def thisRule = [:]
-    if (state.rules)    {
-        def currentMode = String.valueOf(location.currentMode)
-        def nowTime	= now() + 1000
-        def nowDate = new Date(nowTime)
-        def sunriseAndSunset = getSunriseAndSunset()
-        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
-        def timedRulesOnly = false
-        def sunriseTimeWithOff, sunsetTimeWithOff
-        def i = 1
-        for (; i < 11; i++)      {
-            def ruleHasTime = false
-            def ruleNo = String.valueOf(i)
-            thisRule = getNextRule(ruleNo, 't', true)
-            if (thisRule.ruleNo == 'EOR')     break;
-            i = thisRule.ruleNo as Integer
-            if (thisRule.mode && !thisRule.mode.contains(currentMode))      continue;
-            if (thisRule.state && !thisRule.state.contains(roomState))      continue;
-            if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
-// saved old time comparison while adding offset to sunrise / sunset
-/*            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
-                (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
-                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTime : ( thisRule.fromTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.fromTime, location.timeZone)))
-                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTime : ( thisRule.toTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.toTime, location.timeZone)))
-//                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
-                if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
-                if (!timedRulesOnly)    {
-                    turnOn = null
-                    timedRulesOnly = true
-                    i = 0
-                    continue
-                }
-                ruleHasTime = true
-            }*/
-            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
-                (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
-                if (thisRule.fromTimeType == timeSunrise())
-                    sunriseTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunriseTime)
-                else if (thisRule.fromTimeType == timeSunset())
-                    sunsetTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunsetTime)
-                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.fromTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.fromTime, location.timeZone)))
-                if (thisRule.toTimeType == timeSunrise())
-                    sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
-                else if (thisRule.toTimeType == timeSunset())
-                    sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
-                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
-//                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
-                if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
-                if (!timedRulesOnly)    {
-                    turnOn = null
-                    timedRulesOnly = true
-                    i = 0
-                    continue
-                }
-                ruleHasTime = true
-            }
-//            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
-//            ifDebug("timedRulesOnly: $timedRulesOnly | ruleHasTime: $ruleHasTime")
-            if (timedRulesOnly && !ruleHasTime)     continue;
-            turnOn = thisRule.ruleNo
-        }
-    }
-    ifDebug("processCoolHeat: rule: $turnOn")
+    
+    def turnOn = getActiveTemperatureRule()   
+	ifDebug("processCoolHeat: rule: $turnOn")
     if (turnOn)     {
-        thisRule = getRule(turnOn, 't')
+        def thisRule = getRule(turnOn, 't')
         def tempRange = thisRule.tempRange
-        if (['1', '3'].contains(maintainRoomTemp))      {
-            def coolHigh = thisRule.coolTemp + (tempRange / 2f).round(1)
-            def coolLow = thisRule.coolTemp - (tempRange / 2f).round(1)
-            if (temperature >= coolHigh)     {
-                if (useThermostat)      {
-                    roomThermostat.setCoolingSetpoint(thisRule.coolTemp - thermoToTempSensor)
-                    roomThermostat.setThermostatFanMode()
-                    roomThermostat.cool()
-                }
-                else    {
-                    if (roomCoolSwitch.currentValue("switch") == 'off')     {
-                        roomCoolSwitch.on()
-                        updateMaintainIndP(roomCoolTemp)
-                        updateMaintainIndicator = false
-                    }
-                }
-            }
-            else if (temperature <= coolLow)
-                (useThermostat ? roomThermostat.off() : roomCoolSwitch.off())
+		def setpoint       
+        //reduced the off commands and fan commands to prevent spamming the likes of Nest, which have an API rate limiter
+
+		if (['1', '3'].contains(maintainRoomTemp))      {
+            def coolHigh = thisRule.coolTemp + tempRange
+            def coolLow = thisRule.coolTemp - tempRange
+            ifDebug ("Temperature: ${temperature} Lower limit: ${coolLow}, Upper Limit: ${coolHigh}, cooling: ${state.coolingActive}")
+            if (temperature >= coolHigh && (!checkPresence || (checkPresence && isHere)) && (!state.coolingActive))     
+            	setTemp("coolon", thisRule.coolTemp)
+            else
+                if (temperature <= coolLow && state.coolingActive)
+                	setTemp("cooloff") 
         }
+       
         if (['2', '3'].contains(maintainRoomTemp))      {
-            def heatHigh = thisRule.heatTemp + (tempRange / 2f).round(1)
-            def heatLow = thisRule.heatTemp - (tempRange / 2f).round(1)
-            if (temperature >= heatHigh)
-                (useThermostat ? roomThermostat.off() : roomHeatSwitch.off())
-            else        {
-                if (temperature <= heatLow)        {
-                    if (useThermostat)      {
-                        roomThermostat.setHeatingSetpoint(thisRule.heatTemp - thermoToTempSensor)
-                        roomThermostat.fanAuto()
-                        roomThermostat.heat()
-                    }
-                    else    {
-                        if (roomHeatSwitch.currentValue("switch") == 'off')     {
-                            roomHeatSwitch.on()
-                            updateMaintainIndP(roomHeatTemp)
-                            updateMaintainIndicator = false
-                        }
-                    }
-                }
-            }
-        }
+            def heatHigh = thisRule.heatTemp + tempRange
+            def heatLow = thisRule.heatTemp - tempRange
+            ifDebug ("Temperature: ${temperature} Lower limit: ${heatLow}, Upper Limit: ${heatHigh}, heating: ${state.heatingActive}")
+            if (temperature >= heatHigh && state.heatingActive)
+                setTemp("heatoff")		                
+            else        
+                if (temperature <= heatLow && (!checkPresence || (checkPresence && isHere)) && !(state.heatingActive))    
+                	setTemp("heaton", thisRule.heatTemp)
+		}                     
+        
         updateThermostatIndP(isHere)
         if (updateMaintainIndicator)    {
             if (maintainRoomTemp == '1')
@@ -2550,8 +2469,174 @@ def processCoolHeat()       {
                     updateMaintainIndP(thisRule.heatTemp)
                 else
                     updateMaintainIndP(thisRule.coolTemp)
+        	}
+    	}
+    }
+    
+    else if (state.heatingActive)
+        setTemp("heatoff")
+	else if (state.coolingActive)
+    	setTemp("cooloff")
+}
+
+private setTemp(command, temp = null)
+{
+	def setpoint
+    switch (command)
+    {
+    	case "heaton":
+            if (useThermostat)      {
+				if (thermostatActive())
+					break													
+                setpoint = temp - thermoToTempSensor + thermostatOffset
+                ifDebug("On - New setpoint: ${setpoint}")
+                roomThermostat.setHeatingSetpoint(setpoint)
+                //roomThermostat.fanAuto()
+                roomThermostat.heat()
             }
+            else 
+                if (roomHeatSwitch.currentValue("switch") == 'off')     {
+                    roomHeatSwitch.on()
+                    updateMaintainIndP(roomHeatTemp)
+                    updateMaintainIndicator = false
+                }
+			state.heatingActive = true
+         	break
+        
+        case "heatoff":
+            state.heatingActive = false
+			if (useThermostat) {
+				currentTemp = roomThermostat.currentTemperature
+				if (roomThermostat.currentHeatingSetpoint <= currentTemp)
+					break
+				roomThermostat.setHeatingSetpoint(currentTemp)
+				ifDebug("Off - New setpoint: $currentTemp")
+			}
+	        else
+	        	roomHeatSwitch.off()
+            break
+        
+        case "coolon":            
+        	ifDebug("Cooling on")
+            if (useThermostat)      {
+				if (thermostatActive()) 
+					break													
+                setpoint = temp - thermoToTempSensor + thermostatOffset
+                roomThermostat.setCoolingSetpoint(setpoint)
+                //roomThermostat.setThermostatFanMode()
+                roomThermostat.cool()
+            }		
+            else
+                if (roomCoolSwitch.currentValue("switch") == 'off')     {
+                    roomCoolSwitch.on()
+                    updateMaintainIndP(roomCoolTemp)
+                    updateMaintainIndicator = false
+            }
+			state.coolingActive = true
+            break
+        
+        case "cooloff":
+        	ifDebug("Cooling off")
+			state.coolingActive = false
+			if (useThermostat) {
+				currentTemp = roomThermostat.currentTemperature
+				if (roomThermostat.currentCoolingSetpoint >= currentTemp)
+					break
+            	roomThermostat.setCoolingSetpoint(currentTemp)
+            }
+	        else
+	        	roomCoolSwitch.off()
+	        break				
+    }
+}
+
+private thermostatActive()
+{
+	def status = roomThermostat.currentThermostatOperatingState
+	ifDebug("Thermostat status: $status")
+	if (status == "heating" || status == "cooling")
+		return true
+	return false
+}
+
+def getStateValue(key) {
+	return state[key]
+}
+
+private getActiveTemperatureRule()
+{
+    if (state.rules)    
+    {
+        def thisRule = [:]
+        def result = null
+        def currentMode = String.valueOf(location.currentMode)
+        def child = getChildDevice(getRoom())
+        def roomState = child?.currentValue('occupancy')
+        def nowTime	= now() + 1000
+        def nowDate = new Date(nowTime)
+        def sunriseAndSunset = getSunriseAndSunset()
+        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+        def timedRulesOnly = false
+        def sunriseTimeWithOff, sunsetTimeWithOff
+        def i = 1
+
+        for (; i < 11; i++)      
+        {
+            def ruleHasTime = false
+            def ruleNo = String.valueOf(i)
+            thisRule = getNextRule(ruleNo, 't', true)
+            if (thisRule.ruleNo == 'EOR')     break;
+            i = thisRule.ruleNo as Integer
+            if (thisRule.mode && !thisRule.mode.contains(currentMode))      continue;
+            if (thisRule.state && !thisRule.state.contains(roomState))      continue;
+            if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
+            // saved old time comparison while adding offset to sunrise / sunset
+            /*            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
+            (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    {
+            def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTime : ( thisRule.fromTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.fromTime, location.timeZone)))
+            def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTime : ( thisRule.toTimeType == timeSunset() ? sunsetTime : timeToday(thisRule.toTime, location.timeZone)))
+            //                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
+            if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
+            if (!timedRulesOnly)    {
+            turnOn = null
+            timedRulesOnly = true
+            i = 0
+            continue
+            }
+            ruleHasTime = true
+            }*/
+            if ((thisRule.fromTimeType && (thisRule.fromTimeType != timeTime() || thisRule.fromTime)) &&
+                (thisRule.toTimeType && (thisRule.toTimeType != timeTime() || thisRule.toTime)))    
+            {
+                if (thisRule.fromTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.fromTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.fromTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunsetTime)
+                def fTime = ( thisRule.fromTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.fromTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.fromTime, location.timeZone)))
+                if (thisRule.toTimeType == timeSunrise())
+                    sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
+                else if (thisRule.toTimeType == timeSunset())
+                    sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
+                def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
+                //                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
+                if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
+                if (!timedRulesOnly)    {
+                    result = null
+                    timedRulesOnly = true
+                    i = 0
+                    continue
+                }
+                ruleHasTime = true
+            }
+            ifDebug("${i} ${thisRule.ruleNo}")
+            //            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.luxThreshold: $thisRule.luxThreshold | turnOn: $turnOn | previousRuleLux: $previousRuleLux")
+            //            ifDebug("timedRulesOnly: $timedRulesOnly | ruleHasTime: $ruleHasTime")
+            if (timedRulesOnly && !ruleHasTime)     continue;
+            ifDebug("${i} ${thisRule.ruleNo}")
+            result = thisRule.ruleNo
         }
+        return result
     }
 }
 
