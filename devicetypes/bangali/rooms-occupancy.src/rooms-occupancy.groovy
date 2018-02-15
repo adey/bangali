@@ -24,10 +24,27 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.12.0"  }
+public static String version()      {  return "v0.12.6"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.12.6
+*
+*   DONE:   2/14/2018
+*   1) added setting to pick state to be set when 'room device' switch turned on..
+*
+*  Version: 0.12.5
+*
+*   DONE:   2/11/2018
+*   1) added setting for dim to level if no bulb is on in checking state.
+*   2) added temperature offset between thermostat and room temperature sesnor.
+*
+*  Version: 0.12.2
+*
+*   DONE:   2/10/2018
+*   1) added setting to require occupancy before triggering engaged state with power.
+*   2) couple of bug fixes.
 *
 *  Version: 0.12.0
 *
@@ -679,7 +696,19 @@ def setupAlarmC()	{
 		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)
 }
 
-def on()		{  occupied()  }
+def on()	{
+	def toState = parent?.roomDeviceSwitchOnP()
+	toState = (toState ? toState as String : 'occupied')
+	ifDebug("on: $toState")
+	switch(toState)		{
+		case 'occupied':	occupied();		break;
+		case 'engaged':		engaged();		break;
+		case 'locked':		locked();		break;
+		case 'asleep':		asleep();		break;
+		default:							break;
+	}
+}
+
 def	off()		{  vacant()  }
 
 def occupied()	{	stateUpdate('occupied')		}

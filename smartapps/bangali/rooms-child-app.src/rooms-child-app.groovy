@@ -24,10 +24,15 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.12.5"  }
+public static String version()      {  return "v0.12.6"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.12.6
+*
+*   DONE:   2/14/2018
+*   1) added setting to pick state to be set when 'room device switch' turned on..
 *
 *  Version: 0.12.5
 *
@@ -517,7 +522,7 @@ private pageOnePager()      {
             else
                 paragraph "After how many seconds?\nselect motion sensor(s) above to set"
         }
-        section("Change room to ENGAGED when?", hideable: false)		{
+        section("Change room to ENGAGED with traffic?", hideable: false)		{
             if (motionSensors)
                 input "busyCheck", "enum", title: "When room is busy?", required: false, multiple: false, defaultValue: 7,
                             options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
@@ -881,8 +886,7 @@ private pageRule(params)   {
 			input "name$ruleNo", "text", title: "Rule name?", required:false, multiple: false, capitalization: "none"
             input "disabled$ruleNo", "bool", title: "Rule disabled?", required: false, multiple: false, defaultValue: false
 			input "mode$ruleNo", "mode", title: "Which mode?", required: false, multiple: true
-            input "state$ruleNo", "enum", title: "Which state?", required: false, multiple: true,
-                    options: [asleep, engaged, occupied, vacant]
+            input "state$ruleNo", "enum", title: "Which state?", required: false, multiple: true, options: [asleep, engaged, occupied, vacant]
             input "dayOfWeek$ruleNo", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
                     options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                           [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
@@ -1293,13 +1297,17 @@ private pageAdjacentRooms() {
 }
 
 private pageGeneralSettings() {
-	dynamicPage(name: "pageGeneralSettings", title: "", install: false0, uninstall: false) {
+	dynamicPage(name: "pageGeneralSettings", title: "", install: false, uninstall: false) {
 		section("Mode settings for AWAY and PAUSE modes?", hideable: false)		{
             input "awayModes", "mode", title: "Away modes to set Room to VACANT?", required: false, multiple: true
             input "pauseModes", "mode", title: "Modes in which to pause automation?", required: false, multiple: true
         }
         section("Turn off all switches on no rule match?", hideable: false)		{
             input "allSwitchesOff", "bool", title: "Turn OFF?", required: false, multiple: false, defaultValue: true
+        }
+        section("When room device 'switch' turned on set room to?\n(note: when room device 'switch' tuned off room state is set to VACANT.)", hideable: false)	{
+            input "roomDeviceSwitchOn", "enum", title: "Which state?", required: false, multiple: false, defaultValue: ['occupied'],
+                                        options: ['occupied', 'engaged', 'locked', 'asleep']
         }
         section("Run rooms automation on which days of the week?\n(when blank runs on all days.)", hideable: false)		{
             input "dayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
@@ -3887,6 +3895,8 @@ def turnSwitchesAllOnOrOff(turnOn)     {
         else            switches.each   {  if (it.currentSwitch != 'off')  it.off()  }
     }
 }
+
+def roomDeviceSwitchOnP()    {  return roomDeviceSwitchOn  }
 
 private getAllSwitches()    {
     def switches = []
