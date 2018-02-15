@@ -1305,6 +1305,10 @@ private pageGeneralSettings() {
             input "dayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
 						                                                    options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
                                                                                       [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
+        }
+		section("Set room to what state when switched on?)", hideable: false)		{
+			input "switchOnToEngaged", "enum", title: "Set room to what state when switched on?", required: true, multiple: false, defaultValue: false,
+			options: [false: "occupied", true: "engaged"]																	                                                                                      
 		}
 	}
 }
@@ -1392,6 +1396,7 @@ def updated()	{
     def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
     child.vacant()
+	child.switchOnToEngaged(switchOnToEngaged)
 }
 
 def updateRoom(adjMotionSensors)     {
