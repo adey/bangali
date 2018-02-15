@@ -2,3 +2,6 @@
 devicetypes/.DS_Store
 resources/.DS_Store
 smartapps/.DS_Store
+/bin/
+
+\.project

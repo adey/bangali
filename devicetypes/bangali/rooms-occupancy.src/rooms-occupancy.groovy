@@ -374,6 +374,7 @@ metadata {
 		capability "Switch"
 		capability "Beacon"
 		attribute "occupancy", "string"
+		attribute "mainSwitchOccupancy", "enum", ['occupied', 'engaged']
 		command "occupied"
         command "checking"
 		command "vacant"
@@ -390,6 +391,7 @@ metadata {
 		command "turnAsleepSwitchesAllOff"
 		command "alarmOffAction"
 		command "updateOccupancy", ["string"]
+		command "switchOnToEngaged", ["boolean"]
 	}
 
 	simulator	{
@@ -679,8 +681,24 @@ def setupAlarmC()	{
 		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)
 }
 
-def on()		{  occupied()  }
-def	off()		{  vacant()  }
+def on()		{  
+state.switchOnToEngaged ? engaged() : occupied()
+}
+    	
+def	off()		{  
+	if (!parent.resetEngagedDirectly && state.switchOnToEngaged)
+    	occupied()
+    else
+    	vacant()
+}
+
+def switchOnToEngaged(active)
+{
+	if(active)
+    	state.switchOnToEngaged = true
+    else
+    	state.remove('switchOnToEngaged')
+}
 
 def occupied()	{	stateUpdate('occupied')		}
 
