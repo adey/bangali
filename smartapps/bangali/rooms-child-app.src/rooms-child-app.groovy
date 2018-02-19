@@ -24,7 +24,7 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.12.6"  }
+public static String version()      {  return "v0.12.7"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
@@ -451,8 +451,10 @@ def roomName()	{
     state.passedOn = false
 	dynamicPage(name: "roomName", title: "Room Name", install: true, uninstall: childCreated())		{
         section		{
-            if (!childCreated())
+            if (!childCreated())    {
+                paragraph "ENTER ROOM NAME AND SAVE THE ROOM. THEN EDIT ROOM, TO ADD SETTINGS AND RULES. DO NOT ADD SETTINGS AND RULES WITHOUT FIRST SAVING THE ROOM ONCE."
 				label title: "Room Name:", required: true
+            }
             else
                 paragraph "Room Name:\n${app.label}"
             input "onePager", "bool", title: "Switch to easy settings?", required: false, multiple: false, defaultValue: false, submitOnChange: true
