@@ -2628,8 +2628,8 @@ def powerEventHandler(evt)    {
     if (engagedSwitch && engagedSwitch.currentValue("switch").contains('on'))  return;
     def roomState = child?.currentValue('occupancy')
     if (powerValueEngaged)     {
-        if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged
-            && ['occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))     {
+        if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged &&
+            ['occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))     {
             unschedule('powerStaysBelowEngaged')
             child.generateEvent('engaged')
         }
@@ -2640,8 +2640,8 @@ def powerEventHandler(evt)    {
     }
     else    {
         if (powerValueAsleep)     {
-            if (currentPower >= powerValueAsleep && state.previousPower < powerValueAsleep
-                && ['engaged', 'occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))    {
+            if (currentPower >= powerValueAsleep && state.previousPower < powerValueAsleep &&
+                ['engaged', 'occupied', 'checking', 'vacant'].contains(roomState) && (powerTriggerFromVacant || roomState != 'vacant'))    {
                 unschedule('powerStaysBelowAsleep')
                 child.generateEvent('asleep')
             }

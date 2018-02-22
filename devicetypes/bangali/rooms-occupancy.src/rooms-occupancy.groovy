@@ -29,10 +29,15 @@ private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
 *
+*  Version: 0.12.7
+*
+*   DONE:   2/22/2018
+*   1) added lock capability to put room in locked state through voice command.
+*
 *  Version: 0.12.6
 *
 *   DONE:   2/14/2018
-*   1) added setting to pick state to be set when 'room device' switch turned on..
+*   1) added setting to pick state to be set when 'room device' switch turned on.
 *
 *  Version: 0.12.5
 *
@@ -390,6 +395,7 @@ metadata {
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
+		capability "Lock Only"
 		attribute "occupancy", "string"
 		command "occupied"
         command "checking"
@@ -710,6 +716,8 @@ def on()	{
 }
 
 def	off()		{  vacant()  }
+
+def lock()		{  locked() }
 
 def occupied()	{	stateUpdate('occupied')		}
 
