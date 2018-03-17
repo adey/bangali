@@ -20,10 +20,60 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.11.5"  }
+public static String version()      {  return "v0.15.0"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.15.0
+*
+*   DONE:   3/2/2018
+*   1) added icons to main settings page for room.
+*
+*  Version: 0.14.6
+*
+*   DONE:   2/28/2018
+*   1) added support for humidity sensor in rules.
+*   2) added contact stays open notification.
+*
+*  Version: 0.14.4
+*
+*   DONE:   2/26/2018
+*   1) added support for battery check and annoucement on low battery.
+*
+*  Version: 0.14.2
+*
+*   DONE:   2/25/2018
+*   1) added setting for annoucement volume.
+*   2) added support for outside door open/close announcement.
+*
+*  Version: 0.14.0
+*
+*   DONE:   2/25/2018
+*   1) update device tiles to be more verbose.
+*
+*  Version: 0.12.6
+*
+*   DONE:   2/14/2018
+*   1) added setting to pick state to be set when 'room device switch' turned on.
+*
+*  Version: 0.12.5
+*
+*   DONE:   2/11/2018
+*   1) added setting for dim to level if no bulb is on in checking state.
+*   2) added temperature offset between thermostat and room temperature sesnor.
+*
+*  Version: 0.12.2
+*
+*   DONE:   2/10/2018
+*   1) added setting to require occupancy before triggering engaged state with power.
+*   2) couple of bug fixes.
+*
+*  Version: 0.12.0
+*
+*   DONE:   2/8/2018
+*   1) added alarm to rooms occupancy. tested somewhat. family kind of upset with me for random alarms going off :-(
+*   2) sunrise & sunset now support offset in minutes. so if you always wanted sunrise -30 or sunset +30 now you can.
 *
 *  Version: 0.11.5
 *
@@ -427,6 +477,13 @@ def pageSpeakerSettings()   {
                 paragraph "Announce to hour?\nselect either presence or time annoucement to set"
             }
         }
+        section     {
+            input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
+            if (batteryTime)
+                input "batteryLevel", "number", title: "Battery level to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
+            else
+                paragraph "Battery level to include in status?\nselect battery time to set."
+        }
 	}
 }
 
@@ -439,6 +496,7 @@ def updated()		{
     announceSetup()
     runEvery15Minutes(processChildSwitches)
     if (timeAnnounce != '4')    schedule("0 0/15 * 1/1 * ? *", tellTime)
+    if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
 
 def initialize()	{
@@ -454,6 +512,7 @@ def initialize()	{
     state.whoCameHome.personsIn = []
     state.whoCameHome.personsOut = []
     state.whoCameHome.personNames = [:]
+    state.lastBatteryUpdate = ''
 }
 
 private announceSetup() {
@@ -707,6 +766,32 @@ def processChildSwitches()      {
         if (child.checkRoomModesAndDoW())       child.switchesOnOrOff(true);
         i = i + 1
     }
+}
+
+def batteryCheck()      {
+    def allBatteries = []
+    def allBatteriesID = []
+    childApps.each  { child ->
+        def batteries = child.batteryDevices()
+        batteries.each      {
+            def itID = it.id
+            if (!allBatteriesID.contains(itID))     {
+                allBatteries << it
+                allBatteriesID << itID
+            }
+        }
+    }
+    def bat
+    def batteryNames = ''
+    allBatteries.each      {
+        bat = it.currentValue("battery")
+        if (bat < batteryLevel)     batteryNames = batteryNames + (it.displayName ?: it.name) + ', ';
+    }
+    if (batteryNames?.trim())
+        state.lastBatteryUpdate = "the following battery devices are below $batteryLevel percent $batteryNames."
+    else
+        state.lastBatteryUpdate = "no device battery below $batteryLevel percent."
+    speakerDevices.playTextAndResume(state.lastBatteryUpdate, speakerVolume)
 }
 
 def tellTime()      {

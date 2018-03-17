@@ -24,10 +24,37 @@
 *
 *****************************************************************************************************************/
 
-public static String version()      {  return "v0.12.0"  }
+public static String version()      {  return "v0.14.0"  }
 private static boolean isDebug()    {  return true  }
 
 /*****************************************************************************************************************
+*
+*  Version: 0.14.0
+*
+*   DONE:   2/25/2018
+*   1) update device tiles to be more verbose.
+*
+*  Version: 0.12.7
+*
+*   DONE:   2/22/2018
+*   1) added lock capability to put room in locked state through voice command.
+*
+*  Version: 0.12.6
+*
+*   DONE:   2/14/2018
+*   1) added setting to pick state to be set when 'room device' switch turned on.
+*
+*  Version: 0.12.5
+*
+*   DONE:   2/11/2018
+*   1) added setting for dim to level if no bulb is on in checking state.
+*   2) added temperature offset between thermostat and room temperature sesnor.
+*
+*  Version: 0.12.2
+*
+*   DONE:   2/10/2018
+*   1) added setting to require occupancy before triggering engaged state with power.
+*   2) couple of bug fixes.
 *
 *  Version: 0.12.0
 *
@@ -373,6 +400,7 @@ metadata {
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
+		capability "Lock Only"
 		attribute "occupancy", "string"
 		command "occupied"
         command "checking"
@@ -386,8 +414,8 @@ metadata {
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
 		command "turnSwitchesAllOff"
-		command "turnAsleepSwitchesAllOn"
-		command "turnAsleepSwitchesAllOff"
+		command "turnNightSwitchesAllOn"
+		command "turnNightSwitchesAllOff"
 		command "alarmOffAction"
 		command "updateOccupancy", ["string"]
 	}
@@ -461,7 +489,7 @@ metadata {
 			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 		}
 		valueTile("luxInd", "device.luxInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("lux", label:'${currentValue}\nlux', backgroundColor:"#ffffff")
+			state("lux", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		standardTile("contactInd", "device.contactInd", width: 1, height: 1, canChangeIcon: true) {
 			state("closed", label:'${name}', icon:"st.contact.contact.closed", backgroundColor:"#00A0DC")
@@ -471,20 +499,26 @@ metadata {
 		standardTile("switchInd", "device.switchInd", width: 1, height: 1, canChangeIcon: true) {
 			state("off", label: '${name}', action: "turnSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', action: "turnSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		standardTile("presenceInd", "device.presenceInd", width: 1, height: 1, canChangeIcon: true) {
 			state("absent", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 			state("present", label:'${name}', icon:"st.presence.tile.present", backgroundColor:"#00A0DC")
 			state("none", label:'${name}', icon:"st.presence.tile.not-present", backgroundColor:"#ffffff")
 		}
+		valueTile("presenceActionInd", "device.presenceActionInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("presenceAction", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
 		standardTile("musicInd", "device.musicInd", width: 1, height: 1, canChangeIcon: true)	{
 			state("none", label:'none', icon:"st.Electronics.electronics12", backgroundColor:"#ffffff")
 			state("pause", action: "playMusic", icon: "st.sonos.play-btn", backgroundColor: "#ffffff")
 			state("play", action: "pauseMusic", icon: "st.sonos.pause-btn", backgroundColor: "#00A0DC")
 		}
+		valueTile("dowInd", "device.dowInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("dow", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
 		valueTile("powerInd", "device.powerInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("power", label:'${currentValue}\nwatts', backgroundColor:"#ffffff")
+			state("power", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		valueTile("pauseInd", "device.pauseInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
 			state("pause", label:'${currentValue}', backgroundColor:"#ffffff")
@@ -528,41 +562,84 @@ metadata {
                 														[value: 97, color: "#BC2323"]])*/
 		}
 		standardTile("thermostatInd", "device.thermostatInd", width:1, height:1, canChangeIcon: true)	{
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
 			state("off", icon: "st.thermostat.heating-cooling-off", backgroundColor: "#ffffff")
 			state("auto", icon: "st.thermostat.auto", backgroundColor: "#ffffff")
 			state("autoCool", icon: "st.thermostat.auto-cool", backgroundColor: "#ffffff")
 			state("autoHeat", icon: "st.thermostat.heat", backgroundColor: "#ffffff")
 			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#5DADE2")
 			state("heating", icon: "st.thermostat.heating", backgroundColor: "#CD6155")
-			state("none", label:'none', icon:"st.thermostat.thermostat-down", backgroundColor:"#ffffff")
 		}
 		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("rules", label:'Rules:\n${currentValue}', backgroundColor:"#ffffff")
+			state("rules", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		valueTile("lastRuleInd", "device.lastRuleInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("lastRule", label:'Last:\n${currentValue}', backgroundColor:"#ffffff")
+			state("lastRule", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
 		standardTile("eSwitchInd", "device.eSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
 		}
 		standardTile("oSwitchInd", "device.oSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
 			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
 			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
 		}
-		valueTile("noMotionEInd", "device.noMotionEInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("noMotionE", label:'${currentValue}\nsecs', backgroundColor:"#ffffff")
-		}
-		standardTile("aSwitchInd", "device.aSwitchInd", width: 1, height: 1, canChangeIcon: true) {
-			state("none", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff")
-			state("off", label: '${name}', action: "turnAsleepSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
-			state("on", label: '${name}', action: "turnAsleepSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+		standardTile("aSwitchInd", "device.aSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
 		}
 		valueTile("aRoomInd", "device.aRoomInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
 			state("rooms", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
+		valueTile("presenceEngagedInd", "device.presenceEngagedInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("presenceEngaged", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("busyEngagedInd", "device.busyEngagedInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("busyEngaged", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		standardTile("lSwitchInd", "device.lSwitchInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat") {
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("off", label: '${name}', icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+		}
+		standardTile("nSwitchInd", "device.nSwitchInd", width: 1, height: 1, canChangeIcon: true) {
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("off", label: '${name}', action: "turnNightSwitchesAllOn", icon: "st.switches.switch.off", backgroundColor: "#ffffff")
+			state("on", label: '${name}', action: "turnNightSwitchesAllOff", icon: "st.switches.switch.on", backgroundColor: "#00A0DC")
+		}
+		valueTile("wSSInd", "device.wSSInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("wSS", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("noMotionInd", "device.noMotionInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("noMotion", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("dimTimerInd", "device.dimTimerInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("dimTimer", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("noMotionEngagedInd", "device.noMotionEngagedInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("noMotionEngaged", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("noMotionAsleepInd", "device.noMotionAsleepInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("noMotionAsleep", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("turnAllOffInd", "device.turnAllOffInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("turnAllOff", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("dimByLevelInd", "device.dimByLevelInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("dimByLevel", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("eWattsInd", "device.eWattsInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("eWatts", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+		valueTile("aWattsInd", "device.aWattsInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("aWatts", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
+//		valueTile("aRoomInd", "device.aRoomInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
+//			state("rooms", label:'${currentValue}', backgroundColor:"#ffffff")
+//		}
 		standardTile("aMotionInd", "device.aMotionInd", width: 1, height: 1, canChangeIcon: true) {
 			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
@@ -643,10 +720,58 @@ metadata {
 			state "toKaput", label:"Updating", icon: "st.Outdoor.outdoor18", backgroundColor:"#95623d"
 		}
 
+		valueTile("blankL", "device.blankL", width: 1, height: 1, decoration: "flat")					{ state "blankL", label:'\n' }
+		valueTile("timerL", "device.timerL", width: 1, height: 1, decoration: "flat")					{ state "timerL", label:'timer' }
+		valueTile("roomMotionL", "device.roomMotionL", width: 1, height: 1, decoration: "flat")			{ state "roomMotionL", label:'room\nmotion' }
+		valueTile("adjRoomMotionL", "device.adjRoomMotionL", width: 1, height: 1, decoration: "flat")	{ state "adjRoomMotionL", label:'adjacent\nroom\nmotion' }
+		valueTile("luxL", "device.luxL", width: 1, height: 1, decoration: "flat")						{ state "luxL", label:'room\nlux' }
+		valueTile("roomContactL", "device.roomContactL", width: 1, height: 1, decoration: "flat")		{ state "roomContactL", label:'room\ncontact' }
+		valueTile("presenceL", "device.presenceL", width: 1, height: 1, decoration: "flat")				{ state "presenceL", label:'presence' }
+		valueTile("presenceActionL", "device.presenceActionL", width: 1, height: 1, decoration: "flat")	{ state "presenceActionL", label:'presence\naction' }
+		valueTile("musicL", "device.musicL", width: 1, height: 1, decoration: "flat")					{ state "musicL", label:'music' }
+		valueTile("dowL", "device.dowL", width: 1, height: 1, decoration: "flat")						{ state "dowL", label:'day of\nweek' }
+		valueTile("timeL", "device.timeL", width: 1, height: 1, decoration: "flat")						{ state "timeL", label:'time\nschedule' }
+		valueTile("oSwitchL", "device.oSwitchL", width: 1, height: 1, decoration: "flat")				{ state "oSwitchL", label:'occupied\nswitches' }
+		valueTile("eSwitchL", "device.eSwitchL", width: 1, height: 1, decoration: "flat")				{ state "eSwitchL", label:'engaged\nswitches' }
+		valueTile("aSwitchL", "device.aSwitchL", width: 1, height: 1, decoration: "flat")				{ state "aSwitchL", label:'asleep\nswitches' }
+		valueTile("presenceEngagedL", "device.presenceEngagedL", width: 1, height: 1, decoration: "flat")	{ state "presenceEngagedL", label:'presence\nengaged' }
+		valueTile("engagedWithBusyL", "device.engagedWithBusyL", width: 1, height: 1, decoration: "flat")	{ state "engagedWithBusyL", label:'engaged\nwith busy' }
+		valueTile("lSwitchL", "device.lSwitchL", width: 1, height: 1, decoration: "flat")				{ state "lSwitchL", label:'locked\nswitch' }
+		valueTile("oTimerL", "device.oTimerL", width: 1, height: 1, decoration: "flat")					{ state "oTimerL", label:'occupied\ntimer' }
+		valueTile("cTimerL", "device.cTimerL", width: 1, height: 1, decoration: "flat")					{ state "cTimerL", label:'checking\ntimer' }
+		valueTile("eTimerL", "device.eTimerL", width: 1, height: 1, decoration: "flat")					{ state "eTimerL", label:'engaged\ntimer' }
+		valueTile("aTimerL", "device.aTimerL", width: 1, height: 1, decoration: "flat")					{ state "aTimerL", label:'asleep\ntimer' }
+		valueTile("turnAllOffL", "device.turnAllOffL", width: 1, height: 1, decoration: "flat")			{ state "turnAllOffL", label:'turn\nall off' }
+		valueTile("dimByL", "device.dimByL", width: 1, height: 1, decoration: "flat")					{ state "dimByL", label:'dim\nby / to\nlevel' }
+		valueTile("switchL", "device.switchL", width: 1, height: 1, decoration: "flat")					{ state "switchL", label:'room\nswitches' }
+		valueTile("nSwitchL", "device.nSwitchL", width: 1, height: 1, decoration: "flat")				{ state "nSwitchL", label:'night\nswitches' }
+		valueTile("shadeL", "device.shadeL", width: 1, height: 1, decoration: "flat")					{ state "shadeL", label:'window\nshades' }
+		valueTile("powerL", "device.powerL", width: 1, height: 1, decoration: "flat")					{ state "powerL", label:'power\nwatts' }
+		valueTile("eWattsL", "device.eWattsL", width: 1, height: 1, decoration: "flat")					{ state "eWattsL", label:'engaged\nwatts' }
+		valueTile("aWattsL", "device.aWattsL", width: 1, height: 1, decoration: "flat")					{ state "aWattsL", label:'asleep\nwatts' }
+		valueTile("temperatureL", "device.temperatureL", width: 1, height: 1, decoration: "flat")		{ state "temperatureL", label:'room\ntemp' }
+		valueTile("thermostatL", "device.thermostatL", width: 1, height: 1, decoration: "flat")			{ state "thermostatL", label:'heat /\ncool' }
+		valueTile("maintainL", "device.maintainL", width: 1, height: 1, decoration: "flat")				{ state "maintainL", label:'maintain\ntemp' }
+		valueTile("rulesL", "device.rulesL", width: 1, height: 1, decoration: "flat")					{ state "rulesL", label:'# of\nrules' }
+		valueTile("adjRoomsL", "device.adjRoomsL", width: 1, height: 1, decoration: "flat")				{ state "adjRoomsL", label:'adjacent\nrooms' }
+		valueTile("lastRuleL", "device.lastRuleL", width: 1, height: 1, decoration: "flat")				{ state "lastRuleL", label:'last\nrules' }
+
 		main (["occupancy"])
 
 		// display all tiles
-		details (["occupancy", "occupied", "engaged", "vacant", "asleep", "locked", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "rulesInd", "oSwitchInd", "aRoomInd", "aMotionInd", "aSwitchInd", "thermostatInd", "lastRuleInd", "eSwitchInd", "noMotionEInd", "powerInd", "temperatureInd", "maintainInd"])
+		details (["occupancy", "occupied", "engaged", "vacant", "asleep", "locked",
+				  "status", "timerL", "timer",
+				  "roomMotionL", "motionInd", "adjRoomMotionL", "aMotionInd", "luxL", "luxInd",
+				  "roomContactL", "contactInd", "presenceL", "presenceInd", "presenceActionL", "presenceActionInd",
+				  "musicL", "musicInd", "dowL", "dowInd", "timeL", "timeInd",
+				  "oSwitchL", "oSwitchInd", "eSwitchL", "eSwitchInd", "aSwitchL", "aSwitchInd",
+				  "presenceEngagedL", "presenceEngagedInd", "engagedWithBusyL", "busyEngagedInd",  "lSwitchL", "lSwitchInd",
+				  "oTimerL", "noMotionInd", "cTimerL", "dimTimerInd", "eTimerL", "noMotionEngagedInd",
+				  "turnAllOffL", "turnAllOffInd", "dimByL", "dimByLevelInd", "aTimerL", "noMotionAsleepInd",
+				  "switchL", "switchInd", "nSwitchL", "nSwitchInd", "shadeL", "wSSInd",
+				  "powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
+				  "temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
+				  "rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
 //		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
 		// display main and other button tiles only
@@ -659,7 +784,9 @@ metadata {
 	}
 }
 
-def parse(String description)	{}
+def parse(String description)	{
+	ifDebug("parse: $description")
+}
 
 // def installed()		{  initialize();	vacant()  }
 
@@ -679,8 +806,22 @@ def setupAlarmC()	{
 		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)
 }
 
-def on()		{  occupied()  }
+def on()	{
+	def toState = parent?.roomDeviceSwitchOnP()
+	toState = (toState ? toState as String : 'occupied')
+	ifDebug("on: $toState")
+	switch(toState)		{
+		case 'occupied':	occupied();		break;
+		case 'engaged':		engaged();		break;
+		case 'locked':		locked();		break;
+		case 'asleep':		asleep();		break;
+		default:							break;
+	}
+}
+
 def	off()		{  vacant()  }
+
+def lock()		{  locked() }
 
 def occupied()	{	stateUpdate('occupied')		}
 
@@ -804,7 +945,7 @@ def updateLuxInd(lux)		{
 	if (lux == -1)
 		sendEvent(name: 'luxInd', value: '--', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'luxInd', value: lux, descriptionText: "indicate lux value", isStateChange: true, displayed: false)
+		sendEvent(name: 'luxInd', value: "${(lux <= 100 ? lux : formatNumber(lux))}", descriptionText: "indicate lux value", isStateChange: true, displayed: false)
 }
 
 def updateContactInd(contactClosed)		{
@@ -830,7 +971,7 @@ def updateSwitchInd(switchOn)		{
 			sendEvent(name: 'switchInd', value: 'off', descriptionText: "indicate all switches in room is off", isStateChange: true, displayed: false)
 			break
 		default:
-			sendEvent(name: 'switchInd', value: 'none', descriptionText: "indicate no switches to turn on in room", isStateChange: true, displayed: false)
+			sendEvent(name: 'switchInd', value: '--', descriptionText: "indicate no switches to turn on in room", isStateChange: true, displayed: false)
 			break
 	}
 }
@@ -847,6 +988,57 @@ def updatePresenceInd(presencePresent)		{
 			sendEvent(name: 'presenceInd', value: 'none', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
 			break
 	}
+}
+
+def updatePresenceActionInd(presenceAction)		{
+	switch(presenceAction)	{
+		case '1':
+			sendEvent(name: 'presenceActionInd', value: 'Arrival', descriptionText: "indicate arrival action when present", isStateChange: true, displayed: false)
+			break
+		case '2':
+			sendEvent(name: 'presenceActionInd', value: 'Departure', descriptionText: "indicate departure action when not present", isStateChange: true, displayed: false)
+			break
+		case '3':
+			sendEvent(name: 'presenceActionInd', value: 'Both', descriptionText: "indicate both arrival and depature action with presence", isStateChange: true, displayed: false)
+			break
+		case '4':
+			sendEvent(name: 'presenceActionInd', value: 'Neither', descriptionText: "indicate no action with with present", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'presenceActionInd', value: '--', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updatePresenceEngagedInd(presenceEngaged)		{
+	if (presenceEngaged == -1)
+		sendEvent(name: 'presenceEngagedInd', value: '--', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'presenceEngagedInd', value: presenceEngaged, descriptionText: "indicate if presence action continuous", isStateChange: true, displayed: false)
+}
+
+def updateBusyEngagedInd(busyEngaged)		{
+	if (busyEngaged == -1)
+		sendEvent(name: 'busyEngagedInd', value: '--', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'busyEngagedInd', value: "$busyEngaged\ntraffic", descriptionText: "indicate traffic check", isStateChange: true, displayed: false)
+}
+
+def updateDoWInd(dow)		{
+	def		val
+	switch(dow)	{
+		case '1':	val = 'Monday';		break;
+		case '2':	val = 'Tuesday';	break;
+		case '3':	val = 'Wednesday';	break;
+		case '4':	val = 'Thursday';	break;
+		case '5':	val = 'Friday';		break;
+		case '6':	val = 'Saturday';	break;
+		case '7':	val = 'Sunday';		break;
+		case '8':	val = 'M - F';		break;
+		case '9':	val = 'S & S';		break;
+		default:	val = 'Everyday';	break;
+	}
+	sendEvent(name: 'dowInd', value: val, descriptionText: "indicate run on only these days of the week: $val", isStateChange: true, displayed: false)
 }
 
 def updateTimeInd(timeFromTo)		{
@@ -870,7 +1062,7 @@ def updateMaintainIndC(temp)		{
 }
 
 def updateThermostatIndC(thermo)		{
-	def vV = 'none'; 	def dD = "indicate no thermostat setting";
+	def vV = '--'; 	def dD = "indicate no thermostat setting";
 	switch(thermo)	{
 		case 0:
 			vV = 'off';			dD = "indicate thermostat not auto";
@@ -919,7 +1111,21 @@ def updatePowerInd(power)		{
 	if (power == -1)
 		sendEvent(name: 'powerInd', value: '--', descriptionText: "indicate no lux sensor", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'powerInd', value: power, descriptionText: "indicate lux value", isStateChange: true, displayed: false)
+		sendEvent(name: 'powerInd', value: "${(power <= 100 ? power : formatNumber(power))}", descriptionText: "indicate lux value", isStateChange: true, displayed: false)
+}
+
+def updateEWattsInd(eWatts)		{
+	if (eWatts == -1)
+		sendEvent(name: 'eWattsInd', value: '--', descriptionText: "indicate no engaged watts", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'eWattsInd', value: "${(eWatts <= 100 ? eWatts : formatNumber(eWatts))}", descriptionText: "indicate engaged watts value", isStateChange: true, displayed: false)
+}
+
+def updateAWattsInd(aWatts)		{
+	if (aWatts == -1)
+		sendEvent(name: 'aWattsInd', value: '--', descriptionText: "indicate no asleep watts", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'aWattsInd', value: "${(aWatts <= 100 ? aWatts : formatNumber(aWatts))}", descriptionText: "indicate asleep watts value", isStateChange: true, displayed: false)
 }
 
 def updateESwitchInd(switchOn)		{
@@ -931,16 +1137,28 @@ def updateESwitchInd(switchOn)		{
 			sendEvent(name: 'eSwitchInd', value: 'off', descriptionText: "indicate engaged switch is off", isStateChange: true, displayed: false)
 			break
 		default:
-			sendEvent(name: 'eSwitchInd', value: 'none', descriptionText: "indicate no engaged switch", isStateChange: true, displayed: false)
+			sendEvent(name: 'eSwitchInd', value: '--', descriptionText: "indicate no engaged switch", isStateChange: true, displayed: false)
 			break
 	}
 }
 
-def updateNoMotionEInd(noMotionE)		{
-	if (noMotionE == -1)
-		sendEvent(name: 'noMotionEInd', value: '--', descriptionText: "indicate no motion timer for engaged state", isStateChange: true, displayed: false)
+def updateTimersInd(noMotion, dimTimer, noMotionEngaged, noMotionAsleep)		{
+	if (noMotion)
+		sendEvent(name: 'noMotionInd', value: "${formatNumber(noMotion)}", descriptionText: "indicate motion timer for occupied state", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'noMotionEInd', value: noMotionE, descriptionText: "indicate motion timer for engaged state", isStateChange: true, displayed: false)
+		sendEvent(name: 'noMotionInd', value: '--', descriptionText: "indicate no motion timer for occupied state", isStateChange: true, displayed: false)
+	if (dimTimer)
+		sendEvent(name: 'dimTimerInd', value: "${formatNumber(dimTimer)}", descriptionText: "indicate timer for checking state", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'dimTimerInd', value: '--', descriptionText: "indicate no timer for checking state", isStateChange: true, displayed: false)
+	if (noMotionEngaged)
+		sendEvent(name: 'noMotionEngagedInd', value: "${formatNumber(noMotionEngaged)}", descriptionText: "indicate motion timer for engaged state", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'noMotionEngagedInd', value: '--', descriptionText: "indicate no motion timer for engaged state", isStateChange: true, displayed: false)
+	if (noMotionAsleep)
+		sendEvent(name: 'noMotionAsleepInd', value: "${formatNumber(noMotionAsleep)}", descriptionText: "indicate motion timer for asleep state", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'noMotionAsleepInd', value: '--', descriptionText: "indicate no motion timer for asleep state", isStateChange: true, displayed: false)
 }
 
 def updateOSwitchInd(switchOn)		{
@@ -952,7 +1170,7 @@ def updateOSwitchInd(switchOn)		{
 			sendEvent(name: 'oSwitchInd', value: 'off', descriptionText: "indicate all occupied switches is off", isStateChange: true, displayed: false)
 			break
 		default:
-			sendEvent(name: 'oSwitchInd', value: 'none', descriptionText: "indicate no occupied switches", isStateChange: true, displayed: false)
+			sendEvent(name: 'oSwitchInd', value: '--', descriptionText: "indicate no occupied switches", isStateChange: true, displayed: false)
 			break
 	}
 }
@@ -966,16 +1184,62 @@ def updateASwitchInd(switchOn)		{
 			sendEvent(name: 'aSwitchInd', value: 'off', descriptionText: "indicate all asleep switches is off", isStateChange: true, displayed: false)
 			break
 		default:
-			sendEvent(name: 'aSwitchInd', value: 'none', descriptionText: "indicate no asleep switches", isStateChange: true, displayed: false)
+			sendEvent(name: 'aSwitchInd', value: '--', descriptionText: "indicate no asleep switches", isStateChange: true, displayed: false)
 			break
 	}
 }
 
-def updateAdjRoomsInd(aRoom)		{
-	if (aRoom == -1)
-		sendEvent(name: 'aRoomInd', value: 'no adjacent rooms', descriptionText: "indicate no adjacent rooms", isStateChange: true, displayed: false)
+def updateNSwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'nSwitchInd', value: 'on', descriptionText: "indicate at least one night switch is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'nSwitchInd', value: 'off', descriptionText: "indicate all night switches is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'nSwitchInd', value: '--', descriptionText: "indicate no night switches", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateLSwitchInd(switchOn)		{
+	switch(switchOn)	{
+		case 1:
+			sendEvent(name: 'lSwitchInd', value: 'on', descriptionText: "indicate locked switch is on", isStateChange: true, displayed: false)
+			break
+		case 0:
+			sendEvent(name: 'lSwitchInd', value: 'off', descriptionText: "indicate locked switch is off", isStateChange: true, displayed: false)
+			break
+		default:
+			sendEvent(name: 'lSwitchInd', value: '--', descriptionText: "indicate no locked switch", isStateChange: true, displayed: false)
+			break
+	}
+}
+
+def updateTurnAllOffInd(turnOff)		{
+	sendEvent(name: 'turnAllOffInd', value: turnOff, descriptionText: "indicate if all switches should be turned off when no rules match", isStateChange: true, displayed: false)
+}
+
+def updateDimByLevelInd(dimBy, dimTo)		{
+	if (dimBy == -1 && dimTo == -1)
+		sendEvent(name: 'dimByLevelInd', value: '-- / --', descriptionText: "indicate no dimming", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'aRoomInd', value: pMode, descriptionText: "indicate adjacent rooms", isStateChange: true, displayed: false)
+		sendEvent(name: 'dimByLevelInd', value: "${(dimBy == -1 ? '--' : dimBy + '%')} /\n${(dimTo == -1 ? '--' : dimTo + '% ')}", descriptionText: "indicate dimming by / to level", isStateChange: true, displayed: false)
+}
+
+def updateAdjRoomsInd(aRooms)		{
+	if (aRooms == -1)
+		sendEvent(name: 'aRoomInd', value: '--', descriptionText: "indicate no adjacent rooms", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'aRoomInd', value: aRooms + '\nrooms', descriptionText: "indicate how many adjacent rooms", isStateChange: true, displayed: false)
+}
+
+def updateWSSInd(wSS)		{
+	if (wSS == -1)
+		sendEvent(name: 'wSSInd', value: '--', descriptionText: "indicate no window shades", isStateChange: true, displayed: false)
+	else
+		sendEvent(name: 'wSSInd', value: wSS, descriptionText: "indicate window shade position", isStateChange: true, displayed: false)
 }
 
 def updateAdjMotionInd(motionOn)		{
@@ -992,6 +1256,11 @@ def updateAdjMotionInd(motionOn)		{
 	}
 }
 
+private formatNumber(number)	{
+	int n = number as Integer
+	return (n > 0 ? String.format("%,d", n) : '')
+}
+
 def turnSwitchesAllOn()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(true)
@@ -1006,19 +1275,19 @@ def turnSwitchesAllOff()		{
 	}
 }
 
-def turnAsleepSwitchesAllOn()	{
- 	ifDebug("turnAsleepSwitchesAllOn")
+def turnNightSwitchesAllOn()	{
+ 	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		updateASwitchInd(1)
+		updateNSwitchInd(1)
 	}
 }
 
-def turnAsleepSwitchesAllOff()	{
-	ifDebug("turnAsleepSwitchesAllOff")
+def turnNightSwitchesAllOff()	{
+	ifDebug("turnNightSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
-		updateASwitchInd(0)
+		updateNSwitchInd(0)
 	}
 }
 
