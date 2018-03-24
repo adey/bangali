@@ -1318,10 +1318,10 @@ private pageAsleepSettings() {
                     paragraph "Button Action?\nselect action for the button above to set"
                 input "noAsleepSwitchesOverride", "bool", title: "Select sleep switches to turn OFF when leaving ASLEEP?\n(default: all)", required: false, multiple: false, defaultValue: false, submitOnChange: true
                 if (noAsleepSwitchesOverride) {
-                	def noAsleepSwitchesOptions = []
-                	noAsleepSwitchesOptions += nightSwitches.collect{ [(it.id): "${it.displayName}"]}
-                	input "noAsleepSwitchesOff", "enum", title: "Switches to turn OFF when leaving ASLEEP?", required: false, multiple: true, defaultValue:null, submitOnChange: true,
-                		options: noAsleepSwitchesOptions
+                    def noAsleepSwitchesOptions = []
+                    noAsleepSwitchesOptions += nightSwitches.collect{ [(it.id): "${it.displayName}"]}
+                    input "noAsleepSwitchesOff", "enum", title: "Switches to turn OFF when leaving ASLEEP?", required: false, multiple: true, defaultValue:null, submitOnChange: true,
+                        options: noAsleepSwitchesOptions
                 }
             }
             else        {
@@ -2995,11 +2995,11 @@ def handleSwitches(data)	{
 //            parent.notifyAnotherRoomEngaged(app.id)
             if (newState == 'asleep')   {
                 if (motionSensors.currentValue("motion").contains("active")) {
-                	dimNightLights()
-                	if (state.noMotionAsleep && whichNoMotion != lastMotionInactive) {
-                		updateChildTimer(state.noMotionAsleep)
-                		runIn(state.noMotionAsleep, nightSwitchesOff)
-                	}
+                    dimNightLights()
+                    if (state.noMotionAsleep && whichNoMotion != lastMotionInactive) {
+                        updateChildTimer(state.noMotionAsleep)
+                        runIn(state.noMotionAsleep, nightSwitchesOff)
+                    }
                 } else {
                     nightSwitchesOff()
                 }
