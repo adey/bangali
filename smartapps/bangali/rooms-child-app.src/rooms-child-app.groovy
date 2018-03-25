@@ -2964,10 +2964,15 @@ def handleSwitches(data)	{
         unschedule('resetAsleep')
         updateAsleepChildTimer(0)
         if (noAsleepSwitchesOverride) {
-            def theOffSwitches = nightSwitches.find {noAsleepSwitchesOff.contains(it.id) }
-            ifDebug("Turnning off devices in noAsleepSwitchesOff: ${ theOffSwitches}")
-            theOffSwitches.each { it.off(); pause(pauseMSec)}
-            child.updateNSwitchInd(isAnyNSwitchOn())
+            if (nightSwitches && noAsleepSwitchesOff) {
+                def child = getChildDevice(getRoom())
+                def theOffSwitches = nightSwitches.find {noAsleepSwitchesOff.contains(it.id) }
+                ifDebug("Turning off devices in noAsleepSwitchesOff: ${ theOffSwitches}")
+                theOffSwitches?.each { it.off(); pause(pauseMSec)}
+                if (theOffSwitches)
+                    child.updateNSwitchInd(isAnyNSwitchOn())
+            }
+            ifDebug("noAsleepSwitchesOverride: no switches to turn off")
         } else {
             nightSwitchesOff()
         }
@@ -3587,7 +3592,7 @@ private previousStateStack(previousState)    {
     ifDebug("previousStateStack")
     def i
     def timeIs = now()
-    def removeHowOld = (state.noMotion ? ((state.noMotion + state.dimTimer) * 10) : (180 * 10))
+    def removeHowOld = (state.noMotion ? (((state.noMotion as Integer) + (state.dimTimer as Integer)) * 10) : (180 * 10))
     def howMany
     int gapBetween
 
