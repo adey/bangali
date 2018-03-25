@@ -1,4 +1,4 @@
-/*****************************************************************************************************************
+/***********************************************************************************************************************
 *
 *  A SmartThings smartapp to create/view rooms created with rooms occupancy DTH.
 *  Copyright (C) 2017 bangali
@@ -18,12 +18,37 @@
 *  Name: Rooms Manager
 *  Source: https://github.com/adey/bangali/blob/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 *
-*****************************************************************************************************************/
+***********************************************************************************************************************/
 
-public static String version()      {  return "v0.15.0"  }
+public static String version()      {  return "v0.17.0"  }
 private static boolean isDebug()    {  return true  }
 
-/*****************************************************************************************************************
+/***********************************************************************************************************************
+*
+*  Version: 0.17.0
+*
+*   DONE:   3/24/2018
+*   1) refactored engaged state check to be more consistent.
+*   2) added fan support to temperature settings and rules.
+*   3) changed how heating and cooling works in it that no longer turns off the thermostat only raises and lowers the
+*       temperature and sets to cooling or heating mode but never turns off the thermostat.
+*   4) added support for named holiday light strings which can be used in automation rules.
+*   5) restructred the rules page a bit so not everything is on one page.
+*   6) added speech synthesis device for using things for annoucements.
+*   7) added random closing string to welcome and left home annoucements.
+*
+*  Version: 0.16.0
+*
+*   DONE:   3/15/2018
+*   1) code refactoring for hubitat compatibility.
+*   2) changed occupancy attribute to enum which allows for subscription to occupancy state while string dpes not.
+        thanks @mark2k on ST community forum.
+*   3) added default settings for wake and sleep time for level and kelvin calculation for 'AL' settings.
+*
+*  Version: 0.15.2
+*
+*   DONE:   3/5/2018
+*   1) added support for icon URL setting for icon to display for each room.
 *
 *  Version: 0.15.0
 *
@@ -400,7 +425,7 @@ private static boolean isDebug()    {  return true  }
 *   5) added button push events to tile commands, where occupied = button 1, ..., kaput = button 6 so it is
 *           supported by ST Smart Lighting smartapp.
 *
-*****************************************************************************************************************/
+***********************************************************************************************************************/
 
 definition (
     name: "rooms manager",
@@ -420,7 +445,14 @@ preferences	{
 }
 
 def mainPage()  {
+    def appChildren = app.getChildApps().sort { it.label }
     dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings") {
+/*        section     {
+            for (aC in appChildren)     {
+                app(appName: "$aC.label")
+            }
+        }
+*/
 		section {
             app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
@@ -435,40 +467,48 @@ def pageSpeakerSettings()   {
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
 		section   {
             input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
-            if (speakerDevices)     {
+            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
+            if (speakerDevices)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
-                input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            }
-            else        {
+            else
                 paragraph "Speaker volume?\nselect speaker(s) to set."
+            if (speakerDevices || speechDevices)
+                input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            else
                 paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
-            }
-            if (speakerDevices && speakerAnnounce)    {
+            if ((speakerDevices || speechDevices) && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
                 input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
-                input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)", required: true, multiple: true
-                input "welcomeHome", "text", title: "Welcome home greeting? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: 'Welcome home &'
-                input "secondsAfter", "number", title: "Seconds after? (left home annoucement is made after this many seconds.)", required: true, multiple: false, defaultValue: 15, range: "5..100"
-                input "leftHome", "text", title: "Left home announcement? (& will be replaced with the names.)", required: true, multiple: false, defaultValue: '& left home'
+                input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)",
+                                                required: true, multiple: true
+                input "welcomeHome", "text",
+                    title: "Welcome home greeting? ('&' will be replaced with the names and a random one will be used if there are multiple ',' separated strings.)",
+                                                required: true, multiple: false, defaultValue: 'Welcome home &'
+                input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
+                input "secondsAfter", "number", title: "Seconds after? (left home annoucement is made after this many seconds.)",
+                                                required: true, multiple: false, defaultValue: 15, range: "5..100"
+                input "leftHome", "text", title: "Left home announcement? (same format as welcome home greeting above)",
+                                                required: true, multiple: false, defaultValue: '& left home'
+                input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
             }
             else    {
                 paragraph "Which presence sensors?\nselect announce to set."
                 paragraph "Comma delmited names?\nselect announce to set."
-                paragraph "Which speakers?\nselect announce to set."
-                paragraph "Speaker volume?\nselect announce to set."
                 paragraph "Which contact sensors?\nselect announce to set."
                 paragraph "Welcome home greeting?\nselect announce to set."
+                paragraph "Welcome home greeting closer?\nselect announce to set."
                 paragraph "Seconds after?\nselect announce to set."
                 paragraph "Left home announcement?\nselect announce to set."
+                paragraph "Left home announcement closer?\nselect announce to set."
             }
-            if (speakerDevices)
+            if (speakerDevices || speechDevices)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
         section     {
-            if (speakerAnnounce || ['1', '2', '3'].contains(timeAnnounce))        {
+            if ((speakerDevices || speechDevices) || ['1', '2', '3'].contains(timeAnnounce))        {
                 input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
                 input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
             }
@@ -478,7 +518,10 @@ def pageSpeakerSettings()   {
             }
         }
         section     {
-            input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
+            if (speakerDevices || speechDevices)
+                input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
+            else
+                paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
             if (batteryTime)
                 input "batteryLevel", "number", title: "Battery level to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
             else
@@ -515,6 +558,8 @@ def initialize()	{
     state.lastBatteryUpdate = ''
 }
 
+def unsubscribeChild(childID)   {  unsubscribe(getChildRoomDeviceObject(childID))  }
+
 private announceSetup() {
     if (!speakerAnnounce)   return;
     def i = presenceSensors.size()
@@ -534,6 +579,7 @@ private announceSetup() {
     }
     state.welcomeHome1 = [:]
     state.welcomeHome2 = [:]
+    state.welcomeHomeCloser = [:]
     str = welcomeHome.split(',')
     i = 0
     str.each    {
@@ -542,8 +588,17 @@ private announceSetup() {
         state.welcomeHome2[i] = (str2.size() > 1 ? str2[1] : '')
         i = i + 1
     }
+    if (welcomeHomeCloser)      {
+        str = welcomeHomeCloser.split(',')
+        i = 0
+        str.each    {
+            state.welcomeHomeCloser[i] = it
+            i = i + 1
+        }
+    }
     state.leftHome1 = [:]
     state.leftHome2 = [:]
+    state.leftHomeCloser = [:]
     str = leftHome.split(',')
     i = 0
     str.each    {
@@ -551,6 +606,14 @@ private announceSetup() {
         state.leftHome1[i] = str2[0]
         state.leftHome2[i] = (str2.size() > 1 ? str2[1] : '')
         i = i + 1
+    }
+    if (leftHomeCloser)     {
+        str = leftHomeCloser.split(',')
+        i = 0
+        str.each    {
+            state.leftHomeCloser[i] = it
+            i = i + 1
+        }
     }
 }
 
@@ -567,6 +630,22 @@ def getChildRoomDeviceObject(childID)     {
     return roomDeviceObject
 }
 
+def checkThermostatValid(childID, checkThermostat)      {
+    ifDebug("checkThermostatValid: $checkThermostat")
+    if (!checkThermostat)   return null;
+    def otherRoom = null
+    childApps.each	{ child ->
+        if (childID != child.id)   {
+            def thermo = child.getChildRoomThermostat()
+            if (thermo && checkThermostat.getId() == thermo.thermostat.getId())     {
+                ifDebug("getChildRoomThermostat: $thermo.name")
+                otherRoom = thermo.name
+            }
+        }
+	}
+    return otherRoom
+}
+
 def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
 
 def	presenceNotPresentEventHandler(evt)     {  whoCameHome(evt.device, true)  }
@@ -576,21 +655,28 @@ def contactClosedEventHandler(evt = null)     {
     def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
     def i = str.size()
     def j = 1
-    def k = (state.welcomeHome1 ? Math.abs(new Random().nextInt() % state.welcomeHome1.size()) : 0) + ''
-    def l = (state.leftHome1 ? Math.abs(new Random().nextInt() % state.leftHome1.size()) : 0) + ''
+    def rand = new Random()
+    def k = (state.welcomeHome1 ? Math.abs(rand.nextInt() % state.welcomeHome1.size()) : 0) + ''
+    def k2 = (state.welcomeHomeCloser ? Math.abs(rand.nextInt() % state.welcomeHomeCloser.size()) : 0) + ''
+    def l = (state.leftHome1 ? Math.abs(rand.nextInt() % state.leftHome1.size()) : 0) + ''
+    def l2 = (state.leftHomeCloser ? Math.abs(rand.nextInt() % state.leftHomeCloser.size()) : 0) + ''
 //    ifDebug("k: $k ${state.welcomeHome1[(k)]} | l: $l ${state.leftHome1[(l)]}")
     def persons = (evt ? state.welcomeHome1[(k)] : state.leftHome1[(l)]) + ' '
     str.each      {
         persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
         j = j + 1
     }
-    persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)])
+    persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)]) +
+                        ' ' + (evt ? (welcomeHomeCloser ? state.welcomeHomeCloser[(k2)] : '') :
+                                     (leftHomeCloser ? state.leftHomeCloser[(l2)] : '')) + '.'
 //    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
     ifDebug("message: $persons")
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
-    if (intCurrentHH >= startHH && intCurrentHH <= endHH)
-        speakerDevices.playTextAndResume(persons, speakerVolume)
+    if (intCurrentHH >= startHH && intCurrentHH <= endHH)   {
+        if (speakerDevices)     speakerDevices.playTextAndResume(persons, speakerVolume);
+        if (speechDevices)      speechDevices.speak(persons);
+    }
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
 }
@@ -722,22 +808,20 @@ def handleAdjRooms()    {
         def adjRooms = adjRoomDetailsMap[childID]
         def adjMotionSensors = []
         def adjMotionSensorsIds = []
-        if (adjRooms)    {
+        if (adjRooms)
             childApps.each	{ child ->
                 if (childID != child.id && adjRooms.contains(child.id))      {
                     def motionSensors = child.getAdjMotionSensors()
-                    if (motionSensors)  {
-                        motionSensors.each  {
+                    if (motionSensors)
+                        motionSensors.each      {
                             def motionSensorId = it.getId()
                             if (!adjMotionSensorsIds.contains(motionSensorId))   {
                                 adjMotionSensors << it
                                 adjMotionSensorsIds << motionSensorId
                             }
                         }
-                    }
                 }
             }
-        }
         ifDebug("rooms manager: updating room $childAll.label")
         ifDebug("$adjMotionSensors")
         childAll.updateRoom(adjMotionSensors)
@@ -748,14 +832,13 @@ def handleAdjRooms()    {
 def getLastStateDate(childID)      {
     def nowDate = new Date()
     def lastStateDate = [:]
-    if (childID)    {
+    if (childID)
         childApps.each	{ child ->
             if (childID == child.id)    {
                 def lastStateDateChild = child.getLastStateChild()
                 lastStateDate = lastStateDateChild
             }
         }
-    }
     return lastStateDate
 }
 
@@ -787,11 +870,10 @@ def batteryCheck()      {
         bat = it.currentValue("battery")
         if (bat < batteryLevel)     batteryNames = batteryNames + (it.displayName ?: it.name) + ', ';
     }
-    if (batteryNames?.trim())
-        state.lastBatteryUpdate = "the following battery devices are below $batteryLevel percent $batteryNames."
-    else
-        state.lastBatteryUpdate = "no device battery below $batteryLevel percent."
-    speakerDevices.playTextAndResume(state.lastBatteryUpdate, speakerVolume)
+    state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
+                                                       "no device battery below $batteryLevel percent.")
+    if (speakerDevices)     speakerDevices.playTextAndResume(state.lastBatteryUpdate, speakerVolume);
+    if (speechDevices)      speak(state.lastBatteryUpdate);
 }
 
 def tellTime()      {
@@ -802,13 +884,14 @@ def tellTime()      {
 // TODO
     if ((timeAnnounce == '1' || (timeAnnounce == '2' && (intCurrentMM == 0 || intCurrentMM == 30)) ||
         (timeAnnounce == '3' && intCurrentMM == 0)) && intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))       {
-        def timeString = 'time is ' + (intCurrentMM == 0 ? '' : intCurrentMM + ' minutes past ') +
-                                                            intCurrentHH + (intCurrentHH < 12 ? ' oclock' : ' hundred hours')
+        def timeString = 'time is ' + (intCurrentMM == 0 ? '' : intCurrentMM + ' minutes past ') + intCurrentHH +
+                                      (intCurrentHH < 12 ? ' oclock.' : ' hundred hours.')
 // TODO
 //        speakerDevices.playTrackAndResume("http://s3.amazonaws.com/smartapp-media/sonos/bell1.mp3",
 //                                            (intCurrentMM == 0 ? 10 : (intCurrentMM == 15 ? 4 : (intCurrentMM == 30 ? 6 : 8))), speakerVolume)
 //        pause(1000)
-        speakerDevices.playTextAndResume(timeString, speakerVolume)
+        if (speakerDevices)      speakerDevices.playTextAndResume(timeString, speakerVolume);
+        if (speechDevices)       speechDevices.speak(timeString);
     }
 }
 

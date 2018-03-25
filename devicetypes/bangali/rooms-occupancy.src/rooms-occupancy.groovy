@@ -1,6 +1,6 @@
-/*****************************************************************************************************************
+/***********************************************************************************************************************
 *
-*  A SmartThings device handler to allow handling rooms as devices which have states.
+*  A SmartThings device handler to allow handling rooms as devices which have states for occupancy.
 *  Copyright (C) 2017 bangali
 *
 *  License:
@@ -22,12 +22,59 @@
 *  Name: Rooms Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
-*****************************************************************************************************************/
+***********************************************************************************************************************/
 
-public static String version()      {  return "v0.14.0"  }
+public static String version()      {  return "v0.17.0"  }
 private static boolean isDebug()    {  return true  }
 
-/*****************************************************************************************************************
+/***********************************************************************************************************************
+*
+*  Version: 0.17.0
+*
+*   DONE:   3/24/2018
+*   1) refactored engaged state check to be more consistent.
+*   2) added fan support to temperature settings and rules.
+*   3) changed how heating and cooling works in it that no longer turns off the thermostat only raises and lowers the
+*       temperature and sets to cooling or heating mode but never turns off the thermostat.
+*   4) added support for named holiday light strings which can be used in automation rules.
+*   5) restructred the rules page a bit so not everything is on one page.
+*   6) added speech synthesis device for using things for annoucements.
+*   7) added random closing string to welcome and left home annoucements.
+*
+*  Version: 0.16.0
+*
+*   DONE:   3/15/2018
+*   1) code refactoring for hubitat compatibility.
+*   2) changed occupancy attribute to enum which allows for subscription to occupancy state while string dpes not.
+        thanks @mark2k on ST community forum.
+*   3) added default settings for wake and sleep time for level and kelvin calculation for 'AL' settings.
+*
+*  Version: 0.15.2
+*
+*   DONE:   3/5/2018
+*   1) added support for icon URL setting for icon to display for each room.
+*
+*  Version: 0.15.0
+*
+*   DONE:   3/2/2018
+*   1) added icons to main settings page for room.
+*
+*  Version: 0.14.6
+*
+*   DONE:   2/28/2018
+*   1) added support for humidity sensor in rules.
+*   2) added contact stays open notification.
+*
+*  Version: 0.14.4
+*
+*   DONE:   2/26/2018
+*   1) added support for battery check and annoucement on low battery.
+*
+*  Version: 0.14.2
+*
+*   DONE:   2/25/2018
+*   1) added setting for annoucement volume.
+*   2) added support for outside door open/close announcement.
 *
 *  Version: 0.14.0
 *
@@ -388,7 +435,7 @@ private static boolean isDebug()    {  return true  }
 *   5) added button push events to tile commands, where occupied = button 1, ..., kaput = button 6 so it is
 *           supported by ST Smart Lighting smartapp.
 *
-*****************************************************************************************************************/
+***********************************************************************************************************************/
 
 metadata {
 	definition (
@@ -401,7 +448,7 @@ metadata {
 		capability "Switch"
 		capability "Beacon"
 		capability "Lock Only"
-		attribute "occupancy", "string"
+		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
 		command "occupied"
         command "checking"
 		command "vacant"
@@ -424,7 +471,7 @@ metadata {
 	}
 
 	preferences		{
-		section("Alarm Settings", hideable: false)		{
+		section("Alarm Settings")		{
 			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false
 			input "alarmTime", "time", title: "Alarm Time?", required: false, multiple: false
 			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
@@ -567,8 +614,15 @@ metadata {
 			state("auto", icon: "st.thermostat.auto", backgroundColor: "#ffffff")
 			state("autoCool", icon: "st.thermostat.auto-cool", backgroundColor: "#ffffff")
 			state("autoHeat", icon: "st.thermostat.heat", backgroundColor: "#ffffff")
-			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#5DADE2")
-			state("heating", icon: "st.thermostat.heating", backgroundColor: "#CD6155")
+			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#1E9CBB")
+			state("heating", icon: "st.thermostat.heating", backgroundColor: "#D04E00")
+		}
+		standardTile("fanInd", "device.fanInd", width:1, height:1, canChangeIcon: true)		{
+			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("off", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#ffffff")
+			state("low", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#90D2A7")
+			state("medium", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#F1D801")
+			state("high", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#D04E00")
 		}
 		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("rules", label:'${currentValue}', backgroundColor:"#ffffff")
@@ -752,6 +806,8 @@ metadata {
 		valueTile("temperatureL", "device.temperatureL", width: 1, height: 1, decoration: "flat")		{ state "temperatureL", label:'room\ntemp' }
 		valueTile("thermostatL", "device.thermostatL", width: 1, height: 1, decoration: "flat")			{ state "thermostatL", label:'heat /\ncool' }
 		valueTile("maintainL", "device.maintainL", width: 1, height: 1, decoration: "flat")				{ state "maintainL", label:'maintain\ntemp' }
+		valueTile("fanL", "device.fanL", width: 1, height: 1, decoration: "flat")						{ state "fanL", label:'fan\nspeed' }
+		valueTile("reservedL", "device.reservedL", width: 4, height: 1, decoration: "flat")				{ state "reservedL", label:'reserved' }
 		valueTile("rulesL", "device.rulesL", width: 1, height: 1, decoration: "flat")					{ state "rulesL", label:'# of\nrules' }
 		valueTile("adjRoomsL", "device.adjRoomsL", width: 1, height: 1, decoration: "flat")				{ state "adjRoomsL", label:'adjacent\nrooms' }
 		valueTile("lastRuleL", "device.lastRuleL", width: 1, height: 1, decoration: "flat")				{ state "lastRuleL", label:'last\nrules' }
@@ -771,6 +827,7 @@ metadata {
 				  "switchL", "switchInd", "nSwitchL", "nSwitchInd", "shadeL", "wSSInd",
 				  "powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
 				  "temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
+				  "fanL", "fanInd", "reservedL",
 				  "rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
 //		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
@@ -784,15 +841,13 @@ metadata {
 	}
 }
 
-def parse(String description)	{
-	ifDebug("parse: $description")
-}
+def parse(String description)	{  ifDebug("parse: $description")  }
 
 // def installed()		{  initialize();	vacant()  }
 
 def installed()		{  initialize()  }
 
-def updated()	{  initialize()  }
+def updated()		{  initialize()  }
 
 def	initialize()	{
 	sendEvent(name: "numberOfButtons", value: 9)
@@ -802,8 +857,7 @@ def	initialize()	{
 
 def setupAlarmC()	{
 	unschedule()
-	if (parent)
-		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek)
+	if (parent)		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek);
 }
 
 def on()	{
@@ -811,11 +865,11 @@ def on()	{
 	toState = (toState ? toState as String : 'occupied')
 	ifDebug("on: $toState")
 	switch(toState)		{
-		case 'occupied':	occupied();		break;
-		case 'engaged':		engaged();		break;
-		case 'locked':		locked();		break;
-		case 'asleep':		asleep();		break;
-		default:							break;
+		case 'occupied':	occupied();		break
+		case 'engaged':		engaged();		break
+		case 'locked':		locked();		break
+		case 'asleep':		asleep();		break
+		default:							break
 	}
 }
 
@@ -884,7 +938,7 @@ def alarmOffAction()	{
 	ifDebug("alarmOffAction")
 	unschedule()
 	if (parent)		parent.ringAlarm(true);
-	alarmOff(true);
+	alarmOff(true)
 }
 
 private updateRoomStatusMsg()		{
@@ -928,17 +982,13 @@ def generateEvent(newState = null)		{
 }
 
 def updateMotionInd(motionOn)		{
+	def vV = 'none'
+	def dD = "indicate no motion sensor"
 	switch(motionOn)	{
-		case 1:
-			sendEvent(name: 'motionInd', value: 'active', descriptionText: "indicate motion active", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'motionInd', value: 'inactive', descriptionText: "indicate motion inactive", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'motionInd', value: 'none', descriptionText: "indicate no motion sensor", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'active';		dD = "indicate motion active";		break
+		case 0:		vV = 'inactive';	dD = "indicate motion inactive";	break
 	}
+	sendEvent(name: 'motionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateLuxInd(lux)		{
@@ -949,65 +999,45 @@ def updateLuxInd(lux)		{
 }
 
 def updateContactInd(contactClosed)		{
+	def vV = 'none'
+	def dD = "indicate no contact sensor"
 	switch(contactClosed)	{
-		case 1:
-			sendEvent(name: 'contactInd', value: 'closed', descriptionText: "indicate contact closed", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'contactInd', value: 'open', descriptionText: "indicate contact open", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'contactInd', value: 'none', descriptionText: "indicate no contact sensor", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'closed';	dD = "indicate contact closed";		break
+		case 0:		vV = 'open';	dD = "indicate contact open";		break
 	}
+	sendEvent(name: 'contactInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateSwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no switches to turn on in room"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'switchInd', value: 'on', descriptionText: "indicate switch at least one switch in room is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'switchInd', value: 'off', descriptionText: "indicate all switches in room is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'switchInd', value: '--', descriptionText: "indicate no switches to turn on in room", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate at least one switch in room is on";	break
+		case 0:		vV = 'off';	dD = "indicate all switches in room is off";		break
 	}
+	sendEvent(name: 'switchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updatePresenceInd(presencePresent)		{
-	switch(presencePresent)	{
-		case 1:
-			sendEvent(name: 'presenceInd', value: 'present', descriptionText: "indicate presence present", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'presenceInd', value: 'absent', descriptionText: "indicate presence not present", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'presenceInd', value: 'none', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
-			break
+	def vV = 'none'
+	def dD = "indicate no presence sensor"
+	switch(presencePresent)		{
+		case 1:		vV = 'present';	dD = "indicate presence present";		break
+		case 0:		vV = 'absent';	dD = "indicate presence not present";	break
 	}
+	sendEvent(name: 'presenceInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updatePresenceActionInd(presenceAction)		{
+	def vV = '--'
+	def dD = "indicate no presence sensor"
 	switch(presenceAction)	{
-		case '1':
-			sendEvent(name: 'presenceActionInd', value: 'Arrival', descriptionText: "indicate arrival action when present", isStateChange: true, displayed: false)
-			break
-		case '2':
-			sendEvent(name: 'presenceActionInd', value: 'Departure', descriptionText: "indicate departure action when not present", isStateChange: true, displayed: false)
-			break
-		case '3':
-			sendEvent(name: 'presenceActionInd', value: 'Both', descriptionText: "indicate both arrival and depature action with presence", isStateChange: true, displayed: false)
-			break
-		case '4':
-			sendEvent(name: 'presenceActionInd', value: 'Neither', descriptionText: "indicate no action with with present", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'presenceActionInd', value: '--', descriptionText: "indicate no presence sensor", isStateChange: true, displayed: false)
-			break
+		case '1':		vV = 'Arrival';		dD = "indicate arrival action when present";						break
+		case '2':		vV = 'Departure';	dD = "indicate departure action when not present";					break
+		case '3':		vV = 'Both';		dD = "indicate both arrival and depature action with presence";		break
+		case '4':		vV = 'Neither';		dD = "indicate no action with with present";						break
 	}
+	sendEvent(name: 'presenceActionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updatePresenceEngagedInd(presenceEngaged)		{
@@ -1025,20 +1055,20 @@ def updateBusyEngagedInd(busyEngaged)		{
 }
 
 def updateDoWInd(dow)		{
-	def		val
+	def		vV
 	switch(dow)	{
-		case '1':	val = 'Monday';		break;
-		case '2':	val = 'Tuesday';	break;
-		case '3':	val = 'Wednesday';	break;
-		case '4':	val = 'Thursday';	break;
-		case '5':	val = 'Friday';		break;
-		case '6':	val = 'Saturday';	break;
-		case '7':	val = 'Sunday';		break;
-		case '8':	val = 'M - F';		break;
-		case '9':	val = 'S & S';		break;
-		default:	val = 'Everyday';	break;
+		case '1':	vV = 'Monday';		break
+		case '2':	vV = 'Tuesday';		break
+		case '3':	vV = 'Wednesday';	break
+		case '4':	vV = 'Thursday';	break
+		case '5':	vV = 'Friday';		break
+		case '6':	vV = 'Saturday';	break
+		case '7':	vV = 'Sunday';		break
+		case '8':	vV = 'M - F';		break
+		case '9':	vV = 'S & S';		break
+		default:	vV = 'Everyday';	break
 	}
-	sendEvent(name: 'dowInd', value: val, descriptionText: "indicate run on only these days of the week: $val", isStateChange: true, displayed: false)
+	sendEvent(name: 'dowInd', value: vV, descriptionText: "indicate run on only these days of the week: $vV", isStateChange: true, displayed: false)
 }
 
 def updateTimeInd(timeFromTo)		{
@@ -1062,28 +1092,29 @@ def updateMaintainIndC(temp)		{
 }
 
 def updateThermostatIndC(thermo)		{
-	def vV = '--'; 	def dD = "indicate no thermostat setting";
+	def vV = '--'
+	def dD = "indicate no thermostat setting"
 	switch(thermo)	{
-		case 0:
-			vV = 'off';			dD = "indicate thermostat not auto";
-			break
-		case 1:
-			vV = 'auto';		dD = "indicate thermostat auto";
-			break
-		case 2:
-			vV = 'autoCool';	dD = "indicate thermostat auto cool";
-			break
-		case 3:
-			vV = 'autoHeat';	dD = "indicate thermostat auto heat";
-			break
-		case 4:
-			vV = 'cooling';		dD = "indicate thermostat cooling";
-			break
-		case 5:
-			vV = 'heating';		dD = "indicate thermostat heating";
-			break
+		case 0:		vV = 'off';			dD = "indicate thermostat not auto";	break
+		case 1:		vV = 'auto';		dD = "indicate thermostat auto";		break
+		case 2:		vV = 'autoCool';	dD = "indicate thermostat auto cool";	break
+		case 3:		vV = 'autoHeat';	dD = "indicate thermostat auto heat";	break
+		case 4:		vV = 'cooling';		dD = "indicate thermostat cooling";		break
+		case 5:		vV = 'heating';		dD = "indicate thermostat heating";		break
 	}
 	sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+}
+
+def updateFanIndC(fan)		{
+	def vV = '--'
+	def dD = "indicate no fan setting"
+	switch(fan)	{
+		case 0:		vV = 'off';		dD = "indicate fan off";				break
+		case 1:		vV = 'low';		dD = "indicate fan on at low speed";	break
+		case 2:		vV = 'medium';	dD = "indicate fan on at medium speed";	break
+		case 3:		vV = 'high';	dD = "indicate fan on at high speed";	break
+	}
+	sendEvent(name: 'fanInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateRulesInd(rules)		{
@@ -1129,17 +1160,13 @@ def updateAWattsInd(aWatts)		{
 }
 
 def updateESwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no engaged switch"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'eSwitchInd', value: 'on', descriptionText: "indicate engaged switch is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'eSwitchInd', value: 'off', descriptionText: "indicate engaged switch is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'eSwitchInd', value: '--', descriptionText: "indicate no engaged switch", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate engaged switch is on";	break
+		case 0:		vV = 'off';	dD = "indicate engaged switch is off";	break
 	}
+	sendEvent(name: 'eSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateTimersInd(noMotion, dimTimer, noMotionEngaged, noMotionAsleep)		{
@@ -1147,14 +1174,17 @@ def updateTimersInd(noMotion, dimTimer, noMotionEngaged, noMotionAsleep)		{
 		sendEvent(name: 'noMotionInd', value: "${formatNumber(noMotion)}", descriptionText: "indicate motion timer for occupied state", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'noMotionInd', value: '--', descriptionText: "indicate no motion timer for occupied state", isStateChange: true, displayed: false)
+
 	if (dimTimer)
 		sendEvent(name: 'dimTimerInd', value: "${formatNumber(dimTimer)}", descriptionText: "indicate timer for checking state", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'dimTimerInd', value: '--', descriptionText: "indicate no timer for checking state", isStateChange: true, displayed: false)
+
 	if (noMotionEngaged)
 		sendEvent(name: 'noMotionEngagedInd', value: "${formatNumber(noMotionEngaged)}", descriptionText: "indicate motion timer for engaged state", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'noMotionEngagedInd', value: '--', descriptionText: "indicate no motion timer for engaged state", isStateChange: true, displayed: false)
+
 	if (noMotionAsleep)
 		sendEvent(name: 'noMotionAsleepInd', value: "${formatNumber(noMotionAsleep)}", descriptionText: "indicate motion timer for asleep state", isStateChange: true, displayed: false)
 	else
@@ -1162,59 +1192,43 @@ def updateTimersInd(noMotion, dimTimer, noMotionEngaged, noMotionAsleep)		{
 }
 
 def updateOSwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no occupied switches"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'oSwitchInd', value: 'on', descriptionText: "indicate at least one occupied switch is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'oSwitchInd', value: 'off', descriptionText: "indicate all occupied switches is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'oSwitchInd', value: '--', descriptionText: "indicate no occupied switches", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate at least one occupied switch is on";		break
+		case 0:		vV = 'off';	dD = "indicate all occupied switches is off";			break
 	}
+	sendEvent(name: 'oSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateASwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no asleep switches"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'aSwitchInd', value: 'on', descriptionText: "indicate at least one asleep switch is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'aSwitchInd', value: 'off', descriptionText: "indicate all asleep switches is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'aSwitchInd', value: '--', descriptionText: "indicate no asleep switches", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate at least one asleep switch is on";	break
+		case 0:		vV = 'off';	dD = "indicate all asleep switches are off";		break
 	}
+	sendEvent(name: 'aSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateNSwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no night switches"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'nSwitchInd', value: 'on', descriptionText: "indicate at least one night switch is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'nSwitchInd', value: 'off', descriptionText: "indicate all night switches is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'nSwitchInd', value: '--', descriptionText: "indicate no night switches", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate at least one night switch is on";	break
+		case 0:		vV = 'off';	dD = "indicate all night switches are off";			break
 	}
+	sendEvent(name: 'nSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateLSwitchInd(switchOn)		{
+	def vV = '--'
+	def dD = "indicate no locked switch"
 	switch(switchOn)	{
-		case 1:
-			sendEvent(name: 'lSwitchInd', value: 'on', descriptionText: "indicate locked switch is on", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'lSwitchInd', value: 'off', descriptionText: "indicate locked switch is off", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'lSwitchInd', value: '--', descriptionText: "indicate no locked switch", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'on';	dD = "indicate locked switch is on";	break
+		case 0:		vV = 'off';	dD = "indicate locked switch is off";	break
 	}
+	sendEvent(name: 'lSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateTurnAllOffInd(turnOff)		{
@@ -1243,17 +1257,13 @@ def updateWSSInd(wSS)		{
 }
 
 def updateAdjMotionInd(motionOn)		{
+	def vV = 'none'
+	def dD = "indicate no adjacent motion sensor"
 	switch(motionOn)	{
-		case 1:
-			sendEvent(name: 'aMotionInd', value: 'active', descriptionText: "indicate adjacent motion active", isStateChange: true, displayed: false)
-			break
-		case 0:
-			sendEvent(name: 'aMotionInd', value: 'inactive', descriptionText: "indicate adjacent motion inactive", isStateChange: true, displayed: false)
-			break
-		default:
-			sendEvent(name: 'aMotionInd', value: 'none', descriptionText: "indicate no adjacent motion sensor", isStateChange: true, displayed: false)
-			break
+		case 1:		vV = 'active';		dD = "indicate adjacent motion active";		break
+		case 0:		vV = 'inactive';	dD = "indicate adjacent motion inactive";	break
 	}
+	sendEvent(name: 'aMotionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 private formatNumber(number)	{
@@ -1297,10 +1307,8 @@ def	turnOnAndOffSwitches()	{
 }
 
 def updateTimer(timer = 0)		{
-	if (timer == -1)
-		timer = state.timer
-	else
-		state.timer = timer
+	if (timer == -1)	timer = state.timer;
+	else				state.timer = timer;
 	sendEvent(name: "timer", value: (timer ?: '--'), isStateChange: true, displayed: false)
 }
 
