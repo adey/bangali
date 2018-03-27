@@ -1379,7 +1379,7 @@ private pageAsleepSettings() {
         else
             asleepButtonOptions << [null:"No buttons"]
     }
-    buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
+    //buttonNames = [[1:"One"],[2:"Two"],[3:"Three"],[4:"Four"],[5:"Five"],[6:"Six"],[7:"Seven"],[8:"Eight"],[9:"Nine"],[10:"Ten"],[11:"Eleven"],[12:"Twelve"]]
     def nightButtonOptions = [:]
     if (nightButton)      {
         def nightButtonAttributes = nightButton.supportedAttributes
@@ -1451,6 +1451,13 @@ private pageAsleepSettings() {
                     input "nightButtonAction", "enum", title: "Turn on/off or toggle switches?", required: true, multiple: false, defaultValue: null, submitOnChange: true, options: [[1:"Turn on"],[2:"Turn off"],[3:"Toggle"]]
                 else
                     paragraph "Button Action?\nselect action for the button above to set"
+                input "noAsleepSwitchesOverride", "bool", title: "Select sleep switches to turn OFF when leaving ASLEEP?\n(default: all)", required: false, multiple: false, defaultValue: false, submitOnChange: true
+                if (noAsleepSwitchesOverride) {
+                    def noAsleepSwitchesOptions = []
+                    noAsleepSwitchesOptions += nightSwitches.collect{ [(it.id): "${it.displayName}"]}
+                    input "noAsleepSwitchesOff", "enum", title: "Switches to turn OFF when leaving ASLEEP?", required: false, multiple: true, defaultValue:null, submitOnChange: true,
+                        options: noAsleepSwitchesOptions
+                }
             }
             else        {
                 paragraph "Set Level When Turning ON?\nselect switches above to set"
@@ -2134,7 +2141,7 @@ def	motionActiveEventHandler(evt)	{
         if (nightSwitches)      {
             dimNightLights()
             if (state.noMotionAsleep && whichNoMotion != lastMotionInactive)    {
-                updateChildTimer(state.noMotion)
+                updateChildTimer(state.noMotionAsleep)
                 runIn(state.noMotionAsleep, nightSwitchesOff)
             }
         }
@@ -3049,7 +3056,19 @@ def handleSwitches(data)	{
         unschedule('roomAwake')
         unschedule('resetAsleep')
         updateAsleepChildTimer(0)
-        nightSwitchesOff()
+        if (noAsleepSwitchesOverride) {
+            if (nightSwitches && noAsleepSwitchesOff) {
+                def child = getChildDevice(getRoom())
+                def theOffSwitches = nightSwitches.find {noAsleepSwitchesOff.contains(it.id) }
+                ifDebug("Turning off devices in noAsleepSwitchesOff: ${ theOffSwitches}")
+                theOffSwitches?.each { it.off(); pause(pauseMSec)}
+                if (theOffSwitches)
+                    child.updateNSwitchInd(isAnyNSwitchOn())
+            }
+            ifDebug("noAsleepSwitchesOverride: no switches to turn off")
+        } else {
+            nightSwitchesOff()
+        }
     }
     else if (oldState == 'locked')
         unschedule('roomUnlocked')
@@ -3071,7 +3090,15 @@ def handleSwitches(data)	{
 //            ifDebug("calling parent.notifyAnotherRoomEngaged: $app.id")
 //            parent.notifyAnotherRoomEngaged(app.id)
             if (newState == 'asleep')   {
-                nightSwitchesOff()
+                if (motionSensors.currentValue("motion").contains("active")) {
+                    dimNightLights()
+                    if (state.noMotionAsleep && whichNoMotion != lastMotionInactive) {
+                        updateChildTimer(state.noMotionAsleep)
+                        runIn(state.noMotionAsleep, nightSwitchesOff)
+                    }
+                } else {
+                    nightSwitchesOff()
+                }
                 if (state.noAsleep)     {
                     updateAsleepChildTimer(state.noAsleep)
                     runIn(state.noAsleep, roomAwake)
@@ -3717,7 +3744,7 @@ private previousStateStack(previousState)    {
     ifDebug("previousStateStack")
     def i
     def timeIs = now()
-    def removeHowOld = (state.noMotion ? ((state.noMotion + state.dimTimer) * 10) : (180 * 10))
+    def removeHowOld = (state.noMotion ? (((state.noMotion as Integer) + (state.dimTimer as Integer)) * 10) : (180 * 10))
     def howMany
     int gapBetween
 
@@ -4376,7 +4403,7 @@ def nightSwitchesOff()      {
 //    unscheduleAll("night switches off")
     unschedule('nightSwitchesOff')
     if (!nightSwitches)     return;
-    nightSwitches.each      { it.on(); pause(pauseMSec) }
+    nightSwitches.each      { it.off(); pause(pauseMSec) }
     getChildDevice(getRoom()).updateNSwitchInd(0)
 }
 
