@@ -966,8 +966,9 @@ private pageHolidayLight(params)   {
     if (params.holiLightNo)
         state.pageHoliLightNo = params.holiLightNo
     else if (state.holiPassedParams)
-        state.pageHoliLightNo = state.passedParams.holiLightNo
+        state.pageHoliLightNo = state.holiPassedParams.holiLightNo
     def holiLightNo = state.pageHoliLightNo
+//    ifDebug("pageHolidayLight: holiLightNo: $holiLightNo")
     dynamicPage(name: "pageHolidayLight", title: "", install: false, uninstall: false)   {
         section()     {
             input "holiName$holiLightNo", "text", title: "Color string name?", required: true,
