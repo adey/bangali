@@ -550,6 +550,7 @@ def initialize()	{
         def childRoomDevice = getChildRoomDeviceObject(child.id)
         ifDebug("initialize: childRoomDevice: $childRoomDevice")
         subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
+        subscribe(childRoomDevice, "occupancy", testSub)
 	}
     state.whoCameHome = [:]
     state.whoCameHome.personsIn = []
@@ -559,6 +560,10 @@ def initialize()	{
 }
 
 def unsubscribeChild(childID)   {  unsubscribe(getChildRoomDeviceObject(childID))  }
+
+def testSub(evt)        {
+    log.debug "rooms manager handler: event: $evt | data: $evt.data | date: $evt.date | dateValue: $evt.dateValue | description: $evt.description | descriptionText: $evt.descriptionText | device: $evt.device | displayName: $evt.displayName | deviceId: $evt.deviceId | id: $evt.id | hubId: $evt.hubId | installedSmartAppId: $evt.installedSmartAppId | isoDate: $evt.isoDate | location: $evt.location | locationId: $evt.locationId | name: $evt.name | source: $evt.source | stringValue: $evt.stringValue | unit: $evt.unit | value: $evt.value | isDigital: ${evt.isDigital()} | isPhysical: ${evt.isPhysical()} | isStateChange: ${evt.isStateChange()} |"
+}
 
 private announceSetup() {
     if (!speakerAnnounce)   return;
