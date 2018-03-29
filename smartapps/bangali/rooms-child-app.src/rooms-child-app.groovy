@@ -36,10 +36,17 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.17.2"  }
+public static String version()      {  return "v0.17.4"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.17.4
+*
+*   DONE:   3/25/2018       FROM: @TonyFleisher
+*   1) removed option to selectively turn off night switches instead of turning off all when leaving ASLEEP state.
+*   2) made fan control standalone from heating / cooling.
+*   3) added option to turn night lights on when entering or exiting ASLEEP state.
 *
 *  Version: 0.17.2
 *
