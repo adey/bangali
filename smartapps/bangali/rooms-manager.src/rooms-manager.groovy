@@ -465,13 +465,32 @@ def pageSpeakerSettings()   {
     def j = str.size()
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
-		section   {
+        section("Speaker selection:")       {
             input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
-            if (speakerDevices)
+            if (speakerDevices || speechDevices)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Speaker volume?\nselect speaker(s) to set."
+        }
+        section("Annouce only between hours:")     {
+            if ((speakerDevices || speechDevices))        {
+                input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
+                input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
+            }
+            else        {
+                paragraph "Announce from hour?\nselect either presence or time annoucement to set"
+                paragraph "Announce to hour?\nselect either presence or time annoucement to set"
+            }
+        }
+        section("Time announcement:")     {
+            if (speakerDevices || speechDevices)
+                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
+                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
+            else
+                paragraph "Announce time?\nselect speaker devices to set."
+        }
+		section("Arrival and departure annoucement:")   {
             if (speakerDevices || speechDevices)
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
@@ -501,23 +520,8 @@ def pageSpeakerSettings()   {
                 paragraph "Left home announcement?\nselect announce to set."
                 paragraph "Left home announcement closer?\nselect announce to set."
             }
-            if (speakerDevices || speechDevices)
-                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
-                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
-            else
-                paragraph "Announce time?\nselect speaker devices to set."
         }
-        section     {
-            if ((speakerDevices || speechDevices) || ['1', '2', '3'].contains(timeAnnounce))        {
-                input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
-                input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
-            }
-            else        {
-                paragraph "Announce from hour?\nselect either presence or time annoucement to set"
-                paragraph "Announce to hour?\nselect either presence or time annoucement to set"
-            }
-        }
-        section     {
+        section("Battery status:")     {
             if (speakerDevices || speechDevices)
                 input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
             else
@@ -676,14 +680,19 @@ def contactClosedEventHandler(evt = null)     {
                                      (leftHomeCloser ? state.leftHomeCloser[(l2)] : '')) + '.'
 //    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
     ifDebug("message: $persons")
+    speakIt(persons)
+    if (evt)    state.whoCameHome.personsIn = [];
+    else        state.whoCameHome.personsOut = [];
+}
+
+private speakIt(string)     {
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
-    if (intCurrentHH >= startHH && intCurrentHH <= endHH)   {
+    def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
+    if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
         if (speakerDevices)     speakerDevices.playTextAndResume(persons, speakerVolume);
         if (speechDevices)      speechDevices.speak(persons);
     }
-    if (evt)    state.whoCameHome.personsIn = [];
-    else        state.whoCameHome.personsOut = [];
 }
 
 def whoCameHome(presenceSensor, left = false)      {
@@ -877,26 +886,26 @@ def batteryCheck()      {
     }
     state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
                                                        "no device battery below $batteryLevel percent.")
-    if (speakerDevices)     speakerDevices.playTextAndResume(state.lastBatteryUpdate, speakerVolume);
-    if (speechDevices)      speak(state.lastBatteryUpdate);
+    speakIt(state.lastBatteryUpdate)
 }
 
 def tellTime()      {
     ifDebug("tellTime")
     def nowDate = new Date(now())
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
-    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
+//    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 // TODO
     if ((timeAnnounce == '1' || (timeAnnounce == '2' && (intCurrentMM == 0 || intCurrentMM == 30)) ||
-        (timeAnnounce == '3' && intCurrentMM == 0)) && intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))       {
+        (timeAnnounce == '3' && intCurrentMM == 0)))       {
         def timeString = 'time is ' + (intCurrentMM == 0 ? '' : intCurrentMM + ' minutes past ') + intCurrentHH +
                                       (intCurrentHH < 12 ? ' oclock.' : ' hundred hours.')
 // TODO
 //        speakerDevices.playTrackAndResume("http://s3.amazonaws.com/smartapp-media/sonos/bell1.mp3",
 //                                            (intCurrentMM == 0 ? 10 : (intCurrentMM == 15 ? 4 : (intCurrentMM == 30 ? 6 : 8))), speakerVolume)
 //        pause(1000)
-        if (speakerDevices)      speakerDevices.playTextAndResume(timeString, speakerVolume);
-        if (speechDevices)       speechDevices.speak(timeString);
+//        if (speakerDevices)      speakerDevices.playTextAndResume(timeString, speakerVolume);
+//        if (speechDevices)       speechDevices.speak(timeString);
+        speakIt(timeString)
     }
 }
 
