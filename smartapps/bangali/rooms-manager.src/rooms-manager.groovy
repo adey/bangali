@@ -466,21 +466,21 @@ def pageSpeakerSettings()   {
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
         section("Speaker selection:")       {
-            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+            input "speakerDevices", "capability.musicPlayer", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
             if (speakerDevices || speechDevices)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Speaker volume?\nselect speaker(s) to set."
         }
-        section("Annouce only between hours:")     {
+        section("Announce only between hours:")     {
             if ((speakerDevices || speechDevices))        {
-                input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
+                input "startHH", "number", title: "Announce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
                 input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
             }
             else        {
-                paragraph "Announce from hour?\nselect either presence or time annoucement to set"
-                paragraph "Announce to hour?\nselect either presence or time annoucement to set"
+                paragraph "Announce from hour?\nselect either presence or time announcement to set"
+                paragraph "Announce to hour?\nselect either presence or time announcement to set"
             }
         }
         section("Time announcement:")     {
@@ -490,7 +490,7 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
-		section("Arrival and departure annoucement:")   {
+		section("Arrival and departure announcement:")   {
             if (speakerDevices || speechDevices)
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else

@@ -1508,7 +1508,14 @@ private pageAsleepSettings() {
 private pageLockedSettings()      {
 	dynamicPage(name: "pageLockedSettings", title: "", install: false, uninstall: false)     {
         section("Switch configuration for LOCKED state:", hideable:false)	{
-            input "lockedSwitch", "capability.switch", title: "Which switch turns ON?", required:false, multiple: false
+            input "lockedSwitch", "capability.switch", title: "This switch will Lock this room?", required:false, multiple: false, submitOnChange: true
+            	if (lockedSwitch) {
+                	input "lockedSwitchCmd", "enum", title: "...when it is turned...", options: [[on:"On"],[off:"Off"]], submitOnChange: true, required:false
+                    }
+            input "lockedContact", "capability.contactSensor", title: "This contact will Lock this room?", required:false, multiple: false, submitOnChange: true
+            	if (lockedContact) {
+                	input "lockedContactCmd", "enum", title: "...when it is...", options: [[open:"Open"],[closed:"Closed"]], submitOnChange: true, required:false
+                    }
             input "lockedTurnOff", "bool", title: "Turn off switches when room changes to LOCKED?", required: false, multiple: false, defaultValue: false
             input "unLocked", "number", title: "Timeout LOCKED state after how many hours?", required: false, multiple: false, defaultValue: null, range: "1..99"
         }
@@ -1829,10 +1836,32 @@ def updateRoom(adjMotionSensors)     {
     state.nightSetCT = (nightSetCT ? nightSetCT as Integer : null)
     state.noAsleep = ((noAsleep && noAsleep >= 1) ? (noAsleep * 60 * 60) : null)
     ifDebug("updateRoom 4")
-    if (lockedSwitch)      {
+
+if (lockedContact) {
+    if (lockedContactCmd == "open")      {
+    	subscribe(lockedContact, "contact.open", lockedContactOpenEventHandler)
+        log.info "locked contact has opened with the command Open"
+		subscribe(lockedContact, "contact.closed", lockedContactClosedEventHandler)
+        log.info "locked contact has closed with the command Open"
+    	}
+    if (lockedContactCmd == "closed")      {
+    	subscribe(lockedContact, "contact.open", lockedContactClosedEventHandler)
+        log.info "locked contact has opened with the command Closed"
+		subscribe(lockedContact, "contact.closed", lockedContactOpenEventHandler)
+        log.info "locked contact has closed with the command Closed"
+		}
+    }
+    
+if (lockedSwitch) {
+    if (lockedSwitchCmd == "on")      {
     	subscribe(lockedSwitch, "switch.on", lockedSwitchOnEventHandler)
-    	subscribe(lockedSwitch, "switch.off", lockedSwitchOffEventHandler)
-	}
+		subscribe(lockedSwitch, "switch.off", lockedSwitchOffEventHandler)
+    	}
+    if (lockedSwitchCmd == "off")      {
+    	subscribe(lockedSwitch, "switch.off", lockedSwitchOnEventHandler)
+		subscribe(lockedSwitch, "switch.on", lockedSwitchOffEventHandler)
+		}
+    }
     if (windowShades)   subscribe(windowShades, "windowShade", windowShadeEventHandler);
     if (roomFanSwitch)      {
         subscribe(roomFanSwitch, "switch", updateFanIndP)
@@ -1986,6 +2015,21 @@ private isAnyNSwitchOn()   {
 private isAnyLSwitchOn()   {
     ifDebug("isAnyLSwitchOn")
     return (lockedSwitch ? (lockedSwitch.currentSwitch.contains('on') ? 1 : 0) : -1)
+}
+
+private isAnyLSwitchOff()   {
+    ifDebug("isAnyLSwitchOff")
+    return (lockedSwitch ? (lockedSwitch.currentSwitch.contains('off') ? 1 : 0) : -1)
+}
+
+private isAnyLContactOpen()   {
+    ifDebug("isAnyLContactOpen")
+    return (lockedSwitch ? (lockedSwitch.currentSwitch.contains('on') ? 1 : 0) : -1)
+}
+
+private isAnyLContactClosed()   {
+    ifDebug("isAnyLContactClosed")
+    return (lockedSwitch ? (lockedSwitch.currentSwitch.contains('off') ? 1 : 0) : -1)
 }
 
 def updateRulesToState()    {
@@ -2670,21 +2714,60 @@ def	asleepSwitchOffEventHandler(evt)	{
 }
 
 def	lockedSwitchOnEventHandler(evt)     {
+log.info "lockedSwitchOnEventHandler has been called = On"
     ifDebug("lockedSwitchOnEventHandler")
     def child = getChildDevice(getRoom())
+    if (lockedSwitchCmd == "on") {
     child.updateLSwitchInd(isAnyLSwitchOn())
+    }
+    if (lockedSwitchCmd == "off") {
+    child.updateLSwitchInd(isAnyLSwitchOff())
+    }
     if (!checkPauseModesAndDoW())    return;
     child.generateEvent(locked)
 }
 
 def	lockedSwitchOffEventHandler(evt)	{
+log.info "lockedSwtichOffEventHandler has been called = Off"
     ifDebug("lockedSwitchOffEventHandler")
     def child = getChildDevice(getRoom())
+    if (lockedSwitchCmd == "on") {
     child.updateLSwitchInd(isAnyLSwitchOn())
+    }
+    if (lockedSwitchCmd == "off") {
+    child.updateLSwitchInd(isAnyLSwitchOff())
+    }
     if (!checkPauseModesAndDoW())    return;
     if (child?.currentValue(occupancy) == locked)       child.generateEvent(checking);
 }
 
+def	lockedContactOpenEventHandler(evt)     {
+log.info "lockedContactOpenEventHandler has been called = Open"
+    ifDebug("lockedContactOpenEventHandler")
+    def child = getChildDevice(getRoom())
+    if (lockedContactCmd == "open") {
+    child.updateLContactInd(isAnyLContactOpen())
+    }
+    if (lockedContactCmd == "closed") {
+    child.updateLContactInd(isAnyLContactClosed())
+    }
+    if (!checkPauseModesAndDoW())    return;
+    child.generateEvent(locked)
+}
+
+def	lockedContactClosedEventHandler(evt)	{
+log.info "lockedContactClosedEventHandler has been called = Closed"
+    ifDebug("lockedContactClosedEventHandler")
+    def child = getChildDevice(getRoom())
+    if (lockedContactCmd == "open") {
+    child.updateLContactInd(isAnyLContactOpen())
+    }
+    if (lockedContactCmd == "closed") {
+    child.updateLContactInd(isAnyLContactClosed())
+    }
+    if (!checkPauseModesAndDoW())    return;
+    if (child?.currentValue(occupancy) == locked)       child.generateEvent(checking);
+}
 
 /*
 def processCoolHeat()       {
