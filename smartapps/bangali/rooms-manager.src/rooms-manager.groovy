@@ -685,13 +685,13 @@ def contactClosedEventHandler(evt = null)     {
     else        state.whoCameHome.personsOut = [];
 }
 
-private speakIt(string)     {
+private speakIt(str)     {
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
     if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
-        if (speakerDevices)     speakerDevices.playTextAndResume(persons, speakerVolume);
-        if (speechDevices)      speechDevices.speak(persons);
+        if (speakerDevices)     speakerDevices.playTextAndResume(str, speakerVolume);
+        if (speechDevices)      speechDevices.speak(str);
     }
 }
 
