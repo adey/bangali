@@ -466,7 +466,8 @@ def pageSpeakerSettings()   {
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
         section("Speaker selection:")       {
-            input "speakerDevices", "capability.musicPlayer", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+            input "musicPlayers", "capability.musicPlayer", title: "Which Media Players?", required: false, mulitple: true, submitOnChange: true
+            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
             if (speakerDevices || speechDevices)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
@@ -474,7 +475,7 @@ def pageSpeakerSettings()   {
                 paragraph "Speaker volume?\nselect speaker(s) to set."
         }
         section("Announce only between hours:")     {
-            if ((speakerDevices || speechDevices))        {
+            if ((speakerDevices || speechDevices || musicPlayers))        {
                 input "startHH", "number", title: "Announce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
                 input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
             }
@@ -484,18 +485,18 @@ def pageSpeakerSettings()   {
             }
         }
         section("Time announcement:")     {
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
 		section("Arrival and departure announcement:")   {
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
                 paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
-            if ((speakerDevices || speechDevices) && speakerAnnounce)    {
+            if ((speakerDevices || speechDevices || musicPlayers) && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
                 input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
                 input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)",
@@ -522,7 +523,7 @@ def pageSpeakerSettings()   {
             }
         }
         section("Battery status:")     {
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
             else
                 paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
@@ -680,18 +681,19 @@ def contactClosedEventHandler(evt = null)     {
                                      (leftHomeCloser ? state.leftHomeCloser[(l2)] : '')) + '.'
 //    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
     ifDebug("message: $persons")
-    speakIt(persons)
+    speakIt(str, persons)
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
 }
 
-private speakIt(string)     {
+private speakIt(str, persons)     {
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
     if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
-        if (speakerDevices)     speakerDevices.playTextAndResume(persons, speakerVolume);
-        if (speechDevices)      speechDevices.speak(persons);
+        if (speakerDevices)     speakerDevices.playTextAndResume(str, speakerVolume);
+        if (speechDevices)      speechDevices.speak(str);
+        if (musicPlayers)		musicPlayers.speak(persons);
     }
 }
 
