@@ -466,10 +466,13 @@ def pageSpeakerSettings()   {
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
         section("Speaker selection:")       {
-            input "musicPlayers", "capability.musicPlayer", title: "Which Media Players?", required: false, mulitple: true, submitOnChange: true
+            input "musicPlayers", "capability.musicPlayer", title: "Which Media Players?", required: false, multiple: true, submitOnChange: true
+            	if (musicPlayers) {
+                input "volume", "number", title: "Temporarily change volume", description: "0-100% (default value = 30%)", required: false
+            	}
             input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Speaker volume?\nselect speaker(s) to set."
@@ -590,7 +593,7 @@ private announceSetup() {
     state.welcomeHome1 = [:]
     state.welcomeHome2 = [:]
     state.welcomeHomeCloser = [:]
-    str = welcomeHome.split(',')
+    str = welcomeHome.split('/')
     i = 0
     str.each    {
         def str2 = it.split('&')
@@ -599,7 +602,7 @@ private announceSetup() {
         i = i + 1
     }
     if (welcomeHomeCloser)      {
-        str = welcomeHomeCloser.split(',')
+        str = welcomeHomeCloser.split('/')
         i = 0
         str.each    {
             state.welcomeHomeCloser[i] = it
@@ -609,7 +612,7 @@ private announceSetup() {
     state.leftHome1 = [:]
     state.leftHome2 = [:]
     state.leftHomeCloser = [:]
-    str = leftHome.split(',')
+    str = leftHome.split('/')
     i = 0
     str.each    {
         def str2 = it.split('&')
@@ -618,7 +621,7 @@ private announceSetup() {
         i = i + 1
     }
     if (leftHomeCloser)     {
-        str = leftHomeCloser.split(',')
+        str = leftHomeCloser.split('/')
         i = 0
         str.each    {
             state.leftHomeCloser[i] = it
@@ -673,7 +676,7 @@ def contactClosedEventHandler(evt = null)     {
 //    ifDebug("k: $k ${state.welcomeHome1[(k)]} | l: $l ${state.leftHome1[(l)]}")
     def persons = (evt ? state.welcomeHome1[(k)] : state.leftHome1[(l)]) + ' '
     str.each      {
-        persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
+        persons = persons + (j != 1 ? (j == i ? ' and ' : '/ ') : '') + it
         j = j + 1
     }
     persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)]) +
@@ -693,7 +696,27 @@ private speakIt(str, persons)     {
     if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
         if (speakerDevices)     speakerDevices.playTextAndResume(str, speakerVolume);
         if (speechDevices)      speechDevices.speak(str);
-        if (musicPlayers)		musicPlayers.speak(persons);
+//        if (musicPlayers)		musicPlayers.speak(persons);
+            if (persons) {
+                state.sound = textToSpeech(persons instanceof List ? persons[9] : persons)
+            }
+            else {
+                state.sound = textToSpeech("You selected the custom message option but did not enter a message in the $app.label Smart App")
+                log.debug "You selected the custom message option but did not enter a message"
+            }
+		if (musicPlayers) {
+            def currVolLevel = musicPlayers.latestValue("level")
+                def currMuteOn = musicPlayers.latestValue("mute").contains("muted")
+                log.debug "currVolSwitchOff = ${currVolSwitchOff}, vol level = ${currVolLevel}, currMuteOn = ${currMuteOn} "
+                if (currMuteOn) { 
+                    log.warn "speaker is on mute, sending unmute command"
+                    musicPlayers.unmute()
+                }
+                def sVolume = settings.volume ?: 30
+                musicPlayers?.playTrackAndResume(state.sound.uri, state.sound.duration, sVolume)
+                log.info "Playing message on the music player '${musicPlayers}' at volume '${volume}'" 
+            };
+
     }
 }
 
