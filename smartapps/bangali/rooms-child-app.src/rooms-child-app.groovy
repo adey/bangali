@@ -2510,7 +2510,7 @@ private checkIsEngaged(skipPresence = false, skipMusic = false, skipPower = fals
     if (contactSensor)      {
         def cV = contactSensor.currentContact
         if (!skipContact &&
-                ((!contactSensorOutsideDoor && cV.contains('open')) || (contactSensorOutsideDoor && !cV.contains('open'))))     return true;
+                ((!contactSensorOutsideDoor && !cV.contains('open')) || (contactSensorOutsideDoor && !cV.contains('open'))))     return true;
     }
     return false
 }
