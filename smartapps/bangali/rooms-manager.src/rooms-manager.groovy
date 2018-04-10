@@ -20,10 +20,36 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.17.0"  }
+public static String version()      {  return "v0.20.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.0
+*
+*   DONE:   7/4/2018
+*   1) change lock only to lock because hubitat does not support lock only capability.
+*   2) add option for cooling / heating override in minutes.
+*   3) added option to check room windoes before turning on cooling / heating.
+*   4) cleaning up text in settings as i go along.
+*   5) added option to not restore light level from dimming if room changes to vacant.
+*   6) changed how auto level works by exposing by exposing as variables everything that used to be constant in the code.
+*   7) added support for celsius values.
+*   8) refactored a bunch of code and may have squashed a bug or two in the process.
+*   9) refactored a bunch for hubitat compatibility.
+*
+*  Version: 0.17.4
+*
+*   DONE:   3/25/2018
+*   1) removed option to selectively turn off night switches instead of turning off all when leaving ASLEEP state.
+*   2) made fan control standalone from heating / cooling.
+*   3) added option to turn night lights on when entering or exiting ASLEEP state.
+*
+*  Version: 0.17.2
+*
+*   DONE:   3/25/2018       FROM: @TonyFleisher
+*   1) added option to selectively turn off night switches instead of turning off all when leaving ASLEEP state.
+*   2) fixed a bug i introduced by turning on night switches instead of turning them off.
 *
 *  Version: 0.17.0
 *
@@ -461,7 +487,7 @@ def mainPage()  {
 
 def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
-    def str = (presenceNames ? presenceNames.split(',') : [])
+    def str = (presenceNames ? presenceNames.split('\\|') : [])
     def j = str.size()
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
@@ -497,18 +523,19 @@ def pageSpeakerSettings()   {
                 paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
             if ((speakerDevices || speechDevices) && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
-                input "presenceNames", "text", title: "Comma delmited names? (in sequence of presence sensors)", required: true, multiple: false, submitOnChange: true
-                input "contactSensors", "capability.contactSensor", title: "Which contact sensors? (welcome home greeting is played after this contact sensor closes.)",
+                input "presenceNames", "text", title: "'|' delmited names in same sequence as presence sensors?", required: true, multiple: false, submitOnChange: true
+                input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensors close?",
                                                 required: true, multiple: true
+                paragraph "In the following texts '&' will be replaced with person's name(s) and a random string will be used if there are multiple '|' separated strings."
+                paragraph "Also, all occurances of '#' will be replaced with 'is' / 'are' and '^' with 'has' / 'have', depending on the number of name(s) in the list."
                 input "welcomeHome", "text",
-                    title: "Welcome home greeting? ('&' will be replaced with the names and a random one will be used if there are multiple ',' separated strings.)",
-                                                required: true, multiple: false, defaultValue: 'Welcome home &'
+                        title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
                 input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
-                input "secondsAfter", "number", title: "Seconds after? (left home annoucement is made after this many seconds.)",
-                                                required: true, multiple: false, defaultValue: 15, range: "5..100"
-                input "leftHome", "text", title: "Left home announcement? (same format as welcome home greeting above)",
-                                                required: true, multiple: false, defaultValue: '& left home'
+                input "leftHome", "text", title: "Left home announcement?\n(same format as welcome greeting)",
+                                                required: true, multiple: false, defaultValue: '& # home'
                 input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
+                input "secondsAfter", "number", title: "Left home announcement how many seconds after?\n",
+                                                required: true, multiple: false, defaultValue: 15, range: "5..100"
             }
             else    {
                 paragraph "Which presence sensors?\nselect announce to set."
@@ -541,8 +568,8 @@ def updated()		{
     unschedule()
 	initialize()
     announceSetup()
-    runEvery15Minutes(processChildSwitches)
-    if (timeAnnounce != '4')    schedule("0 0/15 * 1/1 * ? *", tellTime)
+    runEvery10Minutes(processChildSwitches)
+    schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
 
@@ -553,8 +580,8 @@ def initialize()	{
 		log.info "rooms manager: room: ${child.label} id: ${child.id}"
         def childRoomDevice = getChildRoomDeviceObject(child.id)
         ifDebug("initialize: childRoomDevice: $childRoomDevice")
-        subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
-        subscribe(childRoomDevice, "occupancy", testSub)
+//        subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
+        subscribe(childRoomDevice, "occupancy", roomStateHistory)
 	}
     state.whoCameHome = [:]
     state.whoCameHome.personsIn = []
@@ -565,15 +592,34 @@ def initialize()	{
 
 def unsubscribeChild(childID)   {  unsubscribe(getChildRoomDeviceObject(childID))  }
 
-def testSub(evt)        {
-    log.debug "rooms manager handler: event: $evt | data: $evt.data | date: $evt.date | dateValue: $evt.dateValue | description: $evt.description | descriptionText: $evt.descriptionText | device: $evt.device | displayName: $evt.displayName | deviceId: $evt.deviceId | id: $evt.id | hubId: $evt.hubId | installedSmartAppId: $evt.installedSmartAppId | isoDate: $evt.isoDate | location: $evt.location | locationId: $evt.locationId | name: $evt.name | source: $evt.source | stringValue: $evt.stringValue | unit: $evt.unit | value: $evt.value | isDigital: ${evt.isDigital()} | isPhysical: ${evt.isPhysical()} | isStateChange: ${evt.isStateChange()} |"
+def roomStateHistory(evt)        {
+//    log.debug "rooms manager handler: event: $evt | data: $evt.data | date: $evt.date | description: $evt.description | descriptionText: $evt.descriptionText | device: $evt.device | displayName: $evt.displayName | deviceId: $evt.deviceId | id: $evt.id | hubId: $evt.hubId | isoDate: $evt.isoDate | location: $evt.location | locationId: $evt.locationId | name: $evt.name | source: $evt.source | unit: $evt.unit | value: $evt.value | isDigital: ${evt.isDigital()} | isPhysical: ${evt.isPhysical()} |"
+//  rooms manager handler: event: physicalgraph.app.EventWrapper@3405f9c6 | data: {"microDeviceTile":{"type":"standard","icon":"st.Health & Wellness.health9","backgroundColor":"#616969"}} |
+//  date: Thu Apr 05 07:43:49 UTC 2018 | dateValue: null | description: | descriptionText: Living Room changed to checking | device: Living Room |
+//  displayName: Living Room | deviceId: e1e67d09-efa3-426d-8915-c7127707118c | id: 14279da0-38a5-11e8-949a-0a9482059a2a | hubId: null |
+//  installedSmartAppId: null | isoDate: 2018-04-05T07:43:49.370Z | location: Home | locationId: c9924c68-002a-4c2a-a556-cfc4b5dd2b99 |
+//  name: occupancy | source: DEVICE | stringValue: checking | unit: null | value: checking | isDigital: false | isPhysical: false | isStateChange: true |
+
+// rooms manager handler: event: com.hubitat.hub.domain.Event@5434b29a | data: null | description: null | descriptionText: Kitchen changed to vacant |
+//  device: Kitchen | displayName: Kitchen | deviceId: 20 | id: 11240 | hubId: null | location: null | locationId: null |
+//  name: occupancy | source: DEVICE | unit: null | value: vacant | isDigital: false | isPhysical: false |
+
+    def rSH = [state: evt.value, time: new Date(now()).format("yyyy-MM-dd'T'HH:mm:ssZ", location.timeZone)]
+    if (!state.rSH)     state.rSH = [:];
+    if (state.rSH[evt.deviceId])        state.rSH[evt.deviceId] << rSH;
+    else                                state.rSH[evt.deviceId] = rSH;
+/*    state.rSH.each     { dID, dMap ->
+        state.rSH[dID] = dMap.sort  { a, b -> b.value <=> a.value  }
+    }
+*/
 }
 
 private announceSetup() {
     if (!speakerAnnounce)   return;
     def i = presenceSensors.size()
-    def str = presenceNames.split(',')
+    def str = presenceNames.split('\\|')
     def j = str.size()
+    ifDebug("announceSetup: $i | $j")
     if (i == j)     {
         i = 0
         presenceSensors.each        {
@@ -586,38 +632,48 @@ private announceSetup() {
         }
         if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler);
     }
-    state.welcomeHome1 = [:]
-    state.welcomeHome2 = [:]
+    else
+        ifDebug("rooms manager: number of sensors and names don't match.", 'error')
+    state.welcomeHome = [:]
+//    state.welcomeHome1 = [:]
+//    state.welcomeHome2 = [:]
     state.welcomeHomeCloser = [:]
-    str = welcomeHome.split(',')
-    i = 0
-    str.each    {
-        def str2 = it.split('&')
-        state.welcomeHome1[i] = str2[0]
-        state.welcomeHome2[i] = (str2.size() > 1 ? str2[1] : '')
-        i = i + 1
+    if (welcomeHome)        {
+        str = welcomeHome.split('\\|')
+        i = 0
+        str.each    {
+//        def str2 = it.split('&')
+//        state.welcomeHome1[i] = str2[0]
+//        state.welcomeHome2[i] = (str2.size() > 1 ? str2[1] : '')
+            state.welcomeHome[i] = it
+            i = i + 1
+        }
     }
     if (welcomeHomeCloser)      {
-        str = welcomeHomeCloser.split(',')
+        str = welcomeHomeCloser.split('\\|')
         i = 0
         str.each    {
             state.welcomeHomeCloser[i] = it
             i = i + 1
         }
     }
-    state.leftHome1 = [:]
-    state.leftHome2 = [:]
+    state.leftHome = [:]
+//    state.leftHome1 = [:]
+//    state.leftHome2 = [:]
     state.leftHomeCloser = [:]
-    str = leftHome.split(',')
-    i = 0
-    str.each    {
-        def str2 = it.split('&')
-        state.leftHome1[i] = str2[0]
-        state.leftHome2[i] = (str2.size() > 1 ? str2[1] : '')
-        i = i + 1
+    if (leftHome)       {
+        str = leftHome.split('\\|')
+        i = 0
+        str.each    {
+//        def str2 = it.split('&')
+//        state.leftHome1[i] = str2[0]
+//        state.leftHome2[i] = (str2.size() > 1 ? str2[1] : '')
+            state.leftHome[i] = it
+            i = i + 1
+        }
     }
     if (leftHomeCloser)     {
-        str = leftHomeCloser.split(',')
+        str = leftHomeCloser.split('\\|')
         i = 0
         str.each    {
             state.leftHomeCloser[i] = it
@@ -626,9 +682,11 @@ private announceSetup() {
     }
 }
 
+/*
 def buttonPushedEventHandler(evt)     {
     ifDebug("buttonPushedEventHandler")
 }
+*/
 
 def getChildRoomDeviceObject(childID)     {
     def roomDeviceObject = null
@@ -659,6 +717,7 @@ def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
 
 def	presenceNotPresentEventHandler(evt)     {  whoCameHome(evt.device, true)  }
 
+/*
 def contactClosedEventHandler(evt = null)     {
     if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
     def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
@@ -684,14 +743,56 @@ def contactClosedEventHandler(evt = null)     {
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
 }
+*/
 
-private speakIt(string)     {
+def contactClosedEventHandler(evt = null)     {
+    if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
+    def rand = new Random()
+    def k = (state.welcomeHome ? Math.abs(rand.nextInt() % state.welcomeHome.size()) : 0) + ''
+    def k2 = (state.welcomeHomeCloser ? Math.abs(rand.nextInt() % state.welcomeHomeCloser.size()) : 0) + ''
+    def l = (state.leftHome ? Math.abs(rand.nextInt() % state.leftHome.size()) : 0) + ''
+    def l2 = (state.leftHomeCloser ? Math.abs(rand.nextInt() % state.leftHomeCloser.size()) : 0) + ''
+    def persons = ''
+    def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
+    def i = str.size()
+    def multiple = (i > 1 ? true : false)
+    def j = 1
+    str.each      {
+        persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
+        j = j + 1
+    }
+    str = (evt ? (state.welcomeHome[(k)] ?: '') : (state.leftHome[(l)] ?: '')) + ' ' +
+          (evt ? (state.welcomeHomeCloser[(k2)] ?: '') : (state.leftHomeCloser[(l2)] ?: ''))
+    ifDebug("pre message: $str")
+    for (special in ['&', '#', '\\^'])    {
+        def str2 = str.split(special)
+        str = ''
+        for (i = 0; i < str2.size(); i++)       {
+//            def trimmed = str2[i].replaceAll("\\s","")
+            def replaceWith
+            switch(special) {
+                case '&':   replaceWith = persons;      break
+                case '#':   replaceWith = (multiple ? 'are' : 'is');        break
+                case '\\^': replaceWith = (multiple ? 'have' : 'has');      break
+                default:    replaceWith = 'unknown';    break
+            }
+            str = str + str2[i] + (i != (str2.size() -1) ? ' ' + replaceWith + ' ' : '')
+        }
+        if (!str)       str = str2
+    }
+    ifDebug("message: $str")
+    speakIt(str)
+    if (evt)    state.whoCameHome.personsIn = [];
+    else        state.whoCameHome.personsOut = [];
+}
+
+private speakIt(str)     {
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
     if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
-        if (speakerDevices)     speakerDevices.playTextAndResume(persons, speakerVolume);
-        if (speechDevices)      speechDevices.speak(persons);
+        if (speakerDevices)     speakerDevices.playTextAndResume(str, speakerVolume);
+        if (speechDevices)      speechDevices.speak(str);
     }
 }
 
@@ -857,11 +958,13 @@ def getLastStateDate(childID)      {
 }
 
 def processChildSwitches()      {
-    int i = 1
     childApps.each	{ child ->
-//        runIn(i, child.switchesOnOrOff, [overwrite: false])
-        if (child.checkRoomModesAndDoW())       child.switchesOnOrOff(true);
-        i = i + 1
+        def modeAndDoW = child.checkRoomModesAndDoW()
+        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
+        if (modeAndDoW)     {
+            child.switchesOnOrOff(true)
+            pause(10)
+        }
     }
 }
 
@@ -893,12 +996,12 @@ def tellTime()      {
     ifDebug("tellTime")
     def nowDate = new Date(now())
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
-//    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
+    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 // TODO
+    def timeString = 'time is ' + (intCurrentMM == 0 ? '' : intCurrentMM + ' minutes past ') +
+                   intCurrentHH + (intCurrentHH < 12 ? ' oclock.' : ' hundred hours.')
     if ((timeAnnounce == '1' || (timeAnnounce == '2' && (intCurrentMM == 0 || intCurrentMM == 30)) ||
         (timeAnnounce == '3' && intCurrentMM == 0)))       {
-        def timeString = 'time is ' + (intCurrentMM == 0 ? '' : intCurrentMM + ' minutes past ') + intCurrentHH +
-                                      (intCurrentHH < 12 ? ' oclock.' : ' hundred hours.')
 // TODO
 //        speakerDevices.playTrackAndResume("http://s3.amazonaws.com/smartapp-media/sonos/bell1.mp3",
 //                                            (intCurrentMM == 0 ? 10 : (intCurrentMM == 15 ? 4 : (intCurrentMM == 30 ? 6 : 8))), speakerVolume)

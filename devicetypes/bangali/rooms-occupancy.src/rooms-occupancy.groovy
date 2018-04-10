@@ -24,10 +24,36 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.17.0"  }
+public static String version()      {  return "v0.20.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.0
+*
+*   DONE:   7/4/2018
+*   1) change lock only to lock because hubitat does not support lock only capability.
+*   2) add option for cooling / heating override in minutes.
+*   3) added option to check room windoes before turning on cooling / heating.
+*   4) cleaning up text in settings as i go along.
+*   5) added option to not restore light level from dimming if room changes to vacant.
+*   6) changed how auto level works by exposing by exposing as variables everything that used to be constant in the code.
+*   7) added support for celsius values.
+*   8) refactored a bunch of code and may have squashed a bug or two in the process.
+*   9) refactored a bunch for hubitat compatibility.
+*
+*  Version: 0.17.4
+*
+*   DONE:   3/25/2018
+*   1) removed option to selectively turn off night switches instead of turning off all when leaving ASLEEP state.
+*   2) made fan control standalone from heating / cooling.
+*   3) added option to turn night lights on when entering or exiting ASLEEP state.
+*
+*  Version: 0.17.2
+*
+*   DONE:   3/25/2018       FROM: @TonyFleisher
+*   1) added option to selectively turn off night switches instead of turning off all when leaving ASLEEP state.
+*   2) fixed a bug i introduced by turning on night switches instead of turning them off.
 *
 *  Version: 0.17.0
 *
@@ -447,7 +473,8 @@ metadata {
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
-		capability "Lock Only"
+//		capability "Lock Only"
+		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
 		command "occupied"
         command "checking"
@@ -471,7 +498,7 @@ metadata {
 	}
 
 	preferences		{
-		section("Alarm Settings")		{
+		section("Alarm settings:")		{
 			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false
 			input "alarmTime", "time", title: "Alarm Time?", required: false, multiple: false
 			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
@@ -617,12 +644,20 @@ metadata {
 			state("cooling", icon: "st.thermostat.cooling", backgroundColor: "#1E9CBB")
 			state("heating", icon: "st.thermostat.heating", backgroundColor: "#D04E00")
 		}
+		valueTile("thermoOverrideInd", "device.thermoOverrideInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("thermoOverride", label:'${currentValue}', backgroundColor: "#ffffff")
+		}
 		standardTile("fanInd", "device.fanInd", width:1, height:1, canChangeIcon: true)		{
 			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
 			state("off", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#ffffff")
 			state("low", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#90D2A7")
 			state("medium", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#F1D801")
 			state("high", label:'${currentValue}', icon: "st.Lighting.light24", backgroundColor: "#D04E00")
+		}
+		standardTile("contactRTInd", "device.contactRTInd", width: 1, height: 1, canChangeIcon: true) {
+			state("closed", label:'${name}', icon:"st.contact.contact.closed", backgroundColor:"#00A0DC")
+			state("open", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#e86d13")
+			state("none", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#ffffff")
 		}
 		valueTile("rulesInd", "device.rulesInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("rules", label:'${currentValue}', backgroundColor:"#ffffff")
@@ -807,7 +842,9 @@ metadata {
 		valueTile("thermostatL", "device.thermostatL", width: 1, height: 1, decoration: "flat")			{ state "thermostatL", label:'heat /\ncool' }
 		valueTile("maintainL", "device.maintainL", width: 1, height: 1, decoration: "flat")				{ state "maintainL", label:'maintain\ntemp' }
 		valueTile("fanL", "device.fanL", width: 1, height: 1, decoration: "flat")						{ state "fanL", label:'fan\nspeed' }
-		valueTile("reservedL", "device.reservedL", width: 4, height: 1, decoration: "flat")				{ state "reservedL", label:'reserved' }
+		valueTile("thermoOverrideL", "device.thermoOverrideL", width: 1, height: 1, decoration: "flat")	{ state "thermoOverrideL", label:'thermo\noverride' }
+//		valueTile("reservedL", "device.reservedL", width: 2, height: 1, decoration: "flat")				{ state "reservedL", label:'reserved' }
+		valueTile("roomWindowsL", "device.roomWindowsL", width: 1, height: 1, decoration: "flat")		{ state "roomWindowsL", label:'room\nwindow' }
 		valueTile("rulesL", "device.rulesL", width: 1, height: 1, decoration: "flat")					{ state "rulesL", label:'# of\nrules' }
 		valueTile("adjRoomsL", "device.adjRoomsL", width: 1, height: 1, decoration: "flat")				{ state "adjRoomsL", label:'adjacent\nrooms' }
 		valueTile("lastRuleL", "device.lastRuleL", width: 1, height: 1, decoration: "flat")				{ state "lastRuleL", label:'last\nrules' }
@@ -827,7 +864,7 @@ metadata {
 				  "switchL", "switchInd", "nSwitchL", "nSwitchInd", "shadeL", "wSSInd",
 				  "powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
 				  "temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
-				  "fanL", "fanInd", "reservedL",
+				  "roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "fanL", "fanInd",
 				  "rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
 //		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
 		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
@@ -1008,6 +1045,16 @@ def updateContactInd(contactClosed)		{
 	sendEvent(name: 'contactInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
+def updateContactRTInd(contactStatus)		{
+	def vV = 'none'
+	def dD = "indicate no contact sensor"
+	switch(contactStatus)	{
+		case 1:		vV = 'closed';	dD = "indicate contact closed";		break
+		case 0:		vV = 'open';	dD = "indicate contact open";		break
+	}
+	sendEvent(name: 'contactRTInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+}
+
 def updateSwitchInd(switchOn)		{
 	def vV = '--'
 	def dD = "indicate no switches to turn on in room"
@@ -1076,17 +1123,17 @@ def updateTimeInd(timeFromTo)		{
 }
 
 def updateTemperatureInd(temp)		{
-	def tS = '°' + (location.temperatureScale ?: 'F')
+	def tS = (location.temperatureScale ?: 'F')
 	if (temp == -1)
 		sendEvent(name: 'temperatureInd', value: '--', unit: tS, descriptionText: "indicate no temperature sensor", isStateChange: true, displayed: false)
 	else
-		sendEvent(name: 'temperatureInd', value: temp, unit: tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
+		sendEvent(name: 'temperatureInd', value: temp + '°' + tS, unit: tS, descriptionText: "indicate temperature value", isStateChange: true, displayed: false)
 }
 
 def updateMaintainIndC(temp)		{
 	def tS = '°' + (location.temperatureScale ?: 'F')
 	if (temp == -1)
-		sendEvent(name: 'maintainInd', value: '--' + tS, descriptionText: "indicate no maintain temperature", isStateChange: true, displayed: false)
+		sendEvent(name: 'maintainInd', value: '--', descriptionText: "indicate no maintain temperature", isStateChange: true, displayed: false)
 	else
 		sendEvent(name: 'maintainInd', value: temp + tS, descriptionText: "indicate maintain temperature value", isStateChange: true, displayed: false)
 }
@@ -1103,6 +1150,10 @@ def updateThermostatIndC(thermo)		{
 		case 5:		vV = 'heating';		dD = "indicate thermostat heating";		break
 	}
 	sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+}
+
+def updateThermoOverrideIndC(thermoOverride)		{
+	sendEvent(name: 'thermoOverrideInd', value: thermoOverride, descriptionText: "indicate thermo override minutes", isStateChange: true, displayed: false)
 }
 
 def updateFanIndC(fan)		{
