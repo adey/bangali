@@ -477,6 +477,7 @@ private static boolean isDebug()    {  return true  }
 ***********************************************************************************************************************/
 
 import groovy.transform.Field
+import groovy.time.*
 
 @Field final String lastMotionActive   = '1'
 @Field final String lastMotionInactive = '2'
@@ -1478,8 +1479,8 @@ private dateInputValid(dateInputStart, dateInputEnd)       {
         def dateIE = yearTranslate(dateInputEnd)
         def dIE = Date.parse("yyyy/M/d HH:mm:ss z", dateIE + ' 23:59:59 ' + location.timeZone.getDisplayName())
         def cDate = new Date(now())
-        if (cDate > dIE)
-            use(TimeCategory)   {
+        if (cDate > dIE)    {
+//            use(TimeCategory)   {
                 dIS = dIS + 1.year
                 dIE = dIE + 1.year
             }
@@ -4130,10 +4131,12 @@ private calculateLK(min, max, fadeW, fadeWB, fadeWA, fadeS, fadeSB, fadeSA)     
 private timeTodayA(whichDate, thisDate, timeZone)      {
     def newDate
     if (thisDate.before(whichDate))     {
-        use (groovy.time.TimeCategory)   {
-            def duration = whichDate - thisDate
+//        use (groovy.time.TimeCategory)   {
+            def duration = TimeCategory.minus(whichDate, thisDate)
+//            def duration = whichDate - thisDate
+            ifDebug("$whichDate | $thisDate | $duration")
             newDate = thisDate.plus(duration.days + 1)
-        }
+//        }
     }
     else
         newDate = thisDate
