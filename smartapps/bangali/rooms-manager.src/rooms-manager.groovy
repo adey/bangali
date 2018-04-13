@@ -20,10 +20,16 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.0"  }
+public static String version()      {  return "v0.20.1"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.1
+*
+*   DONE:   7/11/2018
+*   1) handle pause for hubitat.
+*   2) adapt timeTodayAfter for hubitat compatibility.
 *
 *  Version: 0.20.0
 *
@@ -764,6 +770,7 @@ def contactClosedEventHandler(evt = null)     {
     str = (evt ? (state.welcomeHome[(k)] ?: '') : (state.leftHome[(l)] ?: '')) + ' ' +
           (evt ? (state.welcomeHomeCloser[(k2)] ?: '') : (state.leftHomeCloser[(l2)] ?: ''))
     ifDebug("pre message: $str")
+// TODO add more generic text replacement like @is is replaced with `is` when 1 person and `are` when multiple persons.
     for (special in ['&', '#', '\\^'])    {
         def str2 = str.split(special)
         str = ''
