@@ -20,10 +20,20 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.1"  }
+public static String version()      {  return "v0.20.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.5
+*
+*   DONE:   7/18/2018
+*   1) changed message separator to '/' and added support for &is and &has.
+*   2) added save and restore sound level when playing announcements.
+*   3) restored lock only capability instead of using lock capability.
+*   4) added support for lock state contact sensor by @BamaRayne.
+*   5) added support for lock state switch and contact sensor to lock either on on/off or open/close by @BamaRayne.
+*   6) added missing dot to nightSetCT range.
 *
 *  Version: 0.20.1
 *
@@ -459,6 +469,10 @@ private static boolean isDebug()    {  return true  }
 *
 ***********************************************************************************************************************/
 
+import groovy.transform.Field
+
+@Field final String msgSeparator   = '/'
+
 definition (
     name: "rooms manager",
     namespace: "bangali",
@@ -493,47 +507,51 @@ def mainPage()  {
 
 def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
-    def str = (presenceNames ? presenceNames.split('\\|') : [])
+    def str = (presenceNames ? presenceNames.split(msgSeparator) : [])
     def j = str.size()
     if (i != j)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
         section("Speaker selection:")       {
+//            	if (musicPlayers) {
+//                input "volume", "number", title: "Temporarily change volume", description: "0-100% (default value = 30%)", required: false
+//            	}
             input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
             input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
-            if (speakerDevices || speechDevices)
+            input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Speaker volume?\nselect speaker(s) to set."
         }
-        section("Annouce only between hours:")     {
-            if ((speakerDevices || speechDevices))        {
-                input "startHH", "number", title: "Annouce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
+        section("Announce only between hours:")     {
+            if ((speakerDevices || speechDevices || musicPlayers))        {
+                input "startHH", "number", title: "Announce from hour?", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ? endHH : 23}", submitOnChange: true
                 input "endHH", "number", title: "Announce to hour?", required: true, multiple: false, defaultValue: 7, range: "${startHH ? startHH : 23}..23", submitOnChange: true
             }
             else        {
-                paragraph "Announce from hour?\nselect either presence or time annoucement to set"
-                paragraph "Announce to hour?\nselect either presence or time annoucement to set"
+                paragraph "Announce from hour?\nselect either presence or time announcement to set"
+                paragraph "Announce to hour?\nselect either presence or time announcement to set"
             }
         }
         section("Time announcement:")     {
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
-		section("Arrival and departure annoucement:")   {
-            if (speakerDevices || speechDevices)
+		section("Arrival and departure announcement:")   {
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
                 paragraph "Announce when presence sensors arrive or depart?\nselect speaker(s) to set."
-            if ((speakerDevices || speechDevices) && speakerAnnounce)    {
+            if ((speakerDevices || speechDevices || musicPlayers) && speakerAnnounce)    {
                 input "presenceSensors", "capability.presenceSensor", title: "Which presence snesors?", required: true, multiple: true
-                input "presenceNames", "text", title: "'|' delmited names in same sequence as presence sensors?", required: true, multiple: false, submitOnChange: true
+                input "presenceNames", "text", title: "'$msgSeparator' delmited names in same sequence as presence sensors?", required: true, multiple: false, submitOnChange: true
                 input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensors close?",
                                                 required: true, multiple: true
-                paragraph "In the following texts '&' will be replaced with person's name(s) and a random string will be used if there are multiple '|' separated strings."
-                paragraph "Also, all occurances of '#' will be replaced with 'is' / 'are' and '^' with 'has' / 'have', depending on the number of name(s) in the list."
+                paragraph "In the following texts '&' will be replaced with persons name(s) and a random string will be used if there are multiple '$msgSeparator' separated strings."
+                paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
                 input "welcomeHome", "text",
                         title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
                 input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
@@ -555,7 +573,7 @@ def pageSpeakerSettings()   {
             }
         }
         section("Battery status:")     {
-            if (speakerDevices || speechDevices)
+            if (speakerDevices || speechDevices || musicPlayers)
                 input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
             else
                 paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
@@ -623,7 +641,7 @@ def roomStateHistory(evt)        {
 private announceSetup() {
     if (!speakerAnnounce)   return;
     def i = presenceSensors.size()
-    def str = presenceNames.split('\\|')
+    def str = presenceNames.split(msgSeparator)
     def j = str.size()
     ifDebug("announceSetup: $i | $j")
     if (i == j)     {
@@ -643,9 +661,8 @@ private announceSetup() {
     state.welcomeHome = [:]
 //    state.welcomeHome1 = [:]
 //    state.welcomeHome2 = [:]
-    state.welcomeHomeCloser = [:]
     if (welcomeHome)        {
-        str = welcomeHome.split('\\|')
+        str = welcomeHome.split(msgSeparator)
         i = 0
         str.each    {
 //        def str2 = it.split('&')
@@ -655,8 +672,9 @@ private announceSetup() {
             i = i + 1
         }
     }
+    state.welcomeHomeCloser = [:]
     if (welcomeHomeCloser)      {
-        str = welcomeHomeCloser.split('\\|')
+        str = welcomeHomeCloser.split(msgSeparator)
         i = 0
         str.each    {
             state.welcomeHomeCloser[i] = it
@@ -666,9 +684,8 @@ private announceSetup() {
     state.leftHome = [:]
 //    state.leftHome1 = [:]
 //    state.leftHome2 = [:]
-    state.leftHomeCloser = [:]
     if (leftHome)       {
-        str = leftHome.split('\\|')
+        str = leftHome.split(msgSeparator)
         i = 0
         str.each    {
 //        def str2 = it.split('&')
@@ -678,8 +695,9 @@ private announceSetup() {
             i = i + 1
         }
     }
+    state.leftHomeCloser = [:]
     if (leftHomeCloser)     {
-        str = leftHomeCloser.split('\\|')
+        str = leftHomeCloser.split(msgSeparator)
         i = 0
         str.each    {
             state.leftHomeCloser[i] = it
@@ -737,7 +755,7 @@ def contactClosedEventHandler(evt = null)     {
 //    ifDebug("k: $k ${state.welcomeHome1[(k)]} | l: $l ${state.leftHome1[(l)]}")
     def persons = (evt ? state.welcomeHome1[(k)] : state.leftHome1[(l)]) + ' '
     str.each      {
-        persons = persons + (j != 1 ? (j == i ? ' and ' : ', ') : '') + it
+        persons = persons + (j != 1 ? (j == i ? ' and ' : '/ ') : '') + it
         j = j + 1
     }
     persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)]) +
@@ -745,7 +763,7 @@ def contactClosedEventHandler(evt = null)     {
                                      (leftHomeCloser ? state.leftHomeCloser[(l2)] : '')) + '.'
 //    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
     ifDebug("message: $persons")
-    speakIt(persons)
+    speakIt(str, persons)
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
 }
@@ -771,19 +789,19 @@ def contactClosedEventHandler(evt = null)     {
           (evt ? (state.welcomeHomeCloser[(k2)] ?: '') : (state.leftHomeCloser[(l2)] ?: ''))
     ifDebug("pre message: $str")
 // TODO add more generic text replacement like @is is replaced with `is` when 1 person and `are` when multiple persons.
-    for (special in ['&', '#', '\\^'])    {
+    for (special in ['&is', '&are', '&has', '&have', '&'])    {
         def str2 = str.split(special)
         str = ''
         for (i = 0; i < str2.size(); i++)       {
 //            def trimmed = str2[i].replaceAll("\\s","")
             def replaceWith
-            switch(special) {
-                case '&':   replaceWith = persons;      break
-                case '#':   replaceWith = (multiple ? 'are' : 'is');        break
-                case '\\^': replaceWith = (multiple ? 'have' : 'has');      break
-                default:    replaceWith = 'unknown';    break
+            switch(special)     {
+                case '&':       replaceWith = persons;      break
+                case ['&is', '&are']:     replaceWith = persons + (multiple ? ' are' : ' is');        break
+                case ['&has', '&have']:   replaceWith = persons + (multiple ? ' have' : ' has');      break
+                default:        replaceWith = 'unknown';    break
             }
-            str = str + str2[i] + (i != (str2.size() -1) ? ' ' + replaceWith + ' ' : '')
+            str = str + str2[i] + (i != (str2.size() -1) ? ' ' + replaceWith : '')
         }
         if (!str)       str = str2
     }
@@ -798,8 +816,23 @@ private speakIt(str)     {
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
     if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
-        if (speakerDevices)     speakerDevices.playTextAndResume(str, speakerVolume);
+        if (speakerDevices)     {
+            def currentVolume = speakerDevices.currentLevel
+            def isMuteOn = speakerDevices.currentMute.contains("muted")
+            if (isMuteOn)     speakerDevices.unmute();
+            speakerDevices.playTextAndResume(str, speakerVolume);
+            if (currentVolume != speakerVolume)      speakerDevices.setLevel(currentVolume)
+            if (isMuteOn)     musicPlayers.mute();
+        }
         if (speechDevices)      speechDevices.speak(str);
+		if (musicPlayers)     {
+            def currentVolume = musicPlayers.currentLevel
+            def isMuteOn = musicPlayers.currentMute.contains("muted")
+            if (isMuteOn)     musicPlayers.unmute();
+            musicPlayers.playTrackAndResume(str, speakerVolume)
+            if (currentVolume != speakerVolume)      musicPlayers.setLevel(currentVolume)
+            if (isMuteOn)     musicPlayers.mute();
+        }
     }
 }
 

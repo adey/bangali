@@ -24,10 +24,26 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.0"  }
+public static String version()      {  return "v0.20.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.5
+*
+*   DONE:   7/18/2018
+*   1) changed message separator to '/' and added support for &is and &has.
+*   2) added save and restore sound level when playing announcements.
+*   3) restored lock only capability instead of using lock capability.
+*   4) added support for lock state contact sensor by @BamaRayne.
+*   5) added support for lock state switch and contact sensor to lock either on on/off or open/close by @BamaRayne.
+*   6) added missing dot to nightSetCT range.
+*
+*  Version: 0.20.1
+*
+*   DONE:   7/11/2018
+*   1) handle pause for hubitat.
+*   2) adapt timeTodayAfter for hubitat compatibility.
 *
 *  Version: 0.20.0
 *
@@ -473,8 +489,8 @@ metadata {
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
-//		capability "Lock Only"
-		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
+		capability "Lock Only"
+//		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
 		command "occupied"
         command "checking"
