@@ -1656,12 +1656,12 @@ private pageAsleepSettings() {
 private pageLockedSettings()      {
 	dynamicPage(name: "pageLockedSettings", title: "Locked Settings", install: false, uninstall: false)     {
         section("Switch configuration for LOCKED state:", hideable:false)	{
-            input "lockedSwitch", "capability.switch", title: "Switch for LOCKED state?", required: false, multiple: false, submitOnChange: true
+            input "lockedSwitch", "capability.switch", title: "Which switch for LOCKED state?", required: false, multiple: false, submitOnChange: true
             if (lockedSwitch)
             	input "lockedSwitchCmd", "bool", title: "When switch turns ON? (otherwise when switch turns off)", required: true, defaultValue: true
             else
                 paragraph "When switch turns ON?\nselect locked switch above to set"
-            input "lockedContact", "capability.contactSensor", title: "This contact will Lock this room?", required:false, multiple: false, submitOnChange: true
+            input "lockedContact", "capability.contactSensor", title: "Which contact for LOCKED state?", required:false, multiple: false, submitOnChange: true
             if (lockedContact)
             	input "lockedContactCmd", "bool", title: "When contact closes? (toherwise when contact opens)", required: true, defaultValue: true
             else
