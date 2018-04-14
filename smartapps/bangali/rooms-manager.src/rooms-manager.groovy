@@ -27,7 +27,7 @@ private static boolean isDebug()    {  return true  }
 *
 *  Version: 0.20.5
 *
-*   DONE:   7/18/2018
+*   DONE:   7/13/2018
 *   1) changed message separator to '/' and added support for &is and &has.
 *   2) added save and restore sound level when playing announcements.
 *   3) restored lock only capability instead of using lock capability.
