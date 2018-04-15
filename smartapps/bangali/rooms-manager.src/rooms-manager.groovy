@@ -556,7 +556,7 @@ def pageSpeakerSettings()   {
                         title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
                 input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
                 input "leftHome", "text", title: "Left home announcement?\n(same format as welcome greeting)",
-                                                required: true, multiple: false, defaultValue: '& # home'
+                                                required: true, multiple: false, defaultValue: '&has left home'
                 input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
                 input "secondsAfter", "number", title: "Left home announcement how many seconds after?\n",
                                                 required: true, multiple: false, defaultValue: 15, range: "5..100"
@@ -643,7 +643,7 @@ private announceSetup() {
     def i = presenceSensors.size()
     def str = presenceNames.split(msgSeparator)
     def j = str.size()
-    ifDebug("announceSetup: $i | $j")
+//    ifDebug("announceSetup: $i | $j")
     if (i == j)     {
         i = 0
         presenceSensors.each        {
@@ -729,7 +729,7 @@ def checkThermostatValid(childID, checkThermostat)      {
         if (childID != child.id)   {
             def thermo = child.getChildRoomThermostat()
             if (thermo && checkThermostat.getId() == thermo.thermostat.getId())     {
-                ifDebug("getChildRoomThermostat: $thermo.name")
+//                ifDebug("getChildRoomThermostat: $thermo.name")
                 otherRoom = thermo.name
             }
         }
@@ -787,7 +787,7 @@ def contactClosedEventHandler(evt = null)     {
     }
     str = (evt ? (state.welcomeHome[(k)] ?: '') : (state.leftHome[(l)] ?: '')) + ' ' +
           (evt ? (state.welcomeHomeCloser[(k2)] ?: '') : (state.leftHomeCloser[(l2)] ?: ''))
-    ifDebug("pre message: $str")
+//    ifDebug("pre message: $str")
 // TODO add more generic text replacement like @is is replaced with `is` when 1 person and `are` when multiple persons.
     for (special in ['&is', '&are', '&has', '&have', '&'])    {
         def str2 = str.split(special)
@@ -803,9 +803,9 @@ def contactClosedEventHandler(evt = null)     {
             }
             str = str + str2[i] + (i != (str2.size() -1) ? ' ' + replaceWith : '')
         }
-        if (!str)       str = str2
+        if (!str)   str = str2;
     }
-    ifDebug("message: $str")
+//    ifDebug("message: $str")
     speakIt(str)
     if (evt)    state.whoCameHome.personsIn = [];
     else        state.whoCameHome.personsOut = [];
@@ -1000,7 +1000,7 @@ def getLastStateDate(childID)      {
 def processChildSwitches()      {
     childApps.each	{ child ->
         def modeAndDoW = child.checkRoomModesAndDoW()
-        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
+//        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
         if (modeAndDoW)     {
             child.switchesOnOrOff(true)
             pause(10)

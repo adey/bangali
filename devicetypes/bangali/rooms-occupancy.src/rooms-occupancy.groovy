@@ -24,10 +24,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.5"  }
+public static String version()      {  return "v0.20.7"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.7
+*
+*   DONE:   7/14/2018
+*   1) added a bunch of state variable for use with hubitat dashboard tiles.
 *
 *  Version: 0.20.5
 *
@@ -492,6 +497,12 @@ metadata {
 		capability "Lock Only"
 //		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
+		attribute "alarmEnabled", "boolean"
+		attribute "alarmTime", "String"
+		attribute "alarmDayOfWeek", "String"
+		attribute "alarmRepeat", "number"
+		attribute "alarmSound", "String"
+		attribute "countdown", "String"
 		command "occupied"
         command "checking"
 		command "vacant"
@@ -515,7 +526,7 @@ metadata {
 
 	preferences		{
 		section("Alarm settings:")		{
-			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false
+			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false, defaultValue: true
 			input "alarmTime", "time", title: "Alarm Time?", required: false, multiple: false
 			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
 			input "alarmSound", "enum", title:"Sound?", required: (alarmTime ? true : false), multiple: false,
@@ -903,20 +914,48 @@ def installed()		{  initialize()  }
 def updated()		{  initialize()  }
 
 def	initialize()	{
+	unschedule()
+	state
 	sendEvent(name: "numberOfButtons", value: 9)
 	state.timer = 0
 	setupAlarmC()
+	sendEvent(name: "countdown", value: 0, descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
 }
 
 def setupAlarmC()	{
-	unschedule()
 	if (parent)		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek);
+	if (alarmDayOfWeek)      {
+        state.alarmDayOfWeek = []
+        switch(alarmDayOfWeek)       {
+            case '1':	state.alarmDayOfWeek << 'Mon';		break
+			case '2':	state.alarmDayOfWeek << 'Tue';		break
+			case '3':	state.alarmDayOfWeek << 'Wed';		break
+			case '4':	state.alarmDayOfWeek << 'Thu';		break
+			case '5':	state.alarmDayOfWeek << 'Fri';		break
+			case '6':	state.alarmDayOfWeek << 'Sat';		break
+			case '7':	state.alarmDayOfWeek << 'Sun';		break
+            case '8':   ['Mon','Tue','Wed','Thu','Fri'].each    { state.alarmDayOfWeek << it };    break
+            case '9':   ['Sat','Sun'].each						{ state.alarmDayOfWeek << it };    break
+            default:    state.alarmDayOfWeek = null;		break
+        }
+    }
+    else
+        state.alarmDayOfWeek = ''
+	if (alarmSound)
+		state.alarmSound = [1:"Bell 1", 2:"Bell 2", 3:"Dogs Barking", 4:"Fire Alarm", 5:"Piano", 6:"Lightsaber"][alarmSound as Integer]
+	else
+		state.alarmSound = ''
+	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
+	sendEvent(name: "alarmTime", value: "${timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone)}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
+	sendEvent(name: "alarmDayOfWeek", value: "$state.alarmDayOfWeek", descriptionText: "alarm days of week is $state.alarmDayOfWeek", isStateChange: true, displayed: true)
+	sendEvent(name: "alarmSound", value: "$state.alarmSound", descriptionText: "alarm sound is $state.alarmSound", isStateChange: true, displayed: true)
+	sendEvent(name: "alarmRepeat", value: alarmRepeat, descriptionText: "alarm sounds is repeated $alarmRepeat times", isStateChange: true, displayed: true)
 }
 
 def on()	{
 	def toState = parent?.roomDeviceSwitchOnP()
 	toState = (toState ? toState as String : 'occupied')
-	ifDebug("on: $toState")
+//	ifDebug("on: $toState")
 	switch(toState)		{
 		case 'occupied':	occupied();		break
 		case 'engaged':		engaged();		break
@@ -1377,6 +1416,7 @@ def updateTimer(timer = 0)		{
 	if (timer == -1)	timer = state.timer;
 	else				state.timer = timer;
 	sendEvent(name: "timer", value: (timer ?: '--'), isStateChange: true, displayed: false)
+	sendEvent(name: "countdown", value: timer, descriptionText: "countdown timer: $timer", isStateChange: true, displayed: true)
 }
 
 /*
