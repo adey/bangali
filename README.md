@@ -6,7 +6,7 @@ What these rules enable is many common tasks around rooms which most users go th
 
 If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. But even importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
 
-Additionally, these rooms devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or rule machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
+Additionally, these room devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
 <h4>Here are the most common room occupancy states:</h4>
 
@@ -23,20 +23,20 @@ Here is a quick description of the various top level settings and how the app wo
 
 <h4>Here are the top level settings:</h4>
 
-- <h4>Occupied Settings</h4><p></p>
-- <h4>Engaged Settings</h4><p></p>
-- <h4>Checking Settings</h4><p></p>
-- <h4>Vacant Settings</h4><p></p>
-- <h4>Asleep Settings</h4><p></p>
-- <h4>Locked Settings</h4><p></p>
-- <h4>Other Devices</h4><p></p>
-- <h4>Auto Level 'AL' Settings</h4><p></p>
-- <h4>Holiday Lights 'HL' Settings</h4><p></p>
-- <h4>Temperature Settings</h4><p></p>
-- <h4>Maintain Rules</h4><p></p>
-- <h4>Adjacent Room Settings</h4><p></p>
-- <h4>Mode and Other Settings</h4><p></p>
-- <h4>View All Settings</h4><p></p>
+- <h4>Occupied Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
+- <h4>Engaged Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
+- <h4>Checking Settings</h4><p>Settings for timeout and light levels while in checking state.</p>
+- <h4>Vacant Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
+- <h4>Asleep Settings</h4><p>Settings that specify how this occupancy state is set. Asleep is tricky because there is no true commonly used physical asleep sensors. So, these settings allow other ways of setting Asleep occupancy state and specifying night light settings which are a little different from how lights work through the rules.</p>
+- <h4>Locked Settings</h4><p>Settings that specify how this occupancy state is set. This state disables all automation for the room.</p>
+- <h4>Other Devices</h4><p>Other sensors used in creating rules based on data from these sensors.</p>
+- <h4>Auto Level 'AL' Settings</h4><p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified.</p>
+- <h4>Holiday Lights 'HL' Settings</h4><p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
+- <h4>Temperature Settings</h4><p>Manage temperature settings for the room in conjunction with thermostat or switch controlled room AC and/or heater.</p>
+- <h4>Maintain Rules</h4><p>Here's where you create the rules that allow you to check various sensor and other variables to decide which lights should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
+- <h4>Adjacent Room Settings</h4><p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
+- <h4>Mode and Other Settings</h4><p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
+- <h4>View All Settings</h4>What name says.<p></p>
 
 This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
 
