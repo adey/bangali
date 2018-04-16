@@ -1,23 +1,33 @@
-# bangali's random code stuff for SmartThings.
+# bangali's code stuff for SmartThings and Hubitat.
 
-<h2>Rooms Occupancy and Manager</h2>
+<h2>Rooms Occupancy and Rooms Manager</h2>
 
 While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors. When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.
 
 What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor and device inputs. This smartapp makes that possible.
 
-If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. But even importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
+If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
 
 Additionally, these room devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
-<h4>Here are the most common room occupancy states:</h4>
+<h4>How does this app work?</h4>
 
-- <h4>Occupied:</h4><p>Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a somewhat persistent state.</p>
-- <h4>Engaged:</h4><p>Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.</p>
-- <h4>Asleep:</h4><p>Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.</p>
-- <h4>Vacant:</h4><p>Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.</p>
-- <h4>Checking:</h4><p>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</p>
-- <h4>Locked:</h4><p>Locked state disable all automation for the room and allows you to control lights and other devices in the room either manually or some other way.</p>
+This app works by setting rooms occupancy to various states based on a set of sensors as specified by the user. It combines this state with attribute values from various other sensors and evaluates a set of rules that you create. When all of the conditions for the rule matches, it executes actions specified on these matching rules.
+
+As an example, you can specify motion sensors in Occupied settings to set a room state to Occupied when there is motion from any of those motion sensors. Then create a rule to turn on some lights. In this rule you could also set that these lights should only be turned on if a lux sensor is at a certain lux value or lower. Or you could specify that only turn on the lights during certain times. Or you could specify turn on the lights at a certain level during certain times and at another level during other times.
+
+As a part of the Occupied settings you can also specify timeout values so the room does not indefinitely stay set to Occupied state and the lights turn off after a while when there is no motion. How quickly that happens is controlled by you through the timeout value you specify in the settings.
+
+By specifying settings in the Checking settings you are also able to dim the lights before the lights turn off completely so there is a visual cue to the room occupant that the lights will turn off because they have not moved in a while. Off course you may be in the room while and not be moving for a while like reading a book or watching TV. That's when you use the Engaged settings to set the room to Engaged state. See below for additional details.
+
+<h4>Here are the common room occupancy states:</h4>
+
+- <h5>Occupied:</h5><p>Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a somewhat persistent state.</p>
+- <h5>Engaged:</h5><p>Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.</p>
+- <h5>Asleep:</h5><p>Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.</p>
+- <h5>Vacant:</h5><p>Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.</p>
+- <h5>Checking:</h5><p>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</p>
+- <h5>Locked:</h5><p>Locked state disables all automations for the room and allows you to control lights and other devices in the room either manually or some other way.</p>
 
 The states 'locked', 'reserved' and 'kaput' are effectively all similar in that they all disable automation. Since there is no real difference in automation between these states instead of names, there is some sensors allowed to set / unset rooms to / from Locked state but no other automation beyond that for these occupancy states.
 
@@ -27,30 +37,30 @@ Here is a quick description of the various top level settings and how the app wo
 
 <p>The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 
-- <h4>Occupied Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
-- <h4>Engaged Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
-- <h4>Checking Settings</h4><p>Settings for timeout and light levels while in checking state.</p>
-- <h4>Vacant Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
-- <h4>Asleep Settings</h4><p>Settings that specify how this occupancy state is set. Asleep is tricky because there is no true commonly used physical asleep sensors. So, these settings allow other ways of setting Asleep occupancy state and specifying night light settings which are a little different from how lights work through the rules.</p>
-- <h4>Locked Settings</h4><p>Settings that specify how this occupancy state is set. This state disables all automation for the room.</p>
+- <h5>Occupied Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
+- <h5>Engaged Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
+- <h5>Checking Settings</h5><p>Settings for timeout and light levels while in checking state.</p>
+- <h5>Vacant Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
+- <h5>Asleep Settings</h5><p>Settings that specify how this occupancy state is set. Asleep is tricky because there is no true commonly used physical asleep sensors. So, these settings allow other ways of setting Asleep occupancy state and specifying night light settings which are a little different from how lights work through the rules.</p>
+- <h5>Locked Settings</h5><p>Settings that specify how this occupancy state is set. This state disables all automation for the room.</p>
 
 <p>These group of settings allow for specifying additional sensors and other settings used in the rules.</p>
 
-- <h4>Other Devices</h4><p>Other sensors used in creating rules based on data from these sensors.</p>
-- <h4>Auto Level 'AL' Settings</h4><p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified.</p>
-- <h4>Holiday Lights 'HL' Settings</h4><p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
-- <h4>Temperature Settings</h4><p>Manage temperature settings for the room in conjunction with thermostat or switch controlled room AC and/or heater. After adding temperature settings remember create temperature rules in maintain rules so the app can automate temperature control based on these rules.</p>
+- <h5>Other Devices</h5><p>Other sensors used in creating rules based on data from these sensors.</p>
+- <h5>Auto Level 'AL' Settings</h5><p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified.</p>
+- <h5>Holiday Lights 'HL' Settings</h5><p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
+- <h5>Temperature Settings</h5><p>Manage temperature settings for the room in conjunction with thermostat or switch controlled room AC and/or heater. After adding temperature settings remember create temperature rules in maintain rules so the app can automate temperature control based on these rules.</p>
 
-<p>Here are the rest of the settings starting with the heart of the app Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
+<p>Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
 
-- <h4>Maintain Rules</h4><p>Here's where you create the rules that allow you to check various sensor and other variables to decide which lights should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
-- <h4>Adjacent Room Settings</h4><p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
-- <h4>Mode and Other Settings</h4><p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
-- <h4>View All Settings</h4>What the name says.<p></p>
+- <h5>Maintain Rules</h5><p>Here's where you create the rules that allow you to check various sensor and other variables to decide which lights should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
+- <h5>Adjacent Room Settings</h5><p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
+- <h5>Mode and Other Settings</h5><p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
+- <h5>View All Settings</h5>What the name says.<p></p>
 
-This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
+This is only a part of what's possible through this app. Please take a look at all settings for a room in the app to get a sense of what else is possible.
 
-<h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved.</h5>
+<h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
 `For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.`
 
