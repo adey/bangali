@@ -66,7 +66,7 @@ Knowing that users are finding their app useful enough to support development of
 
 <div id="screenshots-table">
     <table>
-	    <tr>
+        <tr>
     	    <td style="padding:5px">
         	    <img height="400" src="https://user-images.githubusercontent.com/319291/32026136-d367e612-b997-11e7-885f-de855d9e444e.png">
       	    </td>
@@ -76,6 +76,8 @@ Knowing that users are finding their app useful enough to support development of
             <td style="padding:15px">
                 <img height="400" src="https://user-images.githubusercontent.com/319291/32026137-d3829390-b997-11e7-9d07-1899a6cace35.png">
             </td>
+        </tr>
+        <tr>
             <td style="padding:15px">
                 <img height="400" src="https://user-images.githubusercontent.com/319291/32026138-d39e1bf6-b997-11e7-86bd-22ba97467597.png">
             </td>
@@ -85,6 +87,8 @@ Knowing that users are finding their app useful enough to support development of
             <td style="padding:15px">
                 <img height="400" src="https://user-images.githubusercontent.com/319291/32026132-d251cc52-b997-11e7-9dcb-3bffab4094f0.png">
             </td>
+        </tr>
+        <tr>
             <td style="padding:15px">
                 <img height="400" src="https://user-images.githubusercontent.com/319291/32026135-d34e0b2a-b997-11e7-950a-d2e88e7cc2f2.png">
             </td>
