@@ -23,20 +23,20 @@ Here is a quick description of the various top level settings and how the app wo
 
 <h4>Here are the top level settings:</h4>
 
-- Occupied Settings
-- Engaged Settings
-- Checking Settings
-- Vacant Settings
-- Asleep Settings
-- Locked Settings
-- Other Devices
-- Auto Level 'AL' Settings
-- Holiday Lights 'HL' Settings
-- Temperature Settings
-- Maintain Rules
-- Adjacent Room Settings
-- Mode and Other Settings
-- View All Settings
+- <h4>Occupied Settings</h4><p></p>
+- <h4>Engaged Settings</h4><p></p>
+- <h4>Checking Settings</h4><p></p>
+- <h4>Vacant Settings</h4><p></p>
+- <h4>Asleep Settings</h4><p></p>
+- <h4>Locked Settings</h4><p></p>
+- <h4>Other Devices</h4><p></p>
+- <h4>Auto Level 'AL' Settings</h4><p></p>
+- <h4>Holiday Lights 'HL' Settings</h4><p></p>
+- <h4>Temperature Settings</h4><p></p>
+- <h4>Maintain Rules</h4><p></p>
+- <h4>Adjacent Room Settings</h4><p></p>
+- <h4>Mode and Other Settings</h4><p></p>
+- <h4>View All Settings</h4><p></p>
 
 This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
 
