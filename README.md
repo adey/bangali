@@ -42,9 +42,9 @@ This is only a part of what's possible through this app. please take a look at a
 
 When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room.
 
-`For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.
+`For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.`
 
-For a manual install here are the links, in order of DTHs and smartapps you should save and publish.`
+`For a manual install here are the links, in order of DTHs and smartapps you should save and publish.`
 
 rooms occupancy DTH:
 https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
