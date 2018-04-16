@@ -21,7 +21,8 @@ The states 'locked', 'reserved' and 'kaput' are effectively all similar in that 
 
 Here is a quick description of the various top level settings and how the app works. At the heart of the app is the concept of room states and rules to automate devices based on these room's states and other sensor inputs. (In the following description when I talk about sensors it refers to devices that have attributes which are used to drive decisions in the room's rules.)
 
-Here are the top level settings:
+<h4>Here are the top level settings:</h4>
+
 - Occupied Settings
 - Engaged Settings
 - Checking Settings
@@ -39,7 +40,7 @@ Here are the top level settings:
 
 This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
 
-When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room.
+<h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to create the rules and in ST the app state is not consistent till the app has been created first.</h5>
 
 `For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.`
 
