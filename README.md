@@ -4,7 +4,7 @@ While ST has a concept of rooms it is essentially a grouping mechanism which doe
 
 What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not allow the kind of comprehensive automation that should be possible for devices in a room based on sensor and device inputs. This smartapp makes that possible.
 
-`If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring repeated human intervention. In short - your automation should work for you and not the other way around. 🙂`
+If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring repeated human intervention. In short - your automation should work for you and not the other way around. 🙂
 
 Additionally, these rooms devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or rule machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
