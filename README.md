@@ -25,6 +25,8 @@ Here is a quick description of the various top level settings and how the app wo
 
 <h4>Here are the top level settings:</h4>
 
+<p><h4>The next 6 settings group are for how the room is set to each of those 6 occupancy states and some settings specific to that occupancy state.</h4></p>
+
 - <h4>Occupied Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
 - <h4>Engaged Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
 - <h4>Checking Settings</h4><p>Settings for timeout and light levels while in checking state.</p>
@@ -38,7 +40,7 @@ Here is a quick description of the various top level settings and how the app wo
 - <h4>Maintain Rules</h4><p>Here's where you create the rules that allow you to check various sensor and other variables to decide which lights should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
 - <h4>Adjacent Room Settings</h4><p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
 - <h4>Mode and Other Settings</h4><p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
-- <h4>View All Settings</h4>What name says.<p></p>
+- <h4>View All Settings</h4>What the name says.<p></p>
 
 This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
 
