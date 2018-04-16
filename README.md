@@ -8,7 +8,7 @@ If there is one principle that these apps are built on, it is - that your home a
 
 Additionally, these rooms devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or rule machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
-Here are the most common room occupancy states:
+<h4>Here are the most common room occupancy states:</h4>
 
 - Occupied:     Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a persistent state.
 - Engaged:      Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.
