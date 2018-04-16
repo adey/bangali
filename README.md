@@ -64,6 +64,8 @@ https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-ch
 
 Knowing that users are finding their app useful enough to support development of the app is always motivating for any dev. So here is the donation link. To be clear ... _no donation is required or expected to use rooms manager_. But if you do donate please also know that it is much appreciated. With that, if you feel like it ... <a href="https://www.paypal.me/dey">please donate here</a>.
 
+<br>
+
 <div id="screenshots-table">
     <table>
         <tr>
