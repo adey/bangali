@@ -38,7 +38,7 @@ Here is a quick description of the various top level settings and how the app wo
 <p>The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 
 - <h5>Occupied Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
--- <p>Motion sensor:</p>
++ <p>Motion sensor:</p>
 - <h5>Engaged Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
 - <h5>Checking Settings</h5><p>Settings for timeout and light levels while in checking state.</p>
 - <h5>Vacant Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
