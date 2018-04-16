@@ -2,22 +2,22 @@
 
 While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors. When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.
 
-But even importantly perhaps it gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
-
 What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor and device inputs. This smartapp makes that possible.
 
-If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. 🙂
+If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. But even importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
 
 Additionally, these rooms devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or rule machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
-Here are the room occupancy states that most users will deal it:
-- Occupied:
-- Engaged:
-- Asleep:
-- Vacant:
-- Checking:
+Here are the most common room occupancy states:
 
-The states 'locked', 'reserved' and 'kaput' stop automation so use these when you temporarily want to control lights and switches in the room either manually or some other way.
+- Occupied:     Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a persistent state.
+- Engaged:      Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.
+- Asleep:       Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.
+- Vacant:       Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.
+- Checking:     Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.
+- Locked:       Locked state disable all automation for the room and allows you to control lights and other devices in the room either manually or some other way.
+
+The states 'locked', 'reserved' and 'kaput' are effectively all similar in that they all disable automation. Since there is no real difference in automation between these states instead of names, there is some sensors allowed to set / unset rooms to / from Locked state but no other automation beyond that for these occupancy states.
 
 Here is a quick description of the various top level settings and how the app works. At the heart of the app is the concept of room states and rules to automate devices based on these room's states and other sensor inputs. (In the following description when I talk about sensors it refers to devices that have attributes which are used to drive decisions in the room's rules.)
 
@@ -36,14 +36,6 @@ Here are the top level settings:
 - Adjacent Room Settings
 - Mode and Other Settings
 - View All Settings
-
-Think of occupied as a transient state and engaged as a persistent state.
-
-Occupied is you go to a room are in there for a few minutes then leave the room. lights come on when you enter the room and turn off after a couple of minutes of your leaving the room.
-
-Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room.
-
-When in engaged state you have a different and longer timeout state than the occupied state. So there is still a motion requirement but a much higher time threshold than the transient occupied state.
 
 This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
 
