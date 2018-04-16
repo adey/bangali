@@ -25,7 +25,7 @@ Here is a quick description of the various top level settings and how the app wo
 
 <h4>Here are the top level settings:</h4>
 
-<p><h4>The next 6 settings group are for how the room is set to each of those 6 occupancy states and some settings specific to that occupancy state.</h4></p>
+<h4>The next 6 settings group are for how the room is set to each of those 6 occupancy states and some settings specific to that occupancy state.</h4>
 
 - <h4>Occupied Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
 - <h4>Engaged Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
