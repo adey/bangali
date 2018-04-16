@@ -850,6 +850,20 @@ private pageEngagedSettings() {
 	}
 }
 
+/*
+private buttonDetails(button)     {
+    if (!button)    return;
+    def supportedCaps = button.capabilities
+    supportedCaps.each {cap ->
+        ifDebug("This device supports the ${cap.name} capability")
+    }
+    def theAtts = button.supportedAttributes
+    theAtts.each {att ->
+        ifDebug("Supported Attribute: ${att.name}")
+    }
+}
+*/
+
 private pageCheckingSettings()      {
 	dynamicPage(name: "pageCheckingSettings", title: "Checking Settings", install: false, uninstall: false)     {
         section("CHECKING state timer before room changes to VACANT:", hideable: false)		{
@@ -1935,7 +1949,8 @@ def updateRoom(adjMotionSensors)     {
         subscribe(musicDevice, "status.stopped", musicStoppedEventHandler)
     }
     state.busyCheck = (busyCheck ? busyCheck as Integer : null)
-    if (engagedButton)  subscribe(engagedButton, "button.pushed", buttonPushedEventHandler)
+//    if (engagedButton)  subscribe(engagedButton, "button.pushed", buttonPushedEventHandler)
+    if (engagedButton)  subscribe(engagedButton, "button", buttonPushedEventHandler)
     if (personsPresence)     {
     	subscribe(personsPresence, "presence.present", presencePresentEventHandler)
         subscribe(personsPresence, "presence.not present", presenceNotPresentEventHandler)
@@ -1964,7 +1979,8 @@ def updateRoom(adjMotionSensors)     {
             if (roomDeviceObject)       subscribe(roomDeviceObject, "button.pushed", anotherRoomEngagedButtonPushedEventHandler);
         }
     }
-    if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
+//    if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
+    if (vacantButton)   subscribe(vacantButton, "button", buttonPushedVacantEventHandler);
     if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", vacantSwitchOffEventHandler);
     ifDebug("updateRoom 3")
     if (luxSensor)      {
@@ -1982,12 +1998,14 @@ def updateRoom(adjMotionSensors)     {
         state.previousPower = null
     if (speechDevice)   subscribe(speechDevice, "phraseSpoken", speechEventHandler);
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
-    if (asleepButton)   subscribe(asleepButton, "button.pushed", asleepButtonPushedEventHandler);
+//    if (asleepButton)   subscribe(asleepButton, "button.pushed", buttonPushedAsleepEventHandler);
+    if (asleepButton)   subscribe(asleepButton, "button", buttonPushedAsleepEventHandler);
     if (asleepSwitch)      {
     	subscribe(asleepSwitch, "switch.on", asleepSwitchOnEventHandler)
     	subscribe(asleepSwitch, "switch.off", asleepSwitchOffEventHandler)
 	}
-    if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
+//    if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
+    if (nightButton)    subscribe(nightButton, "button", nightButtonPushedEventHandler);
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     nightSwitches.each      {
         if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
@@ -2648,10 +2666,7 @@ def	buttonPushedAsleepEventHandler(evt)     {
     if (!eD || (buttonIsAsleep && eD['buttonNumber'] != buttonIsAsleep as Integer))     return;
     def child = getChildDevice(getRoom())
     def roomState = child?.currentValue(occupancy)
-    if (['engaged', 'occupied', 'checking', 'vacant'].contains(roomState))
-        child.generateEvent(asleep)
-    else if (roomState == asleep)
-        child.generateEvent(checking)
+    child.generateEvent((roomState == asleep ? checking : asleep))
 }
 
 /*
@@ -3816,7 +3831,9 @@ private turnSwitchesOnAndOff(thisRule)       {
             def colorTemperature = null
             def level = null
             thisRule.switchesOn.each      {
-                it.on(); pauseIt()
+                if (it.currentSwitch != on)     {
+                    it.on(); pauseIt()
+                }
                 def itID = it.getId()
                 if (thisRule.color && state.switchesHasColor[itID])     {
     //                if (it.currentColor != thisRule.hue)
@@ -4984,6 +5001,7 @@ private getAllSwitches()    {
 
 //------------------------------------------------------Night option------------------------------------------------------//
 def	nightButtonPushedEventHandler(evt)     {
+    ifDebug("nightButtonPushedEventHandler: $evt.data")
     if (!evt.data)      return;
     def nM = new groovy.json.JsonSlurper().parseText(evt.data)
     assert nM instanceof Map

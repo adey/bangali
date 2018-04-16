@@ -29,7 +29,7 @@ By specifying settings in the Checking settings you are also able to dim the lig
 - <h5>Checking:</h5><p>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</p>
 - <h5>Locked:</h5><p>Locked state disables all automations for the room and allows you to control lights and other devices in the room either manually or some other way.</p>
 
-The states 'locked', 'reserved' and 'kaput' are effectively all similar in that they all disable automation. Since there is no real difference in automation between these states instead of names, there is some sensors allowed to set / unset rooms to / from Locked state but no other automation beyond that for these occupancy states.
+The states 'locked', 'reserved', 'kaput' and 'donotdisturb' are effectively all similar in that they all disable automation. That being the case there is some sensors allowed to set / unset rooms to / from Locked state but no other automation beyond that for these occupancy states.
 
 Here is a quick description of the various top level settings and how the app works. At the heart of the app is the concept of room states and rules to automate devices based on these room's states and other sensor inputs. (In the following description when I talk about sensors it refers to devices that have attributes which are used to drive decisions in the room's rules.)
 
@@ -37,7 +37,8 @@ Here is a quick description of the various top level settings and how the app wo
 
 <p>The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 
-- <h5>Occupied Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
+- <h5>Occupied Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
+-- <p>Motion sensor:</p>
 - <h5>Engaged Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
 - <h5>Checking Settings</h5><p>Settings for timeout and light levels while in checking state.</p>
 - <h5>Vacant Settings</h5><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
@@ -58,7 +59,7 @@ Here is a quick description of the various top level settings and how the app wo
 - <h5>Mode and Other Settings</h5><p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
 - <h5>View All Settings</h5>What the name says.<p></p>
 
-This is only a part of what's possible through this app. Please take a look at all settings for a room in the app to get a sense of what else is possible.
+This only describes a part of what's possible through this app. For more details please see each group of settings for a room in the app.
 
 <h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
@@ -77,7 +78,9 @@ https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-ma
 rooms child smartapp:
 https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 
-Knowing that users are finding their app useful enough to support development of the app is always motivating for any dev. So here is the donation link. To be clear ... _no donation is required or expected to use rooms manager_. But if you do donate please also know that it is much appreciated. With that, if you feel like it ... <a href="https://www.paypal.me/dey">please donate here</a>.
+`then go to ST app -> Automation tab -> Add a Smartapp -> My apps in ST app and install rooms manager app then create your rooms within rooms manager.`
+
+Knowing that users are finding their app useful enough to support development of the app is always motivating for any dev. So here is the donation link. To be clear ... _no donation is required or expected to use rooms manager_. But if you do donate please also know that it is much appreciated, thank you. <a href="https://www.paypal.me/dey">Please donate here.</a>.
 
 <br>
 
