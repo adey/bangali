@@ -1,10 +1,5 @@
 # bangali's random code stuff for SmartThings.
 
-<style>
-.indented {
-  padding-left: 50pt;
-}
-</style>
 <h2>Rooms Occupancy and Manager</h2>
 
 While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors. When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.
@@ -30,7 +25,7 @@ Here is a quick description of the various top level settings and how the app wo
 
 <h4>Here are the top level settings:</h4>
 
-<p class="indented"><h4>The next 6 settings group are for how the room is set to each of those 6 occupancy states and some settings specific to that occupancy state.</h4></p>
+<p><h4>The next 6 settings group are for how the room is set to each of those 6 occupancy states and some settings specific to that occupancy state.</h4></p>
 
 - <h4>Occupied Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on.</p>
 - <h4>Engaged Settings</h4><p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
