@@ -1,20 +1,61 @@
 # bangali's random code stuff for SmartThings.
 
-while ST has a concept of rooms it seems to be more of a grouping mechanism. in contrast rooms occupancy considers the room as a meta device and automates a few common tasks associated with a “room” physical or virtual. in keeping with that it has attributes, capabilities and commands which are useable in webcore or other smartapps like Smart Lighting.
+While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors. When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart. But even importantly perhaps it gets you the kind of WAF for your home automation that you have always dreamed about. 🙂
 
-however, what makes it useful for me is not just the room's state but the ability to manage automation for room in one set of settings for the room. when adding a room device through the smartapp you are able to configure settings for the room which allow the various devices in the room to be automated based on these settings.
+What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not allow the kind of comprehensive automation that should be possible for devices in a room based on sensor and device inputs. This smartapp makes that possible.
 
-for example in settings:
+`If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring repeated human intervention. In short - your automation should work for you and not the other way around. 🙂`
 
-- if away modes are selected, rooms will change to ‘vacant’ state if they are in either the ‘occupied’ or ‘checking’ state when location changes to any of the away modes.
-- if motion sensors are selected, rooms will change to ‘occupied’ state on motion if they were previously ‘vacant’.
-- if switches are selected, when room changes to ‘occupied’ the switches will be turned on.
-- if motion timeout in seconds is selected the room will be changed to ‘vacant’ after last motion inactive + motion timeout seconds.
-- if 2nd group of switches are selected, when room changes to ‘vacant’ the switches will be turned off.
+Additionally, these rooms devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or rule machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.
 
-this is only a part of what's possible through various settings. please take a look at the settings for a room in the child-app that captures all of these settings to get a sense of what else is possible.
+Here are the room occupancy states that most users will
 
-these are very common tasks around rooms which most users go through automating at some point, so also posting here in case others find this useful.
+Here is a quick description of the various top level settings and how the app works. At the heart of the app is the concept of room states and rules to automate devices based on these room's states and other sensor inputs. (In the following description when I talk about sensors it refers to devices that have attributes which are used to drive decisions in the room's rules.)
+
+Here are the top level settings:
+- Occupied Settings
+- Engaged Settings
+- Checking Settings
+- Vacant Settings
+- Asleep Settings
+- Locked Settings
+- Other Devices
+- Auto Level 'AL' Settings
+- Holiday Lights 'HL' Settings
+- Temperature Settings
+- Maintain Rules
+- Adjacent Room Settings
+- Mode and Other Settings
+- View All Settings
+
+Think of occupied as a transient state and engaged as a persistent state.
+
+Occupied is you go to a room are in there for a few minutes then leave the room. lights come on when you enter the room and turn off after a couple of minutes of your leaving the room.
+
+Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room.
+
+When in engaged state you have a different and longer timeout state than the occupied state. So there is still a motion requirement but a much higher time threshold than the transient occupied state.
+
+The states 'locked', 'reserved' and 'kaput' stop automation so use these when you temporarily want to control lights and switches in the room either manually or some other way.
+
+This is only a part of what's possible through this app. please take a look at all settings for a room in the app to get a sense of what else is possible.
+
+When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room.
+
+For a github install from repo use : `owner: adey / name: bangali / branch: master`. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.
+
+For a manual install here are the links, in order of DTHs and smartapps you should save and publish.
+
+rooms occupancy DTH:
+https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+
+rooms manager smartapp:
+https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
+
+rooms child smartapp:
+https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
+
+Any dev enjoys knowing that users are finding their app useful enough to support development of the app. So here is the donation link. To be clear ... _no donation is required or expected to use rooms manager_. But if you do donate please also know that it is much appreciated. With that, if you feel like it ... <a href="https://www.paypal.me/dey">please donate here</a>.
 
 <br>
 <img height="400" src="https://user-images.githubusercontent.com/319291/32026136-d367e612-b997-11e7-885f-de855d9e444e.png">

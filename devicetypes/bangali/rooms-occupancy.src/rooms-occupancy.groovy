@@ -24,10 +24,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.7"  }
+public static String version()      {  return "v0.20.9"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.20.9
+*
+*   DONE:   7/15/2018
+*   1) time today change for hubitat compatibility.
 *
 *  Version: 0.20.7
 *
@@ -946,7 +951,7 @@ def setupAlarmC()	{
 	else
 		state.alarmSound = ''
 	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
-	sendEvent(name: "alarmTime", value: "${timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone)}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
+	sendEvent(name: "alarmTime", value: "${(alarmTime ? timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone) : '')}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmDayOfWeek", value: "$state.alarmDayOfWeek", descriptionText: "alarm days of week is $state.alarmDayOfWeek", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmSound", value: "$state.alarmSound", descriptionText: "alarm sound is $state.alarmSound", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmRepeat", value: alarmRepeat, descriptionText: "alarm sounds is repeated $alarmRepeat times", isStateChange: true, displayed: true)
