@@ -37,10 +37,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.5"  }
+public static String version()      {  return "v0.21.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.21.0
+*
+*   DONE:   7/19/2018
+*   1) mostly readme updates.
 *
 *  Version: 0.20.5
 *
@@ -556,7 +561,7 @@ preferences {
     page(name: "pageEngagedSettings", title: "Engaged State Settings")
     page(name: "pageCheckingSettings", title: "Checking State Settings")
     page(name: "pageVacantSettings", title: "Vacant State Settings")
-    page(name: "pageOtherDevicesSettings", title: "Other Devices")
+    page(name: "pageOtherDevicesSettings", title: "Room Devices")
     page(name: "pageAutoLevelSettings", title: "Light Auto Level Settings")
     page(name: "pageHolidayLightPatterns", title: "Holiday Light Patterns")
     page(name: "pageHolidayLight", title: "Holiday Light Pattern")
@@ -622,58 +627,58 @@ def roomName()	{
 //            section		{
 //                paragraph "Following settings are optional. Corresponding actions will be skipped when setting is blank."
 //            }
-            section("Occupied settings:") {
+            section("Room devices:")        {
+                    href "pageOtherDevicesSettings", title: "ROOM DEVICES", description: (otherDevicesSettings ? "Tap to change existing settings" : "Tap to configure"),
+                                image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOtherDevices.png"
+            }
+            section("Occupied settings:")       {
     				href "pageOccupiedSettings", title: "OCCUPIED SETTINGS", description: (motionSensors ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupied.png"
 
     		}
-            section("Engaged settings:") {
+            section("Engaged settings:")        {
     				href "pageEngagedSettings", title: "ENGAGED SETTINGS", description: (engagedSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngaged.png"
 
     		}
-            section("Checking settings:") {
+            section("Checking settings:")       {
     				href "pageCheckingSettings", title: "CHECKING SETTINGS", description: ((dimTimer || dimByLevel) ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsChecking.png"
     		}
-            section("Vacant settings:") {
+            section("Vacant settings:")     {
     				href "pageVacantSettings", title: "VACANT SETTINGS", description: (turnOffMusic ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacant.png"
 
     		}
-            section("Asleep settings:") {
+            section("Asleep settings:")     {
     				href "pageAsleepSettings", title: "ASLEEP SETTINGS", description: (asleepSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleep.png"
     		}
-            section("Locked settings:") {
+            section("Locked settings:")     {
     				href "pageLockedSettings", title: "LOCKED SETTINGS", description: (lockedSwitch ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLocked.png"
     		}
-            section("Other devices:") {
-    				href "pageOtherDevicesSettings", title: "OTHER DEVICES", description: (otherDevicesSettings ? "Tap to change existing settings" : "Tap to configure"),
-                                image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOtherDevices.png"
-    		}
-            section("'AL' settings:") {
+            section("'AL' settings:")       {
     				href "pageAutoLevelSettings", title: "AUTO LEVEL 'AL' SETTINGS", description: (autoLevelSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png"
     		}
-            section("'HL' settings:") {
+            section("'HL' settings:")       {
     				href "pageHolidayLightPatterns", title: "HOLIDAY LIGHTS 'HL' SETTINGS", description: (holidayLightsSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights2.png"
     		}
-            section("Temperature settings:") {
+            section("Temperature settings:")        {
     				href "pageRoomTemperature", title: "TEMPERATURE SETTINGS", description: (tempSensors || maintainRoomTemp ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsTemperature.png"
     		}
-            section("Maintain rules:") {
+            section("Maintain rules:")      {
     				href "pageRules", title: "MAINTAIN RULES", description: "Create/Edit/Disable rules",
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png"
     		}
-            section("Adjacent rooms settings:") {
+            section("Adjacent rooms settings:")     {
     				href "pageAdjacentRooms", title: "ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAdjacent5.png"
     		}
-            section("General settings:") {
+            section("General settings:")        {
     				href "pageGeneralSettings", title: "MODE & OTHER SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure"),
                                 image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png"
 
@@ -751,14 +756,6 @@ private pageOnePager()      {
 
 private pageOccupiedSettings()      {
 	dynamicPage(name: "pageOccupiedSettings", title: "Occupied Settings", install: false, uninstall: false)     {
-        section("Motion sensor configuration for OCCUPIED state:", hideable: false)        {
-            input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
-            if (motionSensors)
-                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true,
-                                                                                        options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
-            else
-                paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
-        }
         section("Switch for OCCUPIED state:", hideable:false)	{
             input "occSwitches", "capability.switch", title: "Which switch turns ON?", required:false, multiple: true, submitOnChange: true
         }
@@ -922,8 +919,15 @@ private pageVacantSettings()      {
 
 
 private pageOtherDevicesSettings()       {
-	dynamicPage(name: "pageOtherDevicesSettings", title: "Other Devices", install: false, uninstall: false)      {
-		section("PRESENCE DEVICES:", hideable: false)      {
+	dynamicPage(name: "pageOtherDevicesSettings", title: "Room Devices", install: false, uninstall: false)      {
+        section("MOTION SENSOR(s):", hideable: false)        {
+            input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
+            if (motionSensors)
+                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true, options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            else
+                paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
+        }
+		section("PRESENCE SENSOR(s):", hideable: false)      {
             input "personsPresence", "capability.presenceSensor", title: "Presence sensors?", required: false, multiple: true, submitOnChange: true
         }
         section("LUX SENSOR:", hideable: false)      {
@@ -2446,6 +2450,18 @@ def	motionActiveEventHandler(evt)	{
             runIn(state.noMotionEngaged, roomVacant)
         }
         return
+    }
+    if (roomState == occupied && state.stateStack['0']?.state == occupied && state.noMotion)      {
+/*        def gapBetween = ((now() - state.stateStack['0'].date) / 1000) * 5f
+        def howMany = (gapBetween / (state.noMotion + state.dimTimer)).round(0)
+*/
+        def gapBetween = ((now() - state.stateStack['0'].date) / 1000f)
+        def howMany = ((gapBetween / state.noMotion) * lightTraffic.toInteger()).trunc(0)
+        ifDebug("howMany: $howMany | gapBetween: $gapBetween | busyCheck: $state.busyCheck")
+        if (howMany >= state.busyCheck)      {
+            state.isBusy = true
+            state.stateStack = [:]
+        }
     }
     if (state.isBusy && ['occupied', 'checking', 'vacant'].contains(roomState))       {
         turnOffIsBusy()
