@@ -94,7 +94,7 @@
     </table>
 </ul>
 
-<p>The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
+<p style="font-weight: bold; margin-top: 25px;">The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 <ul>
     <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Occupied Settings</li>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
@@ -322,7 +322,7 @@
     </table>
 </ul>
 
-<p>These group of settings allow for light routine settings used in the rules.</p>
+<p style="font-weight: bold; margin-top: 25px;">These group of settings allow for light routine settings used in the rules.</p>
 
 <ul>
     <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Auto Level 'AL' Settings</li>
@@ -336,7 +336,8 @@
         <li>Specify groups of colors and name them so you can use them with rules.</li>
     </ul>
 </ul>
-<p>Temperature settings is their own group.</p>
+
+<p style="font-weight: bold; margin-top: 25px;">Temperature settings is their own group.</p>
 
 <ul>
     <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Temperature Settings</li>
@@ -346,7 +347,7 @@
     </ul>
 </ul>
 
-<p>Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
+<p style="font-weight: bold; margin-top: 25px;">Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
 
 <ul>
     <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Maintain Rules</li>
@@ -368,11 +369,9 @@
     <p>What the name says.</p>
 </ul>
 
-This only describes a part of what's possible through this app. For more details please see each group of settings for a room in the app.
+<p style="font-style: oblique; margin-top: 25px;">This only describes a part of what's possible through this app. For more details please see each group of settings for a room in the app.</p>
 
-<p style="font-style: oblique; margin-top: 15px;">For a github install from repo in ST use : owner: adey / name: bangali / branch: master.</p>
-
-<p style="font-style: oblique; margin-top: 15px;">Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</p>
+<p style="font-style: oblique; margin-top: 15px;">For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</p>
 
 <p style="font-style: oblique; margin-top: 15px;">For a manual install here are the links, in order of DTHs and smartapps you should save and publish.</p>
 
