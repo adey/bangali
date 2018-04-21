@@ -37,15 +37,30 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.21.0"  }
+public static String version()      {  return "v0.25.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.25.0
+*
+*   DONE:   7/20/2018
+*   1) get buttons working on hubitat.
 *
 *  Version: 0.21.0
 *
 *   DONE:   7/19/2018
 *   1) mostly readme updates.
+*
+*  Version: 0.20.9
+*
+*   DONE:   7/15/2018
+*   1) time today change for hubitat compatibility.
+*
+*  Version: 0.20.7
+*
+*   DONE:   7/14/2018
+*   1) added a bunch of state variable for use with hubitat dashboard tiles.
 *
 *  Version: 0.20.5
 *
@@ -790,6 +805,7 @@ private pageEngagedSettings() {
             engagedButtonOptions << [null:"No buttons"]
     }
     def roomDevices = parent.getRoomNames(app.id)
+    def hT = getHubType()
 	dynamicPage(name: "pageEngagedSettings", title: "Engaged Settings", install: false, uninstall: false) {
 		section("Change room to ENGAGED when?\n(if specified this will also reset room state to 'vacant' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
             paragraph "Settings are in order of priority in which they are checked. For example, if there is both an engaged switch and contact sensor the engaged switch when ON will take priority over the contact sensor being OPEN."
@@ -798,7 +814,7 @@ private pageEngagedSettings() {
                             options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
-            input "engagedButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            input "engagedButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)
                 input "buttonIs", "enum", title: "Button number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
             else
@@ -901,9 +917,10 @@ private pageVacantSettings()      {
         else
             vacantButtonOptions << [null:"No buttons"]
     }
+    def hT = getHubType()
 	dynamicPage(name: "pageVacantSettings", title: "Vacant Settings", install: false, uninstall: false)     {
         section("VACANT settings:", hideable: false)		{
-            input "vacantButton", "capability.button", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
             if (vacantButton)
                 input "buttonIsVacant", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: vacantButtonOptions
             else
@@ -1590,10 +1607,11 @@ private pageAsleepSettings() {
         else
             nightButtonOptions << [null:"No buttons"]
     }
+    def hT = getHubType()
 	dynamicPage(name: "pageAsleepSettings", title: "Asleep Settings", install: false, uninstall: false) {
         section("ASLEEP state settings:", hideable: false)		{
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to set room to ASLEEP?", required: false, multiple: false
-            input "asleepButton", "capability.button", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
+            input "asleepButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
             if (asleepButton)
                 input "buttonIsAsleep", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: asleepButtonOptions
             else
@@ -1637,7 +1655,7 @@ private pageAsleepSettings() {
                 input "noMotionAsleep", "number", title: "Timeout seconds for night lights?", required: false, multiple: false, defaultValue: null, range: "5..99999"
                 input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true, defaultValue: 1,
                                         options: [[1:"Motion in ASLEEP state"],[2:"State changes to ASLEEP"],[3:"State changes away from ASLEEP"]]
-                input "nightButton", "capability.button", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
+                input "nightButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
                 if (nightButton)        {
                     input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
                     input "nightButtonAction", "enum", title: "Button Action?", required: true, multiple: false, defaultValue: null,
@@ -1908,6 +1926,7 @@ def updated()	{
 def updateRoom(adjMotionSensors)     {
     ifDebug("updateRoom")
 	initialize()
+    def hT = getHubType()
     boolean isFarenheit = (location.temperatureScale == 'F')
 //    def child = getChildDevice(getRoom())
 	subscribe(location, "mode", modeEventHandler)
@@ -1954,7 +1973,11 @@ def updateRoom(adjMotionSensors)     {
     }
     state.busyCheck = (busyCheck ? busyCheck as Integer : null)
 //    if (engagedButton)  subscribe(engagedButton, "button.pushed", buttonPushedEventHandler)
-    if (engagedButton)  subscribe(engagedButton, "button", buttonPushedEventHandler)
+    if (engagedButton)
+        if (hT == _SmartThings)
+            subscribe(engagedButton, "button", buttonPushedEventHandler)
+        else
+            subscribe(engagedButton, "pushed.$buttonIs", buttonPushedEventHandler)
     if (personsPresence)     {
     	subscribe(personsPresence, "presence.present", presencePresentEventHandler)
         subscribe(personsPresence, "presence.not present", presenceNotPresentEventHandler)
@@ -1980,11 +2003,19 @@ def updateRoom(adjMotionSensors)     {
 //        subsribe(anotherRoomEngaged, "occupancy", anotherRoomEventHandler)
         anotherRoomEngaged.each     {
             def roomDeviceObject = parent.getChildRoomDeviceObject(it)
-            if (roomDeviceObject)       subscribe(roomDeviceObject, "button.pushed", anotherRoomEngagedButtonPushedEventHandler);
+            if (roomDeviceObject)
+                if (hT == _SmartThings)
+                    subscribe(roomDeviceObject, "button.pushed", anotherRoomEngagedButtonPushedEventHandler);
+                else
+                    subscribe(roomDeviceObject, "pushed.9", anotherRoomEngagedButtonPushedEventHandler);
         }
     }
 //    if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
-    if (vacantButton)   subscribe(vacantButton, "button", buttonPushedVacantEventHandler);
+    if (vacantButton)
+        if (hT == _SmartThings)
+            subscribe(vacantButton, "button", buttonPushedVacantEventHandler)
+        else
+            subscribe(vacantButton, "pushed.$buttonIsVacant", buttonPushedVacantEventHandler)
     if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", vacantSwitchOffEventHandler);
     ifDebug("updateRoom 3")
     if (luxSensor)      {
@@ -2003,13 +2034,21 @@ def updateRoom(adjMotionSensors)     {
     if (speechDevice)   subscribe(speechDevice, "phraseSpoken", speechEventHandler);
     if (asleepSensor)   subscribe(asleepSensor, "sleeping", sleepEventHandler);
 //    if (asleepButton)   subscribe(asleepButton, "button.pushed", buttonPushedAsleepEventHandler);
-    if (asleepButton)   subscribe(asleepButton, "button", buttonPushedAsleepEventHandler);
+    if (asleepButton)
+        if (hT == _SmartThings)
+            subscribe(asleepButton, "button", buttonPushedAsleepEventHandler)
+        else
+            subscribe(asleepButton, "pushed.$buttonIsAsleep", buttonPushedAsleepEventHandler)
     if (asleepSwitch)      {
     	subscribe(asleepSwitch, "switch.on", asleepSwitchOnEventHandler)
     	subscribe(asleepSwitch, "switch.off", asleepSwitchOffEventHandler)
 	}
 //    if (nightButton)    subscribe(nightButton, "button.pushed", nightButtonPushedEventHandler);
-    if (nightButton)    subscribe(nightButton, "button", nightButtonPushedEventHandler);
+    if (nightButton)
+        if (hT == _SmartThings)
+            subscribe(nightButton, "button", nightButtonPushedEventHandler)
+        else
+            subscribe(nightButton, "pushed.$nightButtonIs", nightButtonPushedEventHandler)
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     nightSwitches.each      {
         if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
@@ -2451,7 +2490,7 @@ def	motionActiveEventHandler(evt)	{
         }
         return
     }
-    if (roomState == occupied && state.stateStack['0']?.state == occupied && state.noMotion)      {
+    if (state.busyCheck && roomState == occupied && state.stateStack['0']?.state == occupied && state.noMotion)      {
 /*        def gapBetween = ((now() - state.stateStack['0'].date) / 1000) * 5f
         def howMany = (gapBetween / (state.noMotion + state.dimTimer)).round(0)
 */
@@ -2633,10 +2672,12 @@ def toUpdateSwitchInd()     {  getChildDevice(getRoom()).updateSwitchInd(isAnySw
 def	buttonPushedEventHandler(evt)     {
     ifDebug("buttonPushedEventHandler: $evt.data")
     if (!checkPauseModesAndDoW())    return;
-    if (!evt.data)      return;
-    def eD = new groovy.json.JsonSlurper().parseText(evt.data)
-    assert eD instanceof Map
-    if (!eD || (buttonIs && eD['buttonNumber'] != buttonIs as Integer))     return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || (buttonIs && eD['buttonNumber'] != buttonIs as Integer))     return;
+    }
     def child = getChildDevice(getRoom())
 /*    if (child?.currentValue(occupancy) == engaged)
         child.generateEvent((resetEngagedDirectly ? vacant : checking))
@@ -2650,10 +2691,12 @@ def	buttonPushedEventHandler(evt)     {
 def	buttonPushedVacantEventHandler(evt)     {
     ifDebug("buttonPushedVacantEventHandler: $evt.data")
     if (!checkPauseModesAndDoW())    return;
-    if (!evt.data)      return;
-    def eD = new groovy.json.JsonSlurper().parseText(evt.data)
-    assert eD instanceof Map
-    if (!eD || (buttonIsVacant && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsVacant as Integer))     return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || (buttonIsVacant && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsVacant as Integer))     return;
+    }
     def child = getChildDevice(getRoom())
 //    ifDebug("buttonPushedVacantEventHandler: ${child.currentValue(occupancy)}")
     if (['engaged', 'occupied', 'checking'].contains(child?.currentValue(occupancy)))
@@ -2676,10 +2719,12 @@ def	vacantSwitchOffEventHandler(evt)     {
 def	buttonPushedAsleepEventHandler(evt)     {
     ifDebug("buttonPushedAsleepEventHandler: $evt.data")
     if (!checkPauseModesAndDoW())    return;
-    if (!evt.data)      return;
-    def eD = new groovy.json.JsonSlurper().parseText(evt.data)
-    assert eD instanceof Map
-    if (!eD || (buttonIsAsleep && eD['buttonNumber'] != buttonIsAsleep as Integer))     return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || (buttonIsAsleep && eD['buttonNumber'] != buttonIsAsleep as Integer))     return;
+    }
     def child = getChildDevice(getRoom())
     def roomState = child?.currentValue(occupancy)
     child.generateEvent((roomState == asleep ? checking : asleep))
@@ -2711,10 +2756,12 @@ def	anotherRoomEngagedButtonPushedEventHandler(evt)     {
     ifDebug("anotherRoomEngagedButtonPushedEventHandler $evt.data")
     if (!checkPauseModesAndDoW())    return;
     if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains('present'))     return;
-    if (!evt.data)      return;
-    def eD = new groovy.json.JsonSlurper().parseText(evt.data)
-    assert eD instanceof Map
-    if (!eD || eD['buttonNumber'] < 8)     return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || eD['buttonNumber'] != 9)     return;
+    }
     def child = getChildDevice(getRoom())
     if (['engaged', 'asleep'].contains(child?.currentValue(occupancy)))
         child.generateEvent((resetEngagedDirectly ? vacant : checking))
@@ -3136,13 +3183,13 @@ def thermoUnOverride()      {
 }
 
 def processCoolHeat()       {
-//    ifDebug("processCoolHeat")
+    ifDebug("processCoolHeat")
     if (state.thermoOverride)       return;
     def temp = -1
     def child = getChildDevice(getRoom())
     def isHere = (personsPresence ? personsPresence.currentPresence.contains(present) : false)
     boolean isFarenheit = (location.temperatureScale == 'F')
-    def hT = getHubType()
+//    def hT = getHubType()
     if ((checkPresence && !isHere) || maintainRoomTemp == '4' && !roomFanSwitch)    {
         if (checkPresence && !isHere)       {
             if (['1', '3'].contains(maintainRoomTemp))      {
@@ -3378,7 +3425,7 @@ def updateFanIndP(evt)   {
 }
 
 def luxEventHandler(evt)    {
-//    ifDebug("luxEventHandler")
+    ifDebug("luxEventHandler")
     def child = getChildDevice(getRoom())
     int currentLux = getIntfromStr((String) evt.value)
     child.updateLuxInd(currentLux)
@@ -3388,7 +3435,7 @@ def luxEventHandler(evt)    {
 }
 
 def humidityEventHandler(evt)    {
-//    ifDebug("humidityEventHandler")
+    ifDebug("humidityEventHandler")
     def child = getChildDevice(getRoom())
     if (!checkPauseModesAndDoW())    return;
     switchesOnOrOff()
@@ -3408,7 +3455,7 @@ private getIntfromStr(String mayOrMayNotBeDecimal)     {
 }
 
 def powerEventHandler(evt)    {
-//    ifDebug("powerEventHandler")
+    ifDebug("powerEventHandler")
     def child = getChildDevice(getRoom())
     def currentPower = getIntfromStr((String) evt.value)
     child.updatePowerInd(currentPower)
@@ -3463,7 +3510,7 @@ def roomVacant(forceVacant = false)	  {
     ifDebug("roomVacant")
     def child = getChildDevice(getRoom())
 	def roomState = child?.currentValue(occupancy)
-    if (!forceVacant && motionSensors && ['engaged', 'occupied', 'checking'].contains(roomState) &&
+    if (!forceVacant && motionSensors && ['engaged', 'occupied', 'checking'].contains(roomState) && whichNoMotion == lastMotionInactiveActive &&
         motionSensors.currentMotion.contains(active))     {
         motionActiveEventHandler(null)
         return
@@ -3650,7 +3697,7 @@ private switchesOn()	{
 */
 
 def switchesOnOrOff(switchesOnly = false)      {
-//    ifDebug("switchesOnOrOff")
+    ifDebug("switchesOnOrOff")
     state.holidayLights = false
     def child = getChildDevice(getRoom())
     def roomState = child?.currentValue(occupancy)
@@ -3665,7 +3712,7 @@ def switchesOnOrOff(switchesOnly = false)      {
 }
 
 private processRules(passedRoomState = null, switchesOnly = false)     {
-//    ifDebug("processRules")
+    ifDebug("processRules")
 /*    if (luxThreshold)     {
         def lux = luxSensor.currentIlluminance
         if (lux > luxThreshold)     return false;
@@ -3828,7 +3875,7 @@ private turnSwitchesOnAndOff(thisRule)       {
 //        state.previousRuleNo = thisRule.ruleNo
     state.lastRule = (state.lastRule ? state.lastRule + ',' : '') + thisRule.ruleNo
     getChildDevice(getRoom()).updateLastRuleInd(state.lastRule)
-    def hT = getHubType()
+//    def hT = getHubType()
     if (thisRule.switchesOn)    {
         if (thisRule.level?.startsWith('HL'))     {
             state.holiRuleNo = thisRule.ruleNo
@@ -3906,7 +3953,6 @@ def holidayLights()    {
 
 private holidayLightsRotate(thisRule)       {
     def cI = state.holiColorIndex
-    def hT = getHubType()
     thisRule.switchesOn.each    {
         def holiColor = state.holiHues."$cI"
         it.setColor(holiColor); pauseIt()
@@ -3922,7 +3968,6 @@ private holidayLightsTwinkle(thisRule)       {
     int cI
     def randomFound
     Random rand = new Random()
-    def hT = getHubType()
     state.holiTW = [:]
     for (def i = 0; i < noSwitches; i++)        {
         randomFound = false
@@ -3947,17 +3992,14 @@ private holidayLightsTwinkle(thisRule)       {
 }
 
 private runActions(thisRule)    {
-    def hT = getHubType()
     if (thisRule.actions)   {  thisRule.actions.each  {  location.helloHome?.execute(it); pauseIt()  }  }
 }
 
 private executePiston(thisRule)    {
-    def hT = getHubType()
     if (thisRule.piston)  { webCoRE_execute(thisRule.piston); pauseIt() }
 }
 
 private musicAction(thisRule)       {
-    def hT = getHubType()
     if (musicDevice && thisRule.musicAction)        {
         if (thisRule.musicAction == '1')    {
             musicDevice.play(); ; pauseIt()
@@ -3968,7 +4010,6 @@ private musicAction(thisRule)       {
 }
 
 private setShade(thisRule)      {
-    def hT = getHubType()
     switch(thisRule.shade)      {
         case '0':       windowShades.open();  pauseIt();            break;
         case '1':       windowShades.close(); pauseIt();            break;
@@ -4195,7 +4236,7 @@ private calculateLevelOrKelvin(kelvin = false)       {
 */
 
 private calculateLevelOrKelvin(kelvin = false)       {
-//    ifDebug("calculateLevelOrKelvin")
+    ifDebug("calculateLevelOrKelvin")
     if (kelvin)
         return calculateLK(minKelvin, maxKelvin, fadeCTWake, fadeKWakeBefore, fadeKWakeAfter, fadeCTSleep, fadeKSleepBefore, fadeKSleepAfter)
     else
@@ -4351,10 +4392,9 @@ private whichSwitchesAreOn(returnAllSwitches = false)   {
 }
 
 def dimLights()     {
-//    ifDebug("dim lights")
+    ifDebug("dim lights")
     state.preDimLevel = [:]
     if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel))       return;
-    def hT = getHubType()
     def switchesThatAreOn = whichSwitchesAreOn()
     if (switchesThatAreOn && state.dimByLevel)
         switchesThatAreOn.each      {
@@ -4381,10 +4421,9 @@ def dimLights()     {
 }
 
 private unDimLights(roomState)       {
-//    ifDebug("unDimLights")
+    ifDebug("unDimLights")
 //    ifDebug("state.preDimLevel: $state.preDimLevel")
     if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel) || !state.preDimLevel)      return;
-    def hT = getHubType()
     if (!notRestoreLL || roomState != vacant)      {
         def switchesThatAreOn = whichSwitchesAreOn()
         switchesThatAreOn.each      {
@@ -4401,17 +4440,16 @@ private unDimLights(roomState)       {
 }
 
 def switches2Off()       {
-//    ifDebug("switches2Off")
+    ifDebug("switches2Off")
     state.holidayLights = false
     def switchesThatAreOn = whichSwitchesAreOn(true)
-    def hT = getHubType()
     switchesThatAreOn.each  {
         it.off(); pauseIt();
     }
 }
 
 private previousStateStack(previousState)    {
-//    ifDebug("previousStateStack")
+    ifDebug("previousStateStack")
     def i
     def timeIs = now()
     def removeHowOld = (state.noMotion ? (((state.noMotion as Integer) + (state.dimTimer as Integer)) * 10) : (180 * 10))
@@ -4539,7 +4577,7 @@ def convertRGBToHueSaturation(setColorTo)      {
 }
 
 private unscheduleAll(classNameCalledFrom)		{
-//    ifDebug("${app.label} unschedule calling class: $classNameCalledFrom")
+    ifDebug("${app.label} unschedule calling class: $classNameCalledFrom")
     unschedule('roomVacant')
 //    unschedule('setToEngaged')
     unschedule('powerStaysBelowEngaged')
@@ -4983,11 +5021,10 @@ private	hasOccupiedDevice()		{ return (motionSensors || occSwitches)}
 
 // only called from device handler
 def turnSwitchesAllOnOrOff(turnOn)     {
-//    ifDebug("turnSwitchesAllOnOrOff")
+    ifDebug("turnSwitchesAllOnOrOff")
     def switches = getAllSwitches()
     if (switches)       {
         def action = (turnOn ? on : off)
-        def hT = getHubType()
         switches.each   {  if (it.currentSwitch != action)   { it."$action"(); pauseIt() }  }
     }
 }
@@ -5018,14 +5055,17 @@ private getAllSwitches()    {
 //------------------------------------------------------Night option------------------------------------------------------//
 def	nightButtonPushedEventHandler(evt)     {
     ifDebug("nightButtonPushedEventHandler: $evt.data")
-    if (!evt.data)      return;
-    def nM = new groovy.json.JsonSlurper().parseText(evt.data)
-    assert nM instanceof Map
+    if (!checkPauseModesAndDoW())    return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def nM = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert nM instanceof Map
     // missing map values dont seem to return null in hubitat 2017-04-07
-    if (!nM || (nightButtonIs && nM['buttonNumber'] != null && nM['buttonNumber'] != nightButtonIs as Integer))
-        return;
+        if (!nM || (nightButtonIs && nM['buttonNumber'] != null && nM['buttonNumber'] != nightButtonIs as Integer))
+            return;
+    }
     def roomState = getChildDevice(getRoom())?.currentValue(occupancy)
-    if (nightSwitches && roomState == 'asleep')     {
+    if (nightSwitches && roomState == 'asleep')         {
         unscheduleAll("night button pushed handler")
         def switchValue = nightSwitches.currentSwitch
         if (nightButtonAction == "1")
@@ -5040,7 +5080,6 @@ def	nightButtonPushedEventHandler(evt)     {
 def dimNightLights()     {
 //    unschedule('dimNightLights')
     if (nightSwitches)     {
-        def hT = getHubType()
         nightSwitches.each      {
             it.on(); pauseIt()
             def itID = it.getId()
@@ -5056,7 +5095,6 @@ def dimNightLights()     {
 def nightSwitchesOff()      {
     unschedule('nightSwitchesOff')
     if (nightSwitches)  {
-        def hT = getHubType()
         nightSwitches.each      { it.off(); pauseIt() }
         getChildDevice(getRoom()).updateNSwitchInd(0)
     }

@@ -1,14 +1,15 @@
 # bangali's code stuff for SmartThings and Hubitat.
 
-<h2>Rooms Occupancy and Rooms Manager</h2>
+<img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
+<h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy</h2>
 
-<p>While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
+<p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
 
-<p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor and device inputs. This smartapp makes that possible.</p>
+<p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor inputs. This smartapp makes that possible.</p>
 
 <p>If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. <i>But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about.</i> 🙂</p>
 
-<p>Additionally, these room devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.</p>
+<p>Additionally, these room occupancy devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.</p>
 
 <h4>How does this app work?</h4>
 
@@ -23,29 +24,23 @@
 <h4>Here are the common room occupancy states:</h4>
 
 <ul>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupiedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Occupied:</h5>
-    </li>
     <p>Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a somewhat persistent state.</p>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngagedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Engaged:</h5>
-    </li>
     <p>Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.</p>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleepState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Asleep:</h5>
-    </li>
     <p>Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.</p>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacantState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Vacant:</h5>
-    </li>
     <p>Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.</p>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsCheckingState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Checking:</h5>
-    </li>
     <p>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</p>
-    <li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLockedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
         <h5>Locked:</h5>
-    </li>
     <p>Locked state disables all automations for the room and allows you to control lights and other devices in the room either manually or some other way.</p>
 </ul>
 
@@ -56,7 +51,8 @@
 <h4>Top level settings:</h4>
 
 <ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Room Devices</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOtherDevices.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Room Devices</h5>
     <p>Room sensors used in checking rule conditions based occupancy state and data from these sensors.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -96,7 +92,8 @@
 
 <p style="font-weight: bold; margin-top: 25px;">The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 <ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Occupied Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupied.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Occupied Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -108,7 +105,8 @@
             <td>Value in seconds for room state timeout after last motion event.</td>
         </tr>
     </table>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Engaged Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngaged.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Engaged Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -177,7 +175,8 @@
             <td>Reset room occupancy to Vacant directly without transitioning through Checking state.</td>
         </tr>
     </table>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Checking Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsChecking.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Checking Settings</h5>
     <p>Settings for timeout and light levels while in checking state.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -197,7 +196,8 @@
             <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant.</td>
         </tr>
     </table>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Vacant Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacant.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Vacant Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -217,7 +217,8 @@
             <td>Pause music player when room occupancy changes to Vacant.</td>
         </tr>
     </table>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Asleep Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleep.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Asleep Settings</h5>
     <p>Settings that specify how this occupancy state is set. Asleep is tricky because there is no true commonly used physical asleep sensors. So, these settings allow other ways of setting Asleep occupancy state and specifying night light settings which are a little different from how lights work through the rules.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -260,6 +261,7 @@
     <ul>
         <li style="list-style-type:square">
             <h5>Night lights:</h5>
+            <p>Settings for night lights with motion while in Asleep state.</p>
         </li>
         <table class="wikitable" style="width:875px">
             <tr>
@@ -292,7 +294,8 @@
             </tr>
         </table>
     </ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Locked Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLocked.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Locked Settings</h5>
     <p>Settings that specify how this occupancy state is set. This state disables all automation for the room.</p>
     <table class="wikitable" style="width:900px">
         <tr>
@@ -325,74 +328,61 @@
 <p style="font-weight: bold; margin-top: 25px;">These group of settings allow for light routine settings used in the rules.</p>
 
 <ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Auto Level 'AL' Settings</li>
-    <p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified.</p>
-    <ul>
-        <li>Specify level and color temperature settings along with wake and sleep times. Also allows specifying hours before and after wake and sleep times the light level and color temperature should be dimmed for optimal light levels.</li>
-    </ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Holiday Lights 'HL' Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Auto Level 'AL' Settings</h5>
+    <p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified. Also allows specifying hours before and after wake and sleep times the light level and color temperature should be dimmed for optimal light levels.</p>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Holiday Lights 'HL' Settings</h5>
     <p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
-    <ul>
-        <li>Specify groups of colors and name them so you can use them with rules.</li>
-    </ul>
 </ul>
 
 <p style="font-weight: bold; margin-top: 25px;">Temperature settings is their own group.</p>
 
 <ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Temperature Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsTemperature.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Temperature Settings</h5>
     <p>Manage temperature settings for the room in conjunction with thermostat or switch controlled room AC and/or heater. After adding temperature settings remember create temperature rules in maintain rules so the app can automate temperature control based on these rules.</p>
-    <ul>
-        <li>Specify temperature settings including specifying thermostat, AC and heater switch and fan for use in temperature rules.</li>
-    </ul>
 </ul>
 
 <p style="font-weight: bold; margin-top: 25px;">Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
 
 <ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Maintain Rules</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Maintain Rules</h5>
     <p>Here's where to create the rules that check room occupancy state, various sensor values and other variables to decide which lights and switches should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
-    <ul>
-        <li>Here is where you automate the room and create rules to drive which lights and/or switches turn on based on which condition(s) like occupancy state, mode, date, time and other sensor values.</li>
-    </ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Adjacent Room Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAdjacent5.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Adjacent Room Settings</h5>
     <p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
-    <ul>
-        <li>Specify settings to light your path when you are moving through rooms.</li>
-    </ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">Mode and Other Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Mode and Other Settings</h5>
     <p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
-    <ul>
-        <li>Various miscellaneous settings that do not fit anywhere else.</li>
-    </ul>
-    <li style="font-weight: bold; margin-top: 25px; margin-bottom: 15px;">View All Settings</li>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsViewAll.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>View All Settings</h5>
     <p>What the name says.</p>
 </ul>
 
-<p style="font-style: oblique; margin-top: 25px;">This only describes a part of what's possible through this app. For more details please see each group of settings for a room in the app.</p>
+<p style="font-style: oblique; margin-top: 25px;">This only describes a part of what's possible through this app. For more details please see the wiki here:</p>
+http://thingsthataresmart.wiki/index.php?title=Rooms_Occupancy
+
 
 <p style="font-style: oblique; margin-top: 15px;">For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</p>
 
 <p style="font-style: oblique; margin-top: 15px;">For a manual install here are the links, in order of DTHs and smartapps you should save and publish.</p>
 
 <p style="font-weight: bold; margin-top: 5px;">rooms occupancy DTH:</p>
-<https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy>
+https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 
 <p style="font-weight: bold; margin-top: 15px;">rooms manager smartapp:</p>
-<https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy>
+https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
 
 <p style="font-weight: bold; margin-top: 15px;">rooms child smartapp:</p>
-<https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy>
+https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
 
 <p style="font-weight: bold; margin-top: 20px;">Then go to ST app -> Automation tab -> Add a Smartapp -> My apps in ST app and install rooms manager app then create your rooms within rooms manager.</p>
 
 <h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
-<i><p>For more details see wiki here:</p>
-http://thingsthataresmart.wiki/index.php?title=Rooms_Occupancy
-</i>
-
-<p style="margin-top: 25px; margin-bottom: 50px;">Knowing that users are finding their app useful enough to support development of the app is always motivating for any dev. So here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager</i>. But if you do donate please also know that it is much appreciated, thank you. <a href="https://www.paypal.me/dey">Donate here.</a></p>
+<p style="margin-top: 25px; margin-bottom: 75px;">Knowing that users are finding the app useful enough to support development of the app is always motivating for a dev. So here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager</i>. But if you do donate please also know that it is much appreciated, thank you. Donate here: https://www.paypal.me/dey</p>
 
 <div id="screenshots-table">
     <table>

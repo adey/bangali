@@ -24,10 +24,20 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.20.9"  }
+public static String version()      {  return "v0.25.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.25.0
+*
+*   DONE:   7/20/2018
+*   1) get buttons working on hubitat.
+*
+*  Version: 0.21.0
+*
+*   DONE:   7/19/2018
+*   1) mostly readme updates.
 *
 *  Version: 0.20.9
 *
@@ -489,6 +499,11 @@ private static boolean isDebug()    {  return true  }
 *
 ***********************************************************************************************************************/
 
+import groovy.transform.Field
+
+@Field final String _SmartThings = 'ST'
+@Field final String _Hubitat     = 'HU'
+
 metadata {
 	definition (
     	name: "rooms occupancy",
@@ -496,6 +511,7 @@ metadata {
         author: "bangali")		{
 		capability "Actuator"
 		capability "Button"
+//		capability "PushableButton"		// hubitat changed `Button` to `PushableButton`  2018-04-20
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
@@ -921,10 +937,16 @@ def updated()		{  initialize()  }
 def	initialize()	{
 	unschedule()
 	state
-	sendEvent(name: "numberOfButtons", value: 9)
+	sendEvent(name: "numberOfButtons", value: 9, descriptionText: "set number of buttons to 9.", isStateChange: true, displayed: true)
 	state.timer = 0
 	setupAlarmC()
 	sendEvent(name: "countdown", value: 0, descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
+}
+
+def getHubType()        {
+    if (!state.hubId)   state.hubId = location.hubs[0].id.toString()
+    if (state.hubId.length() > 5)   return _SmartThings;
+    else                            return _Hubitat;
 }
 
 def setupAlarmC()	{
@@ -1015,7 +1037,11 @@ private updateOccupancy(occupancy = null) 	{
     }
 	sendEvent(name: "occupancy", value: occupancy, descriptionText: "${device.displayName} changed to ${occupancy}", isStateChange: true, displayed: true)
     def button = buttonMap[occupancy]
-	sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+	if (getHubType() == _SmartThings)
+		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+	else
+		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+
 	updateRoomStatusMsg()
 }
 
