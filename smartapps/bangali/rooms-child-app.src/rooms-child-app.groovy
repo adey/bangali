@@ -1271,7 +1271,7 @@ private pageRule(params)   {
     }
 //    ifDebug("levelOptions: $levelOptions")
     if (allActions)     allActions.sort();
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
     dynamicPage(name: "pageRule", title: "Edit Rule", install: false, uninstall: false)   {
         section()     {
             ifDebug("rule number page ${ruleNo}")
@@ -1348,11 +1348,11 @@ private pageRule(params)   {
         else        {
             section("Maintain room temperature?", hideable: false)		{
                 if (['1', '3'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomCoolSwitch)))
-                    input "coolTemp$ruleNo", "decimal", title: "Cool to what temperature?", required: (!settings["fanOnTemp$ruleNo"] ? true : false), multiple: false, range: "${(isFarenheit ? '0..38' : '32..99')}", submitOnChange: true
+                    input "coolTemp$ruleNo", "decimal", title: "Cool to what temperature?", required: (!settings["fanOnTemp$ruleNo"] ? true : false), multiple: false, range: "${(isFarenheit ? '32..99' : '0..38')}", submitOnChange: true
                 else
                     paragraph "Cool to what temperature?\nset thermostat or cool switch to set."
                 if (['2', '3'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomHeatSwitch)))
-                    input "heatTemp$ruleNo", "decimal", title: "Heat to what temperature?", required: true, multiple: false, range: "${(isFarenheit ? '0..38' : '32..99')}"
+                    input "heatTemp$ruleNo", "decimal", title: "Heat to what temperature?", required: true, multiple: false, range: "${(isFarenheit ? '32..99' : '0..38')}"
                 else
                     paragraph "Heat to what temperature?\nset thermostat or heat switch to set."
                 if (['1', '2', '3'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && (roomCoolSwitch || roomHeatSwitch))))
@@ -1363,7 +1363,7 @@ private pageRule(params)   {
             section("Fan control?", hideable: false)		{
                 if (roomFanSwitch)      {
                     input "fanOnTemp$ruleNo", "decimal", title: "Fan on at temperature?",
-                                            required: false, multiple: false, defaultValue: null, range: "${(isFarenheit ? '0..38' : '32..99')}", submitOnChange: true
+                                            required: false, multiple: false, defaultValue: null, range: "${(isFarenheit ? '32..99' : '0..38')}", submitOnChange: true
                     input "fanSpeedIncTemp$ruleNo", "decimal", title: "Fan speed with what temperature increments?",
                                             required: (settings["fanOnTemp$ruleNo"]), multiple: false, range: "1..5"
                 }
@@ -1716,7 +1716,7 @@ private pageRoomTemperature()       {
         ifDebug("otherRoom: $otherRoom")
         if (otherRoom)      validThermostat = false;
     }
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 	dynamicPage(name: "pageRoomTemperature", title: "Temperature Settings", install: false, uninstall: false)    {
         if (validThermostat)       {
             section("Maintain room temperature:", hideable: false)		{
@@ -1729,7 +1729,7 @@ private pageRoomTemperature()       {
                         input "roomThermostat", "capability.thermostat", title: "Which thermostat?", required: true, multiple: false, submitOnChange: true
                         input "thermoToTempSensor", "number", title: "Delta (room - thermostat) temperature?",
                                         description: "if room sensor reads 2° lower than thermostat set this to -2 and so on.",
-                                        required: true, multiple: false, defaultValue: 0, range: "${(isFarenheit ? '-9..9' : '-15..15')}"
+                                        required: true, multiple: false, defaultValue: 0, range: "${(isFarenheit ? '-15..15' : '-9..9')}"
                     }
                     if (personsPresence)
                         input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
@@ -1790,7 +1790,7 @@ private pageAdjacentRooms()     {
 }
 
 private pageGeneralSettings()       {
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 	dynamicPage(name: "pageGeneralSettings", title: "General Settings", install: false, uninstall: false) {
 		section("Mode settings for AWAY and PAUSE modes?", hideable: false)		{
             input "awayModes", "mode", title: "Away modes to set Room to VACANT?", required: false, multiple: true
@@ -1840,7 +1840,7 @@ private pageGeneralSettings()       {
 private pageAllSettings() {
     ifDebug("pageAllSettings")
     def dOW = [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],[3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 	dynamicPage(name: "pageAllSettings", title: "View All Settings", install: false, uninstall: false)    {
 		section("", hideable: false)		{
             paragraph "Motion sensor:\t${(motionSensors ? true : '')}\nOccupancy timeout:\t${(hasOccupiedDevice() ? (noMotion ?: '') : '')}\nMotion event:\t\t${(motionSensors ? (whichNoMotion == 1 ? 'Last Motion Active' : 'Last Motion Inactive') : '')}\nOccupied switches:\t${ (occSwitches ? true : '')}"
@@ -1927,7 +1927,7 @@ def updateRoom(adjMotionSensors)     {
     ifDebug("updateRoom")
 	initialize()
     def hT = getHubType()
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 //    def child = getChildDevice(getRoom())
 	subscribe(location, "mode", modeEventHandler)
     state.noMotion = ((noMotion && noMotion >= 5) ? noMotion : null)
@@ -2142,7 +2142,7 @@ def updateIndicators()      {
     ifDebug("updateIndicators")
     def child = getChildDevice(getRoom())
     def ind
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
     child.updateMotionInd((motionSensors ? (motionSensors.currentMotion.contains('active') ? 1 : 0) : -1))
     child.updateLuxInd((luxSensor ? getIntfromStr((String) luxSensor.currentIlluminance) : -1))
     child.updateContactInd((contactSensor ? (contactSensor.currentContact.contains('closed') ? 1 : 0) : -1))
@@ -2195,7 +2195,7 @@ def updateIndicators()      {
 
 private getAvgTemperature()     {
 //    ifDebug("getAvgTemperature")
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
     int countTempSensors = (tempSensors ? tempSensors.size() : 0)
     if (countTempSensors < 1)       return -1;
     def temperatures = tempSensors.currentTemperature
@@ -2981,7 +2981,7 @@ def musicStoppedEventHandler(evt)       {
 def temperatureEventHandler(evt)    {
     def child = getChildDevice(getRoom())
     def temperature = getAvgTemperature()
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 //    ifDebug("temperatureEventHandler: $temperature")
     child.updateTemperatureInd(temperature)
 //    if (!personsPresence)       return;
@@ -3188,7 +3188,7 @@ def processCoolHeat()       {
     def temp = -1
     def child = getChildDevice(getRoom())
     def isHere = (personsPresence ? personsPresence.currentPresence.contains(present) : false)
-    boolean isFarenheit = (location.temperatureScale == 'F')
+    boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 //    def hT = getHubType()
     if ((checkPresence && !isHere) || maintainRoomTemp == '4' && !roomFanSwitch)    {
         if (checkPresence && !isHere)       {
@@ -3894,9 +3894,9 @@ private turnSwitchesOnAndOff(thisRule)       {
             def colorTemperature = null
             def level = null
             thisRule.switchesOn.each      {
-                if (it.currentSwitch != on)     {
+//                if (it.currentSwitch != on)     {
                     it.on(); pauseIt()
-                }
+//                }
                 def itID = it.getId()
                 if (thisRule.color && state.switchesHasColor[itID])     {
     //                if (it.currentColor != thisRule.hue)
