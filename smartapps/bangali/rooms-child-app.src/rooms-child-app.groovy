@@ -936,7 +936,7 @@ private pageVacantSettings()      {
 
 
 private pageOtherDevicesSettings()       {
-	dynamicPage(name: "pageOtherDevicesSettings", title: "Room Devices", install: false, uninstall: false)      {
+	dynamicPage(name: "pageOtherDevicesSettings", title: "Room Sensors", install: false, uninstall: false)      {
         section("MOTION SENSOR(s):", hideable: false)        {
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
             if (motionSensors)
