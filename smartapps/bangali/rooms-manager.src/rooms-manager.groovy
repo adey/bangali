@@ -539,6 +539,7 @@ def pageSpeakerSettings()   {
     def i = (presenceSensors ? presenceSensors.size() : 0)
     def str = (presenceNames ? presenceNames.split(msgSeparator) : [])
     def j = str.size()
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
     if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
         section("Speaker selection:")       {
@@ -554,9 +555,9 @@ def pageSpeakerSettings()   {
                 paragraph "Speaker volume?\nselect speaker(s) to set."
         }
         section("Announce only between hours:")     {
-            if ((speakerDevices || speechDevices || musicPlayers))        {
-                input "startHH", "number", title: "Announce from hour?\n(2 digit hour in 24 hour format)", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ?: 23}", submitOnChange: true
-                input "endHH", "number", title: "Announce to hour?\n(2 digit hour in 24 hour format)", required: true, multiple: false, defaultValue: 7, range: "${startHH ?: 23}..23", submitOnChange: true
+            if (playerDevice)        {
+                input "startHH", "number", title: "Announce from hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ?: 23}", submitOnChange: true
+                input "endHH", "number", title: "Announce to hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${startHH ?: 23}..23", submitOnChange: true
             }
             else        {
                 paragraph "Announce from hour?\nselect either presence or time announcement to set"
@@ -564,7 +565,7 @@ def pageSpeakerSettings()   {
             }
         }
         section("Time announcement:")     {
-            if (speakerDevices || speechDevices || musicPlayers)
+            if (playerDevice)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
             else
@@ -577,12 +578,12 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Comma delmited names?\nselect presence sensors to set."
         }
-		section("Arrival and departure announcement:")   {
-            if ((speakerDevices || speechDevices || musicPlayers) && presenceSensors)
+		section("Arrival and departure announcement:")        {
+            if (playerDevice && presenceSensors)
                 input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
                 paragraph "Announce when presence sensors arrive or depart?\nselect presence sensors and speaker(s) to set."
-            if ((speakerDevices || speechDevices || musicPlayers) && speakerAnnounce)    {
+            if (playerDevice && speakerAnnounce)    {
                 paragraph "In the following texts '&' will be replaced with persons name(s) and a random string will be used if there are multiple '$msgSeparator' separated strings."
                 paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
                 input "welcomeHome", "text",
@@ -603,7 +604,7 @@ def pageSpeakerSettings()   {
             if (presenceSensors)
                 input "speakerAnnounceColor", "bool", title: "Announce with color when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
-                paragraph "Announce with color when presence sensors arrive or depart?\nselect speaker(s) to set."
+                paragraph "Announce with color when presence sensors arrive or depart?\nselect presence sensor(s) to set."
             if (speakerAnnounceColor)    {
                 input "presenceColorString", "text", title: "Comma delimited colors?", required: true, multiple: false
                 input "presenceSwitches", "capability.switch", title: "Which switches?", required: true, multiple: true
@@ -613,11 +614,11 @@ def pageSpeakerSettings()   {
                 paragraph "Which switches?\nselect announce with color to set."
             }
         }
-        section("Welcome greeting and left annoucement settings:")   {
+        section("Welcome greeting and left annoucement settings:")      {
             if (speakerAnnounce || speakerAnnounceColor)    {
                 input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensor(s) close?",
                                                 required: (!motionSensors ? true : false), multiple: true
-                input "motionSensors", "capability.contactSensor", title: "Welcome home greeting with motion on which motion sensor(s)?",
+                input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensor(s)?",
                                                 required: (!contactSensors ? true : false), multiple: true
                 input "secondsAfter", "number", title: "Left home announcement how many seconds after?\n",
                                                 required: true, multiple: false, defaultValue: 15, range: "5..100"
@@ -629,7 +630,7 @@ def pageSpeakerSettings()   {
             }
         }
         section("Battery status:")     {
-            if (speakerDevices || speechDevices || musicPlayers)
+            if (playerDevice)
                 input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
             else
                 paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
@@ -1071,9 +1072,9 @@ def handleAdjRooms()    {
         if (adjRooms)
             childApps.each	{ child ->
                 if (childID != child.id && adjRooms.contains(child.id))      {
-                    def motionSensors = child.getAdjMotionSensors()
-                    if (motionSensors)
-                        motionSensors.each      {
+                    def mS = child.getAdjMotionSensors()
+                    if (mS)
+                        mS.each      {
                             def motionSensorId = it.getId()
                             if (!adjMotionSensorsIds.contains(motionSensorId))   {
                                 adjMotionSensors << it
@@ -1109,7 +1110,7 @@ def processChildSwitches()      {
 //        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
         if (modeAndDoW)     {
             child.switchesOnOrOff(true)
-            if (hT == _SmartThings)     getSpause(10);
+            if (hT == _SmartThings)     pause(10);
         }
     }
 }
