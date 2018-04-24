@@ -44,22 +44,22 @@ private static boolean isDebug()    {  return true  }
 *
 *  Version: 0.25.0
 *
-*   DONE:   7/20/2018
+*   DONE:   4/20/2018
 *   1) get buttons working on hubitat.
 *
 *  Version: 0.21.0
 *
-*   DONE:   7/19/2018
+*   DONE:   4/19/2018
 *   1) mostly readme updates.
 *
 *  Version: 0.20.9
 *
-*   DONE:   7/15/2018
+*   DONE:   4/15/2018
 *   1) time today change for hubitat compatibility.
 *
 *  Version: 0.20.7
 *
-*   DONE:   7/14/2018
+*   DONE:   4/14/2018
 *   1) added a bunch of state variable for use with hubitat dashboard tiles.
 *
 *  Version: 0.20.5
@@ -1150,7 +1150,7 @@ private pageHolidayLight(params)   {
         state.pageHoliLightNo = state.holiPassedParams.holiLightNo
     def holiLightNo = state.pageHoliLightNo
 //    ifDebug("pageHolidayLight: holiLightNo: $holiLightNo")
-    dynamicPage(name: "pageHolidayLight", title: "Holiday Light", install: false, uninstall: false)   {
+    dynamicPage(name: "pageHolidayLight", title: "Holiday Light Pattern", install: false, uninstall: false)   {
         section()     {
             input "holiName$holiLightNo", "text", title: "Color string name?", required: true,
                                 multiple: false, submitOnChange: true
@@ -1731,10 +1731,6 @@ private pageRoomTemperature()       {
                                         description: "if room sensor reads 2° lower than thermostat set this to -2 and so on.",
                                         required: true, multiple: false, defaultValue: 0, range: "${(isFarenheit ? '-15..15' : '-9..9')}"
                     }
-                    if (personsPresence)
-                        input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
-                    else
-                        paragraph "Check presence before maintaining temperature?\nselect presence sensor(s) to set"
                 }
                 if (!useThermostat && ['1', '3'].contains(maintainRoomTemp))      {
                     input "roomCoolSwitch", "capability.switch", title: "AC switch?", required: true, multiple: false, submitOnChange: true
@@ -1752,6 +1748,10 @@ private pageRoomTemperature()       {
     //                input "roomHeatTemp", "decimal", title: "What temperature?", required: true, multiple: false, range: "32..99"
                 }
                 if (['1', '2', '3'].contains(maintainRoomTemp))     {
+                    if (personsPresence)
+                        input "checkPresence", "bool", title: "Check presence before maintaining temperature?", required: true, multiple: false, defaultValue: false
+                    else
+                        paragraph "Check presence before maintaining temperature?\nselect presence sensor(s) to set"
                     input "contactSensorsRT", "capability.contactSensor", title: "Check contact sensors closed?", required: false, multiple: true
                     input "thermoOverride", "number", title: "Allow thermostat or switch override for how many minutes?",
                                                     required: true, multiple: false, defaultValue: 0, range: "1..15"
@@ -4551,7 +4551,7 @@ private returnHueAndSaturation(setColorTo)        {
     return rHAS
 }
 
-def convertRGBToHueSaturation(setColorTo)      {
+private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()
 	def rgb = (colorsRGB[str] ?: colorsRGB['white'])
     float r = rgb[0] / 255

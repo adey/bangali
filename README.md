@@ -57,7 +57,7 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Motion sensor(s)</td>
-            <td style="width:85%">Room motion sensor(s) for motion activated state change like Occupied or Engaged.</td>
+            <td style="width:85%">Room motion sensor(s) for motion activated state change like Occupied or Engaged</td>
         </tr>
         <tr>
             <td>Motion event</td>
@@ -73,19 +73,19 @@
         </tr>
         <tr>
             <td>Humidity sensor</td>
-            <td>Room humidity sensor to use with rules for lights and switches.</td>
+            <td>Room humidity sensor to use with rules for lights and switches</td>
         </tr>
         <tr>
             <td>Music player</td>
-            <td>Room music player to use with rules for lights and switches.</td>
+            <td>Room music player to use with rules for lights and switches</td>
         </tr>
         <tr>
             <td>Power meter</td>
-            <td>Room power sensor to use with rules for lights and switches.</td>
+            <td>Room power sensor to use with rules for lights and switches</td>
         </tr>
         <tr>
             <td>Window shade</td>
-            <td>Room window shade to use in rules.</td>
+            <td>Room window shade to use in rules</td>
         </tr>
     </table>
 </ul>
@@ -98,11 +98,11 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Switch</td>
-            <td style="width:85%">Switch which when turned on will set room occupancy state to Occupied.</td>
+            <td style="width:85%">Switch which when turned on will set room occupancy state to Occupied</td>
         </tr>
         <tr>
             <td>Timeout</td>
-            <td>Value in seconds for room state timeout after last motion event.</td>
+            <td>Value in seconds for room state timeout after last motion event</td>
         </tr>
     </table>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngaged.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -115,11 +115,11 @@
         </tr>
         <tr>
             <td>Button</td>
-            <td>Set room occupancy to Engaged state when button is pushed.</td>
+            <td>Set room occupancy to Engaged state when button is pushed</td>
         </tr>
         <tr>
             <td>Button number</td>
-            <td>Button number of button selected above.</td>
+            <td>Button number of button selected above</td>
         </tr>
         <tr>
             <td>Presence sensor actions</td>
@@ -136,19 +136,19 @@
         </tr>
         <tr>
             <td>Keep room engaged with presence</td>
-            <td>Keeps room occupancy set to Engaged when presence sensor is present.</td>
+            <td>Keeps room occupancy set to Engaged when presence sensor is present</td>
         </tr>
         <tr>
             <td>When music playing</td>
-            <td>Keeps room occupancy set to Engaged when music is playing.</td>
+            <td>Keeps room occupancy set to Engaged when music is playing</td>
         </tr>
         <tr>
             <td>Switch</td>
-            <td>Switch which when turned on will set room occupancy to Engaged.</td>
+            <td>Switch which when turned on will set room occupancy to Engaged</td>
         </tr>
         <tr>
             <td>Power value</td>
-            <td>Power value in watts which when reached will set room occupancy to Engaged.</td>
+            <td>Power value in watts which when reached will set room occupancy to Engaged</td>
         </tr>
         <tr>
             <td>Power stays below</td>
@@ -156,23 +156,23 @@
         </tr>
         <tr>
             <td>Contact sensor</td>
-            <td>Contact sensor(s) when closed will set room occupancy to Engaged with motion.</td>
+            <td>Contact sensor(s) when closed will set room occupancy to Engaged with motion</td>
         </tr>
         <tr>
             <td>Outside door</td>
-            <td>For use with outside doors like garage doors where the Engaged state is triggered with motion if the door is open.</td>
+            <td>For use with outside doors like garage doors where the Engaged state is triggered with motion if the door is open</td>
         </tr>
         <tr>
             <td>Timeout</td>
-            <td>Value in seconds for room occupancy timeout from Engaged to Vacant.</td>
+            <td>Value in seconds for room occupancy timeout from Engaged to Vacant</td>
         </tr>
         <tr>
             <td>Reset Engaged/Asleep</td>
-            <td>Reset Engaged or Asleep state when another room changes to Engaged or Asleep.</td>
+            <td>Reset Engaged or Asleep state when another room changes to Engaged or Asleep</td>
         </tr>
         <tr>
             <td>Reset Engaged directly</td>
-            <td>Reset room occupancy to Vacant directly without transitioning through Checking state.</td>
+            <td>Reset room occupancy to Vacant directly without transitioning through Checking state</td>
         </tr>
     </table>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsChecking.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -181,19 +181,19 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Dim timer</td>
-            <td style="width:85%">Dim lights for how many seconds for visible notification of checking state and that lights and switches will be turned off.</td>
+            <td style="width:85%">Dim lights for how many seconds for visible notification of checking state and that lights and switches will be turned off</td>
         </tr>
         <tr>
             <td>Dim level by</td>
-            <td>If any lights are on dim them by this level.</td>
+            <td>If any lights are on dim them by this level</td>
         </tr>
         <tr>
             <td>Dim level to</td>
-            <td>If no lights are on turn them on at this level.</td>
+            <td>If no lights are on turn them on at this level</td>
         </tr>
         <tr>
             <td>Do not restore</td>
-            <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant.</td>
+            <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant</td>
         </tr>
     </table>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacant.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -202,19 +202,19 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Button</td>
-            <td style="width:85%">Set room occupancy to Vacant state when button is pushed.</td>
+            <td style="width:85%">Set room occupancy to Vacant state when button is pushed</td>
         </tr>
         <tr>
             <td>Button number</td>
-            <td>Button number of button selected above.</td>
+            <td>Button number of button selected above</td>
         </tr>
         <tr>
             <td>Switch</td>
-            <td>Switch which when turned off will set room occupancy to Vacant.</td>
+            <td>Switch which when turned off will set room occupancy to Vacant</td>
         </tr>
         <tr>
             <td>Stop music</td>
-            <td>Pause music player when room occupancy changes to Vacant.</td>
+            <td>Pause music player when room occupancy changes to Vacant</td>
         </tr>
     </table>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleep.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -227,23 +227,23 @@
         </tr>
         <tr>
             <td>Button</td>
-            <td style="width:75%">Set room occupancy to Asleep state when button is pushed.</td>
+            <td style="width:75%">Set room occupancy to Asleep state when button is pushed</td>
         </tr>
         <tr>
             <td>Button number</td>
-            <td>Button number of button selected above.</td>
+            <td>Button number of button selected above</td>
         </tr>
         <tr>
             <td>Switch</td>
-            <td>Switch which when turned off will set room occupancy to Asleep.</td>
+            <td>Switch which when turned off will set room occupancy to Asleep</td>
         </tr>
         <tr>
             <td>Power value</td>
-            <td>Pause music player when room occupancy changes to Vacant.</td>
+            <td>Pause music player when room occupancy changes to Vacant</td>
         </tr>
         <tr>
             <td>Trigger from vacant</td>
-            <td>When false room will need to be in a state other than Vacant for the Asleep state to be triggered.</td>
+            <td>When false room will need to be in a state other than Vacant for the Asleep state to be triggered</td>
         </tr>
         <tr>
             <td>Power stays below</td>
@@ -255,7 +255,7 @@
         </tr>
         <tr>
             <td>Reset with Contact</td>
-            <td>Option to turn off Asleep state after certain number of hours in case you forget to turn it off in the morning.</td>
+            <td>Option to turn off Asleep state after certain number of hours in case you forget to turn it off in the morning</td>
         </tr>
     </table>
     <ul>
@@ -266,31 +266,31 @@
         <table class="wikitable" style="width:875px">
             <tr>
                 <td style="width:15%">Turn on</td>
-                <td style="width:85%">Switches to turn on with motion while in Asleep state.</td>
+                <td style="width:85%">Switches to turn on with motion while in Asleep state</td>
             </tr>
             <tr>
                 <td>Level</td>
-                <td>Set level when turning on switches above.</td>
+                <td>Set level when turning on switches above</td>
             </tr>
             <tr>
                 <td>Color temperature</td>
-                <td>Set color temperature when turning on switches above.</td>
+                <td>Set color temperature when turning on switches above</td>
             </tr>
             <tr>
                 <td>Timeout</td>
-                <td>Value in seconds for night light timeout.</td>
+                <td>Value in seconds for night light timeout</td>
             </tr>
             <tr>
                 <td>Button</td>
-                <td>Button to control night lights only.</td>
+                <td>Button to control night lights only</td>
             </tr>
             <tr>
                 <td>Button number</td>
-                <td>Button number of button selected above.</td>
+                <td>Button number of button selected above</td>
             </tr>
             <tr>
                 <td>Button action</td>
-                <td>Either toggle or turn night lights on or off.</td>
+                <td>Either toggle or turn night lights on or off</td>
             </tr>
         </table>
     </ul>
@@ -300,27 +300,27 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Switch</td>
-            <td style="width:85%">Switch to set room occupancy to Locked.</td>
+            <td style="width:85%">Switch to set room occupancy to Locked</td>
         </tr>
         <tr>
             <td>On or off</td>
-            <td>Set Locked state when switch turns on or turns off.</td>
+            <td>Set Locked state when switch turns on or turns off</td>
         </tr>
         <tr>
             <td>Contact</td>
-            <td>Contact to set room occupancy to Locked.</td>
+            <td>Contact to set room occupancy to Locked</td>
         </tr>
         <tr>
             <td>Open or closed</td>
-            <td>Set Locked state when contact is open or closed.</td>
+            <td>Set Locked state when contact is open or closed</td>
         </tr>
         <tr>
             <td>Switches off</td>
-            <td>When true turn off switches when room occupancy changes to Locked.</td>
+            <td>When true turn off switches when room occupancy changes to Locked</td>
         </tr>
         <tr>
             <td>Timeout</td>
-            <td>Option to turn off Locked state after certain number of hours.</td>
+            <td>Option to turn off Locked state after certain number of hours</td>
         </tr>
     </table>
 </ul>
@@ -331,9 +331,131 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Auto Level 'AL' Settings</h5>
     <p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified. Also allows specifying hours before and after wake and sleep times the light level and color temperature should be dimmed for optimal light levels.</p>
+    <table class="wikitable" style="width:900px">
+        <tr>
+            <td style="width:15%">Minimum level</td>
+            <td style="width:85%">Minimum light level</td>
+        </tr>
+        <tr>
+            <td>Maximum level</td>
+            <td>Maximum light level</td>
+        </tr>
+        <tr>
+            <td>Wakeup time</td>
+            <td>Wakeup time</td>
+        </tr>
+        <tr>
+            <td>Sleep time</td>
+            <td>Sleep time</td>
+        </tr>
+        <td>
+        </td>
+        <tr>
+            <td>Fade up to wake time</td>
+            <td>Fade light level up to wake time</td>
+        </tr>
+        <tr>
+            <td>Hours before</td>
+            <td>How many hours before wakeup time should light level start fading up</td>
+        </tr>
+        <tr>
+            <td>Hours after</td>
+            <td>How many hours after wakeup time should light level stop fading up</td>
+        </tr>
+        <tr>
+            <td>Fade down to sleep time</td>
+            <td>Fade light level down to sleep time</td>
+        </tr>
+        <tr>
+            <td>Hours before</td>
+            <td>How many hours before sleep time should light level start fading down</td>
+        </tr>
+        <tr>
+            <td>Hours after</td>
+            <td>How many hours after sleep time should light level stop fading down</td>
+        </tr>
+        <td>
+        </td>
+        <tr>
+            <td>Auto color temperature</td>
+            <td>Set color temperature along with level</td>
+        </tr>
+        <tr>
+            <td>Minimum kelvin</td>
+            <td>Minimum color temperature for light</td>
+        </tr>
+        <tr>
+            <td>Maximum kelvin</td>
+            <td>Maximum color temperature for light</td>
+        </tr>
+        <td>
+        </td>
+        <tr>
+            <td>Fade up to wake time</td>
+            <td>Fade color temperature up to wake time</td>
+        </tr>
+        <tr>
+            <td>Hours before</td>
+            <td>How many hours before wakeup time should color temperature start fading up</td>
+        </tr>
+        <tr>
+            <td>Hours after</td>
+            <td>How many hours after wakeup time should color temperature stop fading up</td>
+        </tr>
+        <tr>
+            <td>Fade down to sleep time</td>
+            <td>Fade color temperature down to sleep time</td>
+        </tr>
+        <tr>
+            <td>Hours before</td>
+            <td>How many hours before sleep time should color temperature start fading down</td>
+        </tr>
+        <tr>
+            <td>Hours after</td>
+            <td>How many hours after sleep time should color temperature stop fading down</td>
+        </tr>
+    </table>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Holiday Lights 'HL' Settings</h5>
     <p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
+    <ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:100%">List of previously defined holiday light patterns</td>
+            </tr>
+            <tr>
+                <td>Option to create new holiday light pattern</td>
+            </tr>
+        </table>
+        <ul>
+            <li style="list-style-type:square">
+                <h5>Holiday Light Pattern:</h5>
+                <p>Create holiday light patterns to use on different holidays or other special occasion.</p>
+            </li>
+            <table class="wikitable" style="width:875px">
+                <tr>
+                    <td style="width:15%">Color string name</td>
+                    <td style="width:85%">Name for this holiday light pattern for use in specifying with rules</td>
+                </tr>
+                <tr>
+                    <td>Colors</td>
+                    <td>Comma delimited list of colors</td>
+                </tr>
+                <tr>
+                    <td>Light routine</td>
+                    <td>Either Rotate or Twinkle where twinkle is a slow twinkle so the hub does not get saturated with frequent on and off commands</td>
+                </tr>
+                <tr>
+                    <td>How many seconds</td>
+                    <td>Either rotate colors or turn on and off after every how many seconds</td>
+                </tr>
+                <tr>
+                    <td>Light level</td>
+                    <td>Button to control night lights only</td>
+                </tr>
+            </table>
+        </ul>
+    </ul>
 </ul>
 
 <p style="font-weight: bold; margin-top: 25px;">Temperature settings is their own group.</p>
@@ -342,6 +464,83 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsTemperature.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Temperature Settings</h5>
     <p>Manage temperature settings for the room in conjunction with thermostat or switch controlled room AC and/or heater. After adding temperature settings remember create temperature rules in maintain rules so the app can automate temperature control based on these rules.</p>
+    <ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:15%">Temperature sensors</td>
+                <td style="width:85%">Room temperature sensors</td>
+            </tr>
+            <tr>
+                <td>Maintain temperature</td>
+                <td>Maintain temperature:
+                    <ul>
+                        <ul>
+                            <li>Cool:&emsp;&emsp;&ensp;&emsp;Cool room only</li>
+                            <li>Heat:&emsp;&ensp;&emsp;&emsp;Heat room only</li>
+                            <li>Both:&emsp;&emsp;&emsp;&ensp;Both cool and heat</li>
+                            <li>Neither:&emsp;&emsp;Neither</li>
+                        </ul>
+                    </ul>
+                </td>
+            </tr>
+            <tr>
+                <td>Use thermostat</td>
+                <td>Use thermostat to heat and cool or use in room AC and heater controlled by switches</td>
+            </tr>
+        </table>
+        <ul>
+            <li style="list-style-type:square">
+                <h5>Use thermostat: ON</h5>
+            </li>
+            <table class="wikitable" style="width:875px">
+                <tr>
+                    <td style="width:15%">Thermostat</td>
+                    <td style="width:85%">Thermostat</td>
+                </tr>
+                <tr>
+                    <td>Delta temperature</td>
+                    <td>Room temperature sensor <b>-</b> thermostat temperature reading</td>
+                </tr>
+            </table>
+        </ul>
+        <ul>
+            <li style="list-style-type:square">
+                <h5>Use thermostat: OFF</h5>
+            </li>
+            <table class="wikitable" style="width:875px">
+                <tr>
+                    <td style="width:15%">AC switch</td>
+                    <td style="width:85%">Switch for in room AC</td>
+                </tr>
+                <tr>
+                    <td>Heater switch</td>
+                    <td>Switch for in room heather </td>
+                </tr>
+            </table>
+        </ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:15%">Check presence</td>
+                <td style="width:85%">Specify presence sensors to check for presence before maintaining temperature</td>
+            </tr>
+            <tr>
+                <td>Check contact closed</td>
+                <td>Specify window contact sensors to check for closed before maintaining temperature</td>
+            </tr>
+            <tr>
+                <td>Switch override</td>
+                <td>Allow thermostat or AC / heater switch to be manually overridden for how many minutes</td>
+            </tr>
+            <tr>
+                <td>Outdoor temperature</td>
+                <td>Outdoor temperature sensor that is not currently used but have plans to use</td>
+            </tr>
+            <tr>
+                <td>Fan switch</td>
+                <td>Fan switch to use in rules</td>
+            </tr>
+        </table>
+    </ul>
 </ul>
 
 <p style="font-weight: bold; margin-top: 25px;">Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
@@ -350,6 +549,7 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Maintain Rules</h5>
     <p>Here's where to create the rules that check room occupancy state, various sensor values and other variables to decide which lights and switches should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
+    <p>While date acts a filter when checking rules for match, time works as a trigger. So, if you wanted your outdoor lights to turn on and off at certain times everyday you would create 1 rule with those times and lights to turn on and off at right times. You could also use this feature in combination with date filtering and with or without Holiday Light 'HL' settings above for different color settings for different holidays.</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAdjacent5.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Adjacent Room Settings</h5>
     <p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
@@ -363,7 +563,6 @@
 
 <p style="font-style: oblique; margin-top: 25px;">This only describes a part of what's possible through this app. For more details please see the wiki here:</p>
 http://thingsthataresmart.wiki/index.php?title=Rooms_Occupancy
-
 
 <p style="font-style: oblique; margin-top: 15px;">For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</p>
 

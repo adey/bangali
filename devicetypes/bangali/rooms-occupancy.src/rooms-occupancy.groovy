@@ -31,27 +31,27 @@ private static boolean isDebug()    {  return true  }
 *
 *  Version: 0.25.0
 *
-*   DONE:   7/20/2018
+*   DONE:   4/20/2018
 *   1) get buttons working on hubitat.
 *
 *  Version: 0.21.0
 *
-*   DONE:   7/19/2018
+*   DONE:   4/19/2018
 *   1) mostly readme updates.
 *
 *  Version: 0.20.9
 *
-*   DONE:   7/15/2018
+*   DONE:   4/15/2018
 *   1) time today change for hubitat compatibility.
 *
 *  Version: 0.20.7
 *
-*   DONE:   7/14/2018
+*   DONE:   4/14/2018
 *   1) added a bunch of state variable for use with hubitat dashboard tiles.
 *
 *  Version: 0.20.5
 *
-*   DONE:   7/13/2018
+*   DONE:   4/13/2018
 *   1) changed message separator to '/' and added support for &is and &has.
 *   2) added save and restore sound level when playing announcements.
 *   3) restored lock only capability instead of using lock capability.
@@ -61,13 +61,13 @@ private static boolean isDebug()    {  return true  }
 *
 *  Version: 0.20.1
 *
-*   DONE:   7/11/2018
+*   DONE:   4/11/2018
 *   1) handle pause for hubitat.
 *   2) adapt timeTodayAfter for hubitat compatibility.
 *
 *  Version: 0.20.0
 *
-*   DONE:   7/4/2018
+*   DONE:   4/4/2018
 *   1) change lock only to lock because hubitat does not support lock only capability.
 *   2) add option for cooling / heating override in minutes.
 *   3) added option to check room windoes before turning on cooling / heating.
@@ -940,7 +940,7 @@ def	initialize()	{
 	sendEvent(name: "numberOfButtons", value: 9, descriptionText: "set number of buttons to 9.", isStateChange: true, displayed: true)
 	state.timer = 0
 	setupAlarmC()
-	sendEvent(name: "countdown", value: 0, descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
+	sendEvent(name: "countdown", value: '0s', descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
 }
 
 def getHubType()        {
