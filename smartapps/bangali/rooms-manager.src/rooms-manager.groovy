@@ -1109,7 +1109,7 @@ def processChildSwitches()      {
 //        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
         if (modeAndDoW)     {
             child.switchesOnOrOff(true)
-            if (hT == _SmartThings)     getSpause(10);
+            if (hT == _SmartThings)     pause(10);
         }
     }
 }
