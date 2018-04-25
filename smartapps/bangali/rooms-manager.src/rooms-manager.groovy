@@ -557,7 +557,7 @@ def pageSpeakerSettings()   {
         section("Announce only between hours:")     {
             if (playerDevice)        {
                 input "startHH", "number", title: "From hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
-                input "endHH", "number", title: "To hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 23)}..23", submitOnChange: true
+                input "endHH", "number", title: "To hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
             }
             else        {
                 paragraph "Announce from hour?\nselect either presence or time announcement to set"
