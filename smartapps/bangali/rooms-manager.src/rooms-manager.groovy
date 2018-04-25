@@ -547,17 +547,17 @@ def pageSpeakerSettings()   {
 //                input "volume", "number", title: "Temporarily change volume", description: "0-100% (default value = 30%)", required: false
 //            	}
             input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
-            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?\nlike lannounceer.", required: false, multiple: true, submitOnChange: true
+            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?", required: false, multiple: true, submitOnChange: true
             input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
-            if (speakerDevices || speechDevices || musicPlayers)
+            if (playerDevice)
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
             else
-                paragraph "Speaker volume?\nselect speaker(s) to set."
+                paragraph "Speaker volume?\nselect any speaker to set."
         }
         section("Announce only between hours:")     {
             if (playerDevice)        {
-                input "startHH", "number", title: "Announce from hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 7, range: "1..${endHH ?: 23}", submitOnChange: true
-                input "endHH", "number", title: "Announce to hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${startHH ?: 23}..23", submitOnChange: true
+                input "startHH", "number", title: "From hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 7, range: "1..${(endHH ?: 23)}", submitOnChange: true
+                input "endHH", "number", title: "To hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 23)}..23", submitOnChange: true
             }
             else        {
                 paragraph "Announce from hour?\nselect either presence or time announcement to set"
@@ -566,8 +566,8 @@ def pageSpeakerSettings()   {
         }
         section("Time announcement:")     {
             if (playerDevice)
-                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false, defaultValue: 4,
-                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], submitOnChange: true
+                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false,
+                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]]
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
@@ -576,7 +576,7 @@ def pageSpeakerSettings()   {
             if (presenceSensors)
                 input "presenceNames", "text", title: "'$msgSeparator' delmited names in same sequence as presence sensors?", required: true, multiple: false
             else
-                paragraph "Comma delmited names?\nselect presence sensors to set."
+                paragraph "'$msgSeparator' delmited names?\nselect presence sensors to set."
         }
 		section("Arrival and departure announcement:")        {
             if (playerDevice && presenceSensors)
@@ -586,11 +586,9 @@ def pageSpeakerSettings()   {
             if (playerDevice && speakerAnnounce)    {
                 paragraph "In the following texts '&' will be replaced with persons name(s) and a random string will be used if there are multiple '$msgSeparator' separated strings."
                 paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
-                input "welcomeHome", "text",
-                        title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
+                input "welcomeHome", "text", title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
                 input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
-                input "leftHome", "text", title: "Left home announcement?\n(same format as welcome greeting)",
-                                                required: true, multiple: false, defaultValue: '&has left home'
+                input "leftHome", "text", title: "Left home announcement?\n(same format as welcome greeting)", required: true, multiple: false, defaultValue: '&has left home'
                 input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
             }
             else    {
@@ -620,12 +618,12 @@ def pageSpeakerSettings()   {
                                                 required: (!motionSensors ? true : false), multiple: true
                 input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensor(s)?",
                                                 required: (!contactSensors ? true : false), multiple: true
-                input "secondsAfter", "number", title: "Left home announcement how many seconds after?\n",
+                input "secondsAfter", "number", title: "Left home announcement how many seconds after?",
                                                 required: true, multiple: false, defaultValue: 15, range: "5..100"
             }
             else    {
-                paragraph "Which contact sensors?\nselect announce to set."
-                paragraph "Which motion sensors?\nselect announce to set."
+                paragraph "Welcome home greeting when which contact sensor(s) close?\nselect announce to set."
+                paragraph "Welcome home greeting with motion on which motion sensor(s)?\nselect announce to set."
                 paragraph "Left home announcement how many seconds after?\nselect announce to set."
             }
         }
@@ -1159,7 +1157,7 @@ def tellTime()      {
     }
 }
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" 'romms manager: ' + msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" 'rooms manager: ' + msg  }
 
 private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()
