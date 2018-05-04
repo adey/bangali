@@ -832,7 +832,7 @@ private pageOccupiedSettings()      {
 	}
 }
 
-private pageEngagedSettings() {
+private pageEngagedSettings()       {
     def buttonNames = genericButtons
     def engagedButtonOptions = [:]
     if (engagedButton)      {
@@ -855,7 +855,7 @@ private pageEngagedSettings() {
     }
     def roomDevices = parent.getRoomNames(app.id)
     def hT = getHubType()
-	dynamicPage(name: "pageEngagedSettings", title: "Engaged Settings", install: false, uninstall: false) {
+	dynamicPage(name: "pageEngagedSettings", title: "Engaged Settings", install: false, uninstall: false)      {
 		section("Change room to ENGAGED when?\n(if specified this will also reset room state to 'vacant' when the button is pushed again or presence sensor changes to not present etc.)", hideable: false)		{
             paragraph "Settings are in order of priority in which they are checked. For example, if there is both an engaged switch and contact sensor the engaged switch when ON will take priority over the contact sensor being OPEN."
             if (motionSensors)
@@ -906,7 +906,7 @@ private pageEngagedSettings() {
             else
                 paragraph "Contact sensor on outside door?\nselect contact sensor above to set."
             input "noMotionEngaged", "number", title: "Require motion within how many seconds when room is ENGAGED?", required: false, multiple: false, defaultValue: null, range: "5..99999"
-            input "anotherRoomEngaged", "enum", title: "Reset ENGAGED OR ASLEEP state when another room changes to ENGAGED OR ASLEEP? If yes, which room?", required: false, multiple: true, defaultValue: null, options: roomDevices, submitOnChange: true
+            input "anotherRoomEngaged", "enum", title: "Reset ENGAGED OR ASLEEP state when another room changes to ENGAGED OR ASLEEP? If yes, which room(s)?", required: false, multiple: true, defaultValue: null, options: roomDevices
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
         }
 	}
@@ -2066,8 +2066,10 @@ def updateRoom(adjMotionSensors)     {
             if (roomDeviceObject)
                 if (hT == _SmartThings)
                     subscribe(roomDeviceObject, "button.pushed", anotherRoomEngagedButtonPushedEventHandler);
-                else
-                    subscribe(roomDeviceObject, "pushed.9", anotherRoomEngagedButtonPushedEventHandler);
+                else    {
+                    subscribe(roomDeviceObject, "pushed.8", anotherRoomEngagedButtonPushedEventHandler);        // asleep
+                    subscribe(roomDeviceObject, "pushed.9", anotherRoomEngagedButtonPushedEventHandler);        // engaged
+                }
         }
     }
 //    if (vacantButton)   subscribe(vacantButton, "button.pushed", buttonPushedVacantEventHandler);
@@ -3658,10 +3660,10 @@ def handleSwitches(data)	{
         updateAsleepChildTimer(0)
 /*        if (noAsleepSwitchesOverride)       {
             if (nightSwitches && noAsleepSwitchesOff)       {
-//                def child = getChildDevice(getRoom())
+                def child = getChildDevice(getRoom())
                 def theOffSwitches = nightSwitches.find { noAsleepSwitchesOff.contains(it.id) }
                 ifDebug("Turning off devices in noAsleepSwitchesOff: ${ theOffSwitches}")
-//                theOffSwitches?.each { it.off(); pause(pauseMSec) }
+                theOffSwitches?.each { it.off(); pause(pauseMSec) }
                 if (theOffSwitches)     {
                     theOffSwitches.each { it.off(); pause(pauseMSec) }
                     child.updateNSwitchInd(isAnyNSwitchOn())
@@ -3669,7 +3671,8 @@ def handleSwitches(data)	{
             }
             ifDebug("noAsleepSwitchesOverride: no switches to turn off")
         }
-        else*/
+        else
+*/
         if (nightSwitches)
             if (nightTurnOn.contains('3'))       {
                 dimNightLights()
@@ -3696,52 +3699,54 @@ def handleSwitches(data)	{
             if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')
                 musicDevice.pause()
         }
-        if (['engaged', 'asleep'].contains(newState))       {
+    }
+//        if (['engaged', 'asleep'].contains(newState))       {
 //            ifDebug("calling parent.notifyAnotherRoomEngaged: $app.id")
 //            parent.notifyAnotherRoomEngaged(app.id)
-            if (newState == asleep)   {
-                if (nightSwitches)
-                    if (motionSensors.currentMotion.contains(active) || nightTurnOn.contains('2'))    {
-                        dimNightLights()
-                        if (state.noMotionAsleep && (!motionSensors.currentMotion.contains(active) || whichNoMotion != lastMotionInactive))        {
-                            updateChildTimer(state.noMotionAsleep)
-                            runIn(state.noMotionAsleep, nightSwitchesOff)
-                        }
-                    }
-                    else
-                        nightSwitchesOff()
-                if (state.noAsleep)     {
-                    updateAsleepChildTimer(state.noAsleep)
-                    runIn(state.noAsleep, roomAwake)
+    if (newState == asleep)     {
+        if (nightSwitches)
+            if (motionSensors.currentMotion.contains(active) || nightTurnOn.contains('2'))    {
+                dimNightLights()
+                if (state.noMotionAsleep && (!motionSensors.currentMotion.contains(active) || whichNoMotion != lastMotionInactive))        {
+                    updateChildTimer(state.noMotionAsleep)
+                    runIn(state.noMotionAsleep, nightSwitchesOff)
                 }
-//                processCoolHeat()
             }
-            else if (state.noMotionEngaged && !isRoomEngaged(false,false,false,false,true))      {
-                updateChildTimer(state.noMotionEngaged)
-                runIn(state.noMotionEngaged, roomVacant)
-            }
+            else
+                nightSwitchesOff()
+        if (state.noAsleep)     {
+            updateAsleepChildTimer(state.noAsleep)
+            runIn(state.noAsleep, roomAwake)
         }
-        else if (newState == occupied)     {
-            if (state.noMotion)     {
-                if (motionSensors)      {
+//                processCoolHeat()
+    }
+    else if (newState == engaged)       {
+        if (state.noMotionEngaged && !isRoomEngaged(false,true,false,true,false))      {
+            updateChildTimer(state.noMotionEngaged)
+            runIn(state.noMotionEngaged, roomVacant)
+        }
+    }
+    else if (newState == occupied)     {
+        if (state.noMotion)     {
+            if (motionSensors)      {
 //                    def motionValue = motionSensors.currentMotion
 //                    def mV = motionValue.contains('active')
-                    if (whichNoMotion == lastMotionActive ||
-                        (whichNoMotion == lastMotionInactive && !motionSensors.currentMotion.contains('active')))      {
-                        updateChildTimer(state.noMotion)
-                        runIn(state.noMotion, roomVacant)
-                    }
-                }
-                else    {
-//                    if (state.noMotion) {
-                        // If there are no motion sensors, we start the timer when we change to occupied.
+                if (whichNoMotion == lastMotionActive ||
+                    (whichNoMotion == lastMotionInactive && !motionSensors.currentMotion.contains('active')))      {
                     updateChildTimer(state.noMotion)
                     runIn(state.noMotion, roomVacant)
-//                    }
                 }
+            }
+            else    {
+//                    if (state.noMotion) {
+                        // If there are no motion sensors, we start the timer when we change to occupied.
+                updateChildTimer(state.noMotion)
+                runIn(state.noMotion, roomVacant)
+//                    }
             }
         }
     }
+//    }
     else if (newState == checking)     {
         dimLights()
         def dT = state.dimTimer ?: 1

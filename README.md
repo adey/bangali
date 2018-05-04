@@ -26,29 +26,37 @@
 <h4>Here are the common room occupancy states:</h4>
 
 <ul>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupiedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Occupied:</h5>
-    <p>Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a somewhat persistent state.</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngagedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Engaged:</h5>
-    <p>Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleepState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Asleep:</h5>
-    <p>Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacantState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Vacant:</h5>
-    <p>Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsCheckingState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Checking:</h5>
-    <p>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLockedState.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-        <h5>Locked:</h5>
-    <p>Locked state disables all automations for the room and allows you to control lights and other devices in the room either manually or some other way.</p>
+    <table class="wikitable" style="width:900px">
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupiedState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Occupied:</h5>Occupied is you go to a room are in there for a few minutes then leave the room. Lights come on when you enter the room and turn off after a couple of minutes of your leaving the room. Think of Occupied as a transient state and Engaged below as a somewhat persistent state.</td>
+        </tr>
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngagedState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Engaged:</h5>Engaged is when you stay in a room for an extended period of time and may be motionless for some or all of the time. since we cant depend on the motion event for engaged state there are different options to set the room to engaged for extended occupancy. these are all under engaged settings and there is more coming. but these help make sure the switches you set to on stay on even if there is no motion in the room. When in Engaged state you have a different and longer timeout state than the Occupied state. So there is still a motion requirement but a much higher time threshold than the Occupied state.</td>
+        </tr>
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleepState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Asleep:</h5>Asleep state is meant for use while the room should be 'asleep' as in not respond to most typical automation like motion automation. But it does allow for other automation like using a night light and using a button to turn on or off the night lights. You are still able to create rules for the Asleep state but it additionally support a little bit for Asleep state specific automation in the Asleep settings.</td>
+        </tr>
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacantState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Vacant:</h5>Vacant state is for when the room is vacant and you want everything to get turned off. It is possible to setup rules for Vacant settings as well but not required.</td>
+        </tr>
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsCheckingState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Checking:</h5>Occupied state is used for transition between states and not user controlled. For example, when moving from Occupied to Vacant occupancy state the room will transition to Checking state. While the app does not allow creating rules for checking state there is some settings available to control dimming of the lights when in Checking state.</td>
+        </tr>
+        <tr>
+            <td style="width:100px"><img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLockedState.png" width="100px" style="float:left; width:75px;"></td>
+            <td><h5>Locked:</h5>Locked state disables all automations for the room and allows you to control lights and other devices in the room either manually or some other way.</td>
+        </tr>
+    </table>
 </ul>
 
 <p>The states 'locked', 'reserved', 'kaput' and 'donotdisturb' are effectively all similar in that they all disable automation. That being the case there is some sensors allowed to set / unset rooms to / from Locked state but no other automation beyond that for these occupancy states. Here is a quick description of the various top level settings and how the app works. <i>At the heart of the app is the concept of room states and rules to automate devices based on these room's states and other sensor inputs.</i> (In the following description when I talk about sensors it refers to devices that have attributes which are used to drive decisions in the room's rules.)</p>
 
-<p><i>Note many of these settings are optional but when specified will require other settings to be specified. Like specifying a motion sensor is optional. But if you do specify a motion sensor the motion event to trigger timeout countdown becomes required.</i></p>
+<p><i>Note: Many of the following settings are optional but when specified will require other settings to be specified. Like specifying a motion sensor is optional. But if you do specify a motion sensor the motion event to trigger timeout countdown becomes required.</i></p>
 
 <h4>Top level settings:</h4>
 
