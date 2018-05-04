@@ -1,5 +1,5 @@
 # bangali's rooms automation
-
+```html
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
 <h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy for Smartthings and Hubitat</h2>
 
@@ -346,8 +346,8 @@
     </table>
 </ul>
 
+<p>&nbsp;</p>
 <p style="font-weight: bold; margin-top: 25px;">These group of settings allow for light routine settings used in the rules.</p>
-
 <ul>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Auto Level 'AL' Settings</h5>
@@ -882,3 +882,4 @@
         </tr>
     </table>
 </div>
+```
