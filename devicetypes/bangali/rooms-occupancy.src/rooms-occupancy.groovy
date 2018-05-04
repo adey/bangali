@@ -24,10 +24,28 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.25.0"  }
+public static String version()      {  return "v0.27.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.27.5
+*
+*   DONE:   5/2/2018
+*   1) significant updates to documentation. latest on github: https://github.com/adey/bangali
+*   2) turned down the delay between commands on hubitat
+*   3) rooms can now be renamed which will also rename the device for the room.
+*   4) updated text on input settings.
+*   5) added button for occupied settings.
+*   6) all buttons now flip between state for that button and if in that state already to checking state.
+*   7) added push button support for hubitat dashboard.
+*   8) swatted a bug here and a bug there.
+*
+*  Version: 0.26.0
+*
+*   DONE:   4/22/2018
+*   1) added motion support for welcome home announcement.
+*   2) added notification by color, this currently is not constrained by announce only hours settings.
 *
 *  Version: 0.25.0
 *
@@ -533,6 +551,7 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+//		command "push"		// for use with hubitat useful with dashbooard 2018-04-24
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
 		command "turnSwitchesAllOff"
@@ -993,6 +1012,18 @@ def on()	{
 }
 
 def	off()		{  vacant()  }
+
+def push(button)		{
+	ifDebug("$button")
+	switch(button)		{
+		case 1:		occupied();		break
+		case 3:		vacant();		break
+		case 4:		locked();		break
+		case 8:		asleep();		break
+		case 9:		engaged();		break
+		default:					break
+	}
+}
 
 def lock()		{  locked() }
 
@@ -1509,4 +1540,4 @@ private formatduration(long value, boolean friendly = false, granularity = 's', 
 }
 */
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" "rooms occupancy: " + msg  }

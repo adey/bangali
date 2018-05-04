@@ -37,10 +37,28 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.25.0"  }
+public static String version()      {  return "v0.27.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.27.5
+*
+*   DONE:   5/2/2018
+*   1) significant updates to documentation. latest on github: https://github.com/adey/bangali
+*   2) turned down the delay between commands on hubitat
+*   3) rooms can now be renamed which will also rename the device for the room.
+*   4) updated text on input settings.
+*   5) added button for occupied settings.
+*   6) all buttons now flip between state for that button and if in that state already to checking state.
+*   7) added push button support for hubitat dashboard.
+*   8) swatted a bug here and a bug there.
+*
+*  Version: 0.26.0
+*
+*   DONE:   4/22/2018
+*   1) added motion support for welcome home announcement.
+*   2) added notification by color, this currently is not constrained by announce only hours settings.
 *
 *  Version: 0.25.0
 *
@@ -543,7 +561,7 @@ import groovy.time.*
 @Field final String heavyTraffic   = '9'
 
 @Field final int    pauseMSecST = 10
-@Field final int    pauseMSecHU = 100
+@Field final int    pauseMSecHU = 50
 
 @Field final int    fanLow      = 33
 @Field final int    fanMedium   = 67
@@ -625,7 +643,8 @@ def roomName()	{
 				label title: "Room Name:", required: true, image: "$roomIconURL"
             }
             else
-                paragraph "Room Name:\n${app.label}", image: "$roomIconURL"
+                label title: "Room Name:", required: true, image: "$roomIconURL"
+//                paragraph "Room Name:\n${app.label}", image: "$roomIconURL"
 		}
         section("One pager:")     {
             input "onePager", "bool", title: "Switch to easy settings?", required: false, multiple: false, defaultValue: false, submitOnChange: true,
@@ -747,9 +766,9 @@ private pageOnePager()      {
         section("Timeout configuration for CHECKING state:", hideable: false)		{
             input "dimTimer", "number", title: "After how many seconds?", required: true, multiple: false, defaultValue: 90, range: "5..99999", submitOnChange: true
             if (dimTimer)       {
-                input "dimByLevel", "enum", title: "If any light is on dim by what level?", required: false, multiple: false, defaultValue: null,
+                input "dimByLevel", "enum", title: "Dim lights that are on by what level?", required: false, multiple: false, defaultValue: null,
                                     options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
-                input "dimToLevel", "enum", title: "If no light is on turn on and dim to what level?", required: false, multiple: false, defaultValue: null,
+                input "dimToLevel", "enum", title: "If no light is on turn on at what level?", required: false, multiple: false, defaultValue: null,
                                     options: [[1:"1%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"]]
             }
             else    {
@@ -759,9 +778,9 @@ private pageOnePager()      {
         }
         section("States and switches:", hideable:false)     {
             input "state1", "enum", title: "Which state?", required: true, multiple: true, options: [occupied, engaged], defaultValue: [occupied, engaged]
-            input "switchesOn1", "capability.switch", title: "Turn ON which switches?", required: true, multiple: true
-            input "setLevelTo1", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
-                options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+            input "switchesOn1", "capability.switch", title: "Turn on which switches?", required: true, multiple: true
+            input "setLevelTo1", "enum", title: "Set level when turning on?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
+                options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[99:"99%"],[100:"100%"]]
         }
         section("Turn off all switches on no rule match?", hideable: false)		{
             input "allSwitchesOff", "bool", title: "Turn OFF all switches?", required: true, multiple: false, defaultValue: true
@@ -770,7 +789,37 @@ private pageOnePager()      {
 }
 
 private pageOccupiedSettings()      {
-	dynamicPage(name: "pageOccupiedSettings", title: "Occupied Settings", install: false, uninstall: false)     {
+    def buttonNames = genericButtons
+    def occupiedButtonOptions = [:]
+    if (occupiedButton)      {
+        def occupiedButtonAttributes = occupiedButton.supportedAttributes
+        def attributeNameFound = false
+        occupiedButtonAttributes.each  { att ->
+            if (att.name == occupancy)      buttonNames = occupancyButtons;
+            if (att.name == 'numberOfButtons')      attributeNameFound = true;
+        }
+        def numberOfButtons = occupiedButton.currentNumberOfButtons
+        if (attributeNameFound && numberOfButtons)      {
+            def i = 0
+            for (; i < numberOfButtons; i++)
+                occupiedButtonOptions << buttonNames[i]
+        }
+        else
+            occupiedButtonOptions << [null:"No buttons"]
+    }
+    def hT = getHubType()
+    dynamicPage(name: "pageOccupiedSettings", title: "Occupied Settings", install: false, uninstall: false)     {
+        section("Button for OCCUPIED state:", hideable: false)		{
+            input "occupiedButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (occupiedButton)       {
+                input "buttonIsOccupied", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: occupiedButtonOptions
+//                input "buttonToggleWithOccupied", "bool", title: "If room state is OCCUPIED toggle to VACANT state?", required: true, multiple: false, defaultValue: false, options: occupiedButtonOptions
+            }
+            else        {
+                paragraph "Button Number?\nselect button to set"
+//                paragraph "If room state is OCCUPIED toggle to VACANT state?\nselect button to set"
+            }
+        }
         section("Switch for OCCUPIED state:", hideable:false)	{
             input "occSwitches", "capability.switch", title: "Which switch turns ON?", required:false, multiple: true, submitOnChange: true
         }
@@ -820,12 +869,12 @@ private pageEngagedSettings() {
             else
                 paragraph "Button number?\nselect button to set"
             if (personsPresence)    {
-                input "presenceAction", "enum", title: "Presence Sensor actions?", required: true, multiple: false, defaultValue: 3,
+                input "presenceAction", "enum", title: "Presence sensor actions?", required: true, multiple: false, defaultValue: 3,
                             options: [[1:"Set state to ENGAGED on Arrival"],[2:"Set state to VACANT on Departure"],[3:"Both actions"],[4:"Neither action"]]
                 input "presenceActionContinuous", "bool", title: "Keep room engaged when presence sensor present?", required: false, multiple: false, defaultValue: false
             }
             else    {
-                paragraph "Presence Sensor actions?\nselect presence sensor(s) to set"
+                paragraph "Presence sensor actions?\nselect presence sensor(s) to set"
                 paragraph "Keep room engaged when presence sensor present?\nselect presence sensor(s) to set"
             }
             if (musicDevice)
@@ -919,17 +968,25 @@ private pageVacantSettings()      {
     }
     def hT = getHubType()
 	dynamicPage(name: "pageVacantSettings", title: "Vacant Settings", install: false, uninstall: false)     {
-        section("VACANT settings:", hideable: false)		{
+        section("Button for VACANT state:", hideable: false)		{
             input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
-            if (vacantButton)
+            if (vacantButton)       {
                 input "buttonIsVacant", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: vacantButtonOptions
-            else
+//                input "buttonToggleWithVacant", "bool", title: "If room state is VACANT toggle to OCCUPIED state?", required: true, multiple: false, defaultValue: false, options: vacantButtonOptions
+            }
+            else        {
                 paragraph "Button Number?\nselect button to set"
-            input "vacantSwitches", "capability.switch", title: "Switch turns OFF?", required: false, multiple: true
+//                paragraph "If room state is VACANT toggle to OCCUPIED state?\nselect button to set"
+            }
+        }
+        section("Switch for VACANT state:", hideable:false)	{
+            input "vacantSwitches", "capability.switch", title: "Which switch turns OFF?", required: false, multiple: true
+        }
+        section("Pause music on VACANT state:", hideable:false)	{
             if (musicDevice)
-                input "turnOffMusic", "bool", title: "Pause speaker when room changes to vacant?", required: false, multiple: false, defaultValue: false
+                input "turnOffMusic", "bool", title: "Pause speaker when room changes to VACANT?", required: false, multiple: false, defaultValue: false
             else
-                paragraph "Stop speaker when room changes to vacant?\nselect music player in speaker settings to set"
+                paragraph "Stop speaker when room changes to VACANT?\nselect music player in speaker settings to set"
         }
 	}
 }
@@ -1266,7 +1323,7 @@ private pageRule(params)   {
     levelOptions << [AL:"Auto Level (and color temperature)"]
     for (def i = 1; i < 11; i++)
         if (settings["holiName$i"] && settings["holiColorString$i"])       levelOptions << ["HL$i": settings["holiName$i"]];
-    [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]].each    {
+    [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[99:"99%"],[100:"100%"]].each    {
         levelOptions << it
     }
 //    ifDebug("levelOptions: $levelOptions")
@@ -1314,11 +1371,11 @@ private pageRule(params)   {
         }
 
         section("") {
-            href "pageRuleTime", title: "Time filter", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleFromTimeOffset ? " $ruleFromTimeOffset" : "")) + ' : ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleToTimeOffset ? " $ruleToTimeOffset" : "")) : 'Add time filtering')}", params: [ruleNo: "$ruleNo"]
+            href "pageRuleTime", title: "Time trigger", description: "${(ruleFromTimeType || ruleToTimeType ? (ruleFromTimeType == timeTime() ? "$ruleFromTimeHHmm" : (ruleFromTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleFromTimeOffset ? " $ruleFromTimeOffset" : "")) + ' : ' + (ruleToTimeType == timeTime() ? "$ruleToTimeHHmm" : (ruleToTimeType == timeSunrise() ? "Sunrise" : "Sunset") + (ruleToTimeOffset ? " $ruleToTimeOffset" : "")) : 'Add time trigger')}", params: [ruleNo: "$ruleNo"]
         }
 
         if (ruleType != 't')      {
-            section("Lights and switchs, on / off:", hideable: false)     {
+            section("Lights and switches to turn ON:", hideable: false)     {
                 input "switchesOn$ruleNo", "capability.switch", title: "Turn ON which switches?", required: false, multiple: true
                 input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true,
                         options: levelOptions
@@ -1616,7 +1673,7 @@ private pageAsleepSettings() {
                 input "buttonIsAsleep", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: asleepButtonOptions
             else
                 paragraph "Button Number?\nselect button above to set"
-            input "asleepSwitch", "capability.switch", title: "Which switch turns ON?", required:false, multiple: false
+            input "asleepSwitch", "capability.switch", title: "Which switch turns ON?", required:false, multiple: true
             if (powerDevice)    {
                 if (!powerValueEngaged)      {
                     input "powerValueAsleep", "number", title: "Power value to set room to ASLEEP state?",
@@ -1650,7 +1707,7 @@ private pageAsleepSettings() {
                 paragraph "Turn ON which Switches in ASLEEP state with motion?\nselect motion sensor(s) above to set."
             if (nightSwitches)      {
                 input "nightSetLevelTo", "enum", title: "Set Level When Turning ON?", required: false, multiple: false, defaultValue: null,
-                                        options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+                                        options: [[1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[99:"99%"],[100:"100%"]]
                 input "nightSetCT", "number", title: "Set color temperature when turning ON?", required: false, multiple: false, defaultValue: null, range: "1500..7500"
                 input "noMotionAsleep", "number", title: "Timeout seconds for night lights?", required: false, multiple: false, defaultValue: null, range: "5..99999"
                 input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true, defaultValue: 1,
@@ -1796,6 +1853,10 @@ private pageGeneralSettings()       {
             input "awayModes", "mode", title: "Away modes to set Room to VACANT?", required: false, multiple: true
             input "pauseModes", "mode", title: "Modes in which to pause automation?", required: false, multiple: true
         }
+        section("Run on which days of the week?\n(when blank runs on all days.)", hideable: false)		{
+            input "dayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null, options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
+                                                     [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
+		}
         section("Temperature Scale", hideable: false)		{
             input "useCelsius", "bool", title: "Use Celsius?", required: false, multiple: false, defaultValue: "${(!isFarenheit)}"
         }
@@ -1807,19 +1868,15 @@ private pageGeneralSettings()       {
         }
         section("Annoucement volume?", hideable: false)		{
             if (musicDevice)
-                input "announceVolume", "number", title: "Volume?", required: false, multiple: false, defaultValue: 50, range: "1..100"
+                input "announceVolume", "number", title: "Annoucement volume?", required: false, multiple: false, defaultValue: 50, range: "1..100"
             else
-                paragraph "Volume?\nselect music device to set."
-        }
-        section("Contact stays open notification?", hideable: false)		{
+                paragraph "Annoucement volume?\nselect music device to set."
             if (contactSensor && musicDevice)
                 input "announceContact", "enum", title: "Announce when conact stays open?", required: false, multiple: false, defaultValue: null,
                                             options: [[1:"Every 1 minute"],[2:"Every 2 minutes"],[3:"Every 3 minutes"],[5:"Every 5 minutes"],\
                                                                 [10:"Every 10 minutes"],[15:"Every 15 minutes"],[30:"Every 30 minutes"]]
             else
                 paragraph "Announce when conact stays open?\ncan only be enabled when contact sensor and music device is selected."
-        }
-        section("Door annoucement?", hideable: false)		{
             if (contactSensor && contactSensorOutsideDoor && musicDevice)
                 input "announceDoor", "bool", title: "Announce when door opened or closed?", required: false, multiple: false, defaultValue: false
             else
@@ -1829,11 +1886,6 @@ private pageGeneralSettings()       {
             input "roomDeviceSwitchOn", "enum", title: "Which state?", required: false, multiple: false, defaultValue: ['occupied'],
                                         options: ['occupied', 'engaged', 'locked', 'asleep']
         }
-        section("Run rooms automation on which days of the week?\n(when blank runs on all days.)", hideable: false)		{
-            input "dayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
-						                                                    options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"],\
-                                                                                      [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
-		}
 	}
 }
 
@@ -1920,6 +1972,9 @@ def updated()	{
                       'sleepSensor':asleepSensor, 'nightButton':nightButton, 'nightSwitches':nightSwitches, 'awayModes':awayModes, 'pauseModes':pauseModes]
     def child = getChildDevice(getRoom())
     child.deviceList(devicesMap)
+    def childLabel = child.getLabel()
+    ifDebug("room label: $app.label | device label: $childLabel")
+    if (childLabel != app.label)        child.setLabel(app.label);
     child.vacant()
 }
 
@@ -1940,6 +1995,11 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.active", adjMotionActiveEventHandler)
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
+    if (occupiedButton)
+        if (hT == _SmartThings)
+            subscribe(occupiedButton, "button", buttonPushedOccupiedEventHandler)
+        else
+            subscribe(occupiedButton, "pushed.$buttonIsOccupied", buttonPushedOccupiedEventHandler)
     if (occSwitches) {
     	subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
     	subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
@@ -2490,10 +2550,8 @@ def	motionActiveEventHandler(evt)	{
         }
         return
     }
+/*
     if (state.busyCheck && roomState == occupied && state.stateStack['0']?.state == occupied && state.noMotion)      {
-/*        def gapBetween = ((now() - state.stateStack['0'].date) / 1000) * 5f
-        def howMany = (gapBetween / (state.noMotion + state.dimTimer)).round(0)
-*/
         def gapBetween = ((now() - state.stateStack['0'].date) / 1000f)
         def howMany = ((gapBetween / state.noMotion) * lightTraffic.toInteger()).trunc(0)
         ifDebug("howMany: $howMany | gapBetween: $gapBetween | busyCheck: $state.busyCheck")
@@ -2502,6 +2560,7 @@ def	motionActiveEventHandler(evt)	{
             state.stateStack = [:]
         }
     }
+*/
     if (state.isBusy && ['occupied', 'checking', 'vacant'].contains(roomState))       {
         turnOffIsBusy()
         child.generateEvent(engaged)
@@ -2591,6 +2650,31 @@ def adjMotionInactiveEventHandler(evt)      {
     def child = getChildDevice(getRoom())
     child.updateAdjMotionInd(0)
 //    child.updateAdjMotionInd((adjMotionSensors.currentMotion.contains('active') ? 1 : 0))
+}
+
+def	buttonPushedOccupiedEventHandler(evt)     {
+    ifDebug("buttonPushedOccupiedEventHandler: $evt.data")
+    if (!checkPauseModesAndDoW())    return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || (buttonIsOccupied && eD['buttonNumber'] && eD['buttonNumber'] != buttonIsOccupied as Integer))     return;
+    }
+    def child = getChildDevice(getRoom())
+//    ifDebug("buttonPushedVacantEventHandler: ${child.currentValue(occupancy)}")
+//    def roomState = child?.currentValue(occupancy)
+/*    if (roomState != occupied)
+        child.generateEvent(occupied)
+    else if (buttonToggleWithOccupied && roomState == occupied)
+        child.generateEvent(vacant)
+*/
+    child.generateEvent(child?.currentValue(occupancy) != occupied ? occupied : checking)
+// added 18-01-30: if room is already vacant or another state dont do anything
+/*    else    {
+        if (roomState == vacant)
+            child.generateEvent('checking')
+    }*/
 }
 
 def occupiedSwitchOnEventHandler(evt)       {
@@ -2685,7 +2769,7 @@ def	buttonPushedEventHandler(evt)     {
         child.generateEvent(engaged)
 */
 //    ifDebug("buttonPushedEventHandler: ${child.currentValue(occupancy)}")
-    child.generateEvent((child?.currentValue(occupancy) == engaged ? (resetEngagedDirectly ? vacant : checking) : engaged))
+    child.generateEvent((child?.currentValue(occupancy) != engaged ? engaged : (resetEngagedDirectly ? vacant : checking)))
 }
 
 def	buttonPushedVacantEventHandler(evt)     {
@@ -2699,8 +2783,14 @@ def	buttonPushedVacantEventHandler(evt)     {
     }
     def child = getChildDevice(getRoom())
 //    ifDebug("buttonPushedVacantEventHandler: ${child.currentValue(occupancy)}")
-    if (['engaged', 'occupied', 'checking'].contains(child?.currentValue(occupancy)))
+    def roomState = child?.currentValue(occupancy)
+//    if (['engaged', 'occupied', 'checking'].contains(roomState))
+/*    if (roomState != vacant)
         child.generateEvent(vacant)
+    else if (buttonToggleWithVacant && roomState == vacant)
+        child.generateEvent(occupied)
+*/
+    child.generateEvent(roomState != vacant ? vacant : checking)
 // added 18-01-30: if room is already vacant or another state dont do anything
 /*    else    {
         if (roomState == vacant)
@@ -2727,7 +2817,7 @@ def	buttonPushedAsleepEventHandler(evt)     {
     }
     def child = getChildDevice(getRoom())
     def roomState = child?.currentValue(occupancy)
-    child.generateEvent((roomState == asleep ? checking : asleep))
+    child.generateEvent(roomState != asleep ? asleep : checking)
 }
 
 /*
@@ -2798,7 +2888,8 @@ def	engagedSwitchOnEventHandler(evt)     {
 //    if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains('present'))     return;
 //    if (powerDevice && powerValueEngaged && powerDevice.currentPower >= powerValueEngaged)     return;
     def roomState = child?.currentValue(occupancy)
-    if (['occupied', 'checking', 'vacant'].contains(roomState))
+//    if (['occupied', 'checking', 'vacant', 'asleep'].contains(roomState))
+    if (roomState != engaged)
         child.generateEvent(engaged)
     else
         refreshEngagedTimer(roomState)
@@ -2813,7 +2904,8 @@ def	engagedSwitchOffEventHandler(evt)	{
 	def roomState = child?.currentValue(occupancy)
     if (resetEngagedDirectly && roomState == engaged)
         child.generateEvent(vacant)
-    else if (['engaged', 'occupied'].contains(roomState))
+//    else if (['engaged', 'occupied'].contains(roomState))
+    else if (roomState == engaged)
         child.generateEvent(checking)
 }
 
@@ -3002,6 +3094,7 @@ def	asleepSwitchOffEventHandler(evt)	{
     def child = getChildDevice(getRoom())
     child.updateASwitchInd(isAnyASwitchOn())
     if (!checkPauseModesAndDoW())    return;
+    if (asleepSwitch.currentSwitch.contains('on'))      return;
     if (child?.currentValue(occupancy) == asleep)       child.generateEvent(checking);
 }
 
@@ -5015,7 +5108,7 @@ private timeTime()      {  return '3'  }
 private presenceActionArrival()       {  return (presenceAction == '1' || presenceAction == '3')  }
 private presenceActionDeparture()     {  return (presenceAction == '2' || presenceAction == '3')  }
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" 'rooms child ' + msg  }
 
 private	hasOccupiedDevice()		{ return (motionSensors || occSwitches)}
 

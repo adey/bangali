@@ -20,10 +20,22 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.26.0"  }
+public static String version()      {  return "v0.27.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.27.5
+*
+*   DONE:   5/2/2018
+*   1) significant updates to documentation. latest on github: https://github.com/adey/bangali
+*   2) turned down the delay between commands on hubitat
+*   3) rooms can now be renamed which will also rename the device for the room.
+*   4) updated text on input settings.
+*   5) added button for occupied settings.
+*   6) all buttons now flip between state for that button and if in that state already to checking state.
+*   7) added push button support for hubitat dashboard.
+*   8) swatted a bug here and a bug there.
 *
 *  Version: 0.26.0
 *
@@ -556,8 +568,8 @@ def pageSpeakerSettings()   {
         }
         section("Announce only between hours:")     {
             if (playerDevice)        {
-                input "startHH", "number", title: "From hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
-                input "endHH", "number", title: "To hour?", description: "2 digit hour in 24 hour format", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+                input "startHH", "number", title: "From hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
+                input "endHH", "number", title: "To hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
             }
             else        {
                 paragraph "Announce from hour?\nselect either presence or time announcement to set"
@@ -588,7 +600,7 @@ def pageSpeakerSettings()   {
                 paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
                 input "welcomeHome", "text", title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
                 input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
-                input "leftHome", "text", title: "Left home announcement?\n(same format as welcome greeting)", required: true, multiple: false, defaultValue: '&has left home'
+                input "leftHome", "text", title: "Left home announcement?", required: true, multiple: false, defaultValue: '&has left home'
                 input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
             }
             else    {
@@ -633,7 +645,7 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
             if (batteryTime)
-                input "batteryLevel", "number", title: "Battery level to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
+                input "batteryLevel", "number", title: "Battery level below which to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Battery level to include in status?\nselect battery time to set."
         }
@@ -646,7 +658,8 @@ def updated()		{
     ifDebug("updated")
 	initialize()
 //    announceSetup()
-    runEvery10Minutes(processChildSwitches)
+    if (getHubType() == _SmartThings)       runEvery5Minutes(processChildSwitches)
+    else                                    schedule("33 0/1 * * * ?", processChildSwitches)
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
@@ -1102,6 +1115,7 @@ def getLastStateDate(childID)      {
 }
 
 def processChildSwitches()      {
+    def time = now()
     def hT = getHubType()
     childApps.each	{ child ->
         def modeAndDoW = child.checkRoomModesAndDoW()
@@ -1111,6 +1125,7 @@ def processChildSwitches()      {
             if (hT == _SmartThings)     pause(10);
         }
     }
+    ifDebug("${now() - time} ms")
 }
 
 def batteryCheck()      {

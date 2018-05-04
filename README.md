@@ -1,10 +1,11 @@
-# bangali's code stuff for SmartThings and Hubitat.
-
+```html
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
-<h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy</h2>
+<h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy for Smartthings and Hubitat</h2>
 
 <p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
 
+<p><i>You can continue reading here for the summarized version or read the more detailed version on Github which also describes the settings:</i></p>
+<p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
 <p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor inputs. This smartapp makes that possible.</p>
 
 <p>If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. <i>But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about.</i> 🙂</p>
@@ -89,9 +90,11 @@
         </tr>
     </table>
 </ul>
+<p>&nbsp;</p>
 
 <p style="font-weight: bold; margin-top: 25px;">The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
 <ul>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupied.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Occupied Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
@@ -105,13 +108,26 @@
             <td>Value in seconds for room state timeout after last motion event</td>
         </tr>
     </table>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsEngaged.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Engaged Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Engaged state like a button being pressed.</p>
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">When room is busy</td>
-            <td style="width:85%">Set room to Engaged state if Occupied state is triggered frequently in a short period of time or the room is busy and the lights should stay on for longer than in Occupied state.</td>
+            <td style="width:85%">Set room to Engaged state if Occupied state is triggered frequently in a short period of time and the lights should stay on for longer than in Occupied state.
+                    <br /><br />
+                <p>Counts the number of time the occupancy state changes between Engaged <> Occupied <> Checking <> Vacant within ((Occupied no motion timer + Checking dim timer) * 10).</p>
+                <ul>
+                    <ul>
+                        <li>Count = 5:&emsp;&emsp;Light traffic.</li>
+                        <li>Count = 7:&emsp;&emsp;Medium traffic.</li>
+                        <li>Count = 9:&emsp;&emsp;Heavy traffic.</li>
+                    </ul>
+                </ul>
+                <br />
+                <p>This is to automate Engaged state for when the room is flipping between Occupied and Vacant frequently in a short period of time.</p>
+            </td>
         </tr>
         <tr>
             <td>Button</td>
@@ -144,7 +160,7 @@
         </tr>
         <tr>
             <td>Switch</td>
-            <td>Switch which when turned on will set room occupancy to Engaged</td>
+            <td>Switch which when turned on will set room occupancy to Engaged and when turned off will set room occupancy to Vacant.</td>
         </tr>
         <tr>
             <td>Power value</td>
@@ -175,6 +191,7 @@
             <td>Reset room occupancy to Vacant directly without transitioning through Checking state</td>
         </tr>
     </table>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsChecking.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Checking Settings</h5>
     <p>Settings for timeout and light levels while in checking state.</p>
@@ -196,6 +213,7 @@
             <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant</td>
         </tr>
     </table>
+    <br />
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsVacant.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Vacant Settings</h5>
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning off.</p>
@@ -217,6 +235,7 @@
             <td>Pause music player when room occupancy changes to Vacant</td>
         </tr>
     </table>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAsleep.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Asleep Settings</h5>
     <p>Settings that specify how this occupancy state is set. Asleep is tricky because there is no true commonly used physical asleep sensors. So, these settings allow other ways of setting Asleep occupancy state and specifying night light settings which are a little different from how lights work through the rules.</p>
@@ -294,6 +313,7 @@
             </tr>
         </table>
     </ul>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLocked.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Locked Settings</h5>
     <p>Settings that specify how this occupancy state is set. This state disables all automation for the room.</p>
@@ -415,6 +435,7 @@
             <td>How many hours after sleep time should color temperature stop fading down</td>
         </tr>
     </table>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Holiday Lights 'HL' Settings</h5>
     <p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
@@ -549,40 +570,280 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Maintain Rules</h5>
     <p>Here's where to create the rules that check room occupancy state, various sensor values and other variables to decide which lights and switches should be turned on or off. It also allows executing a piston or routine or even starting and stopping a music player based on the rules.</p>
-    <p>While date acts a filter when checking rules for match, time works as a trigger. So, if you wanted your outdoor lights to turn on and off at certain times everyday you would create 1 rule with those times and lights to turn on and off at right times. You could also use this feature in combination with date filtering and with or without Holiday Light 'HL' settings above for different color settings for different holidays.</p>
+    <ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:100%">List of defined rules</td>
+            </tr>
+            <tr>
+                <td>Option to create new rule</td>
+            </tr>
+        </table>
+        <ul>
+            <li style="list-style-type:square">
+                <h5>Edit Rule:</h5>
+                <p>Add a new rule or edit existing rule settings.</p>
+            </li>
+            <table class="wikitable" style="width:875px">
+                <tr>
+                    <td style="width:15%">Rule number</td>
+                    <td style="width:85%">For tracking rule settings, not editable</td>
+                </tr>
+                <tr>
+                    <td>Rule name</td>
+                    <td>User defined descriptive rule name</td>
+                </tr>
+                <tr>
+                    <td>Rule disabled</td>
+                    <td>Quick way to to turn off the rule instead of editing and removing each setting for that rule</td>
+                </tr>
+                <tr>
+                    <td>Modes</td>
+                    <td>Matches to location mode when evaluating rule. Available choices are based on modes defined for that hub location</td>
+                </tr>
+                <tr>
+                    <td>Occupancy state</td>
+                    <td>Matches to current occupancy state when evaluating rule. Available choices are:
+                        <ul>
+                            <ul>
+                                <li>Asleep</li>
+                                <li>Engaged</li>
+                                <li>Occupied</li>
+                                <li>Vacant:&emsp;&emsp;&emsp;Normally you don't need to create rules for the Vacant state. But if you want one of the lights to stay on during certain times in the evening even when the room is Vacant create a rule for the Vacant state with the right mode, times and switch(es)</li>
+                            </ul>
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Days of week</td>
+                    <td>Matches to current day when evaluating rule</td>
+                </tr>
+                <tr>
+                    <td>Rule type</td>
+                    <td>Either Execution or Temperature depending on the rule type you are creating:
+                        <ul>
+                            <ul>
+                                <li>Execution:&emsp;&emsp;&emsp;Allows turning on and off switches, executing routines and pistons, starting or stopping music player and setting window shade position</li>
+                                <li>Temperature:&emsp;&emsp;&emsp;Allows setting room temperature to maintain and room fan on and off settings</li>
+                            </ul>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            <ul>
+                <li style="list-style-type:square">
+                    <h5>Rule type: Execution</h5>
+                </li>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Lux value</td>
+                        <td style="width:85%">Matches to current lux value from sensor <= this value when evaluating rule.</td>
+                    </tr>
+                    <tr>
+                        <td>Humidity range</td>
+                        <td>Matches to current humidity reading from sensor</td>
+                    </tr>
+                    <tr>
+                        <td>Date filter</td>
+                        <td>Matches to current date when evaluating rule entered in <i>yyyy/mm/dd</i> format. Supports the following special values:
+                            <ul>
+                                <ul>
+                                    <li><b>yyyy</b>:&emsp;&emsp;&emsp;Matches to current year when evaluating rule</li>
+                                    <li><b>YYYY</b>:&emsp;&emsp;&ensp;Matches to next year when evaluating rule</li>
+                                </ul>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Time trigger</td>
+                        <td>Allows specifying <i>time range from - to</i> and matches to current time when evaluating rule. Supports the following values:
+                            <ul>
+                                <ul>
+                                    <li>Sunrise:&emsp;&emsp;&emsp;Matches to local sunrise time with offset if specified</li>
+                                    <li>Sunset:&emsp;&emsp;&emsp;&ensp;Matches to local sunset time with offset if specified</li>
+                                    <li>Time:&emsp;&emsp;&emsp;&emsp;&ensp;Matches to specific time/li>
+                                </ul>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Turn on which lights / switches</td>
+                        <td>List of devices to turn on</td>
+                    </tr>
+                    <tr>
+                        <td>Set level</td>
+                        <td>Level value if the light or switch being turned on supports level. Also allows picking either Auto Level or one of the Holiday Light routines defined earlier</td>
+                    </tr>
+                    <tr>
+                        <td>Set color</td>
+                        <td>Color to set when turning on light if the light supports color</td>
+                    </tr>
+                    <tr>
+                        <td>Set color temperature</td>
+                        <td>Color temperature to set when turning on light if light supports color temperature</td>
+                    </tr>
+                    <tr>
+                        <td>Turn off which lights / switches</td>
+                        <td>List of devices to turn off</td>
+                    </tr>
+                </table>
+                <ul>
+                    <li style="list-style-type:square">
+                        <h5>Routines/Pistons and more:</h5>
+                        <p>Execute other actions.</p>
+                    </li>
+                    <table class="wikitable" style="width:875px">
+                        <tr>
+                            <td style="width:15%">Routines</td>
+                            <td style="width:85%">Select routines to execute when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Piston</td>
+                            <td>Select piston to execute when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Music player</td>
+                            <td>Select if music player should be started or stopped when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Window shade</td>
+                            <td>Set window shade to one of the preselected positions when rules evaluates as true</td>
+                        </tr>
+                    </table>
+                </ul>
+                <ul>
+                    <li style="list-style-type:square">
+                        <h5>Timer overrides:</h5>
+                        <p>Override individual timer settings when this rule evaluates as true. For example normal timeout settings for Occupied state may be 180 seconds. But during Night mode the Occupied state timeout could be overridden here to be 30 seconds.</p>
+                    </li>
+                    <table class="wikitable" style="width:875px">
+                        <tr>
+                            <td style="width:15%">Occupied timeout</td>
+                            <td style="width:85%">Timeout in seconds when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Engaged timeout</td>
+                            <td>Timeout in seconds when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Checking timeout</td>
+                            <td>Timeout in seconds when rule evaluates as true</td>
+                        </tr>
+                        <tr>
+                            <td>Night light timeout</td>
+                            <td>Timeout in seconds when rule evaluates as true</td>
+                        </tr>
+                    </table>
+                </ul>
+            </ul>
+            <ul>
+                <li style="list-style-type:square">
+                    <h5>Rule type: Temperature</h5>
+                </li>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Time trigger</td>
+                        <td style="width:85%">Allows specifying <i>time range from - to</i> and matches to current time when evaluating rule. Supports the following values:
+                            <ul>
+                                <ul>
+                                    <li>Sunrise:&emsp;&emsp;&emsp;Matches to local sunrise time with offset if specified</li>
+                                    <li>Sunset:&emsp;&emsp;&emsp;&ensp;Matches to local sunset time with offset if specified</li>
+                                    <li>Time:&emsp;&emsp;&emsp;&emsp;&ensp;Matches to specific time/li>
+                                </ul>
+                            </ul>
+                        </td>
+                    </tr>
+                </table>
+                <p>Manage room temperature settings:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Cool temperature</td>
+                        <td style="width:85%">Temperature to cool room to</td>
+                    </tr>
+                    <tr>
+                        <td>Heat temperature</td>
+                        <td>Temperature to heat room to</td>
+                    </tr>
+                    <tr>
+                        <td>Temperature range</td>
+                        <td>Select the temperature range within which the room temperature is maintained based on cool and heat temperature above.</td>
+                    </tr>
+                </table>
+                <p>Fan control:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Fan on temperature</td>
+                        <td style="width:85%">Temperature at which to turn on fan.</td>
+                    </tr>
+                    <tr>
+                        <td>Fan speed increments</td>
+                        <td>Temperature increments with which to increment fan speed.</td>
+                    </tr>
+                </table>
+            </ul>
+        </ul>
+    </ul>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAdjacent5.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Adjacent Room Settings</h5>
-    <p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room.</p>
+    <p>Adjacent rooms allow specifying which rooms are adjacent to that room so you can automatically turn on lights in the next room when moving through this room or force adjacent rooms to Checking state when there is motion in this room.</p>
+    <ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:15%">Adjacent rooms</td>
+                <td style="width:85%">Select the adjacent rooms to this room.</td>
+            </tr>
+            <tr>
+                <td>Adjacent room motion</td>
+                <td>If motion in adjacent room force motion check in this room to confirm someone is still in this room.</td>
+            </tr>
+            <tr>
+                <td>Adjacent room lights</td>
+                <td>If motion in this room move adjacent rooms to Checking state so lights come on dimmed and lights the pathway.</td>
+            </tr>
+        </table>
+    </ul>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Mode and Other Settings</h5>
     <p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsViewAll.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>View All Settings</h5>
     <p>What the name says.</p>
 </ul>
 
-<p style="font-style: oblique; margin-top: 25px;">This only describes a part of what's possible through this app. For more details please see the wiki here:</p>
-http://thingsthataresmart.wiki/index.php?title=Rooms_Occupancy
+<p>&nbsp;</p>
+<p><i>For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</i></p>
 
-<p style="font-style: oblique; margin-top: 15px;">For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</p>
+<p>For a manual install here are the links, in order of DTHs and smartapps you should save and publish.</p>
 
-<p style="font-style: oblique; margin-top: 15px;">For a manual install here are the links, in order of DTHs and smartapps you should save and publish.</p>
+<p><b>rooms occupancy DTH:</b></p>
+<a href="https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy">https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy</a>
 
-<p style="font-weight: bold; margin-top: 5px;">rooms occupancy DTH:</p>
-https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+<h5>when saving the driver it will generate an error on the first of each of these two lines:</h5>
 
-<p style="font-weight: bold; margin-top: 15px;">rooms manager smartapp:</p>
-https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy
+<p>capability "Button"</p>
+<p>//capability "PushableButton" // hubitat changed Button to PushableButton 2018-04-20</p>
 
-<p style="font-weight: bold; margin-top: 15px;">rooms child smartapp:</p>
-https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy
+<p>capability "Lock Only"</p>
+<p>//capability "Lock" // hubitat does not support Lock Only 2018-04-07</p>
 
-<p style="font-weight: bold; margin-top: 20px;">Then go to ST app -> Automation tab -> Add a Smartapp -> My apps in ST app and install rooms manager app then create your rooms within rooms manager.</p>
+<i>Comment out the Button and Lock Only line and uncomment the PushableButton and Lock line, explanation in inline comment above.</i>
+
+<p><b>rooms manager smartapp:</b></p>
+<a href="https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy">https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy</a>
+
+<p><b>rooms child smartapp:</b></p>
+<a href="https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy">https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy</a>
+<p>&nbsp;</p>
+<p>Then go to ST app -> Automation tab -> Add a Smartapp -> My apps in ST app and install rooms manager app then create your rooms within rooms manager.</p>
 
 <h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
-<p style="margin-top: 25px; margin-bottom: 75px;">Knowing that users are finding the app useful enough to support development of the app is always motivating for a dev. So here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager</i>. But if you do donate please also know that it is much appreciated, thank you. Donate here: https://www.paypal.me/dey</p>
+<p>If you want to support development of the app here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager / occupancy.</i> But if you do donate please also know that it is much appreciated, thank you. Donate here: https://www.paypal.me/dey</p>
 
+<p>&nbsp;</p>
 <div id="screenshots-table">
     <table>
         <tr>
