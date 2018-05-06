@@ -20,10 +20,21 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.27.5"  }
+public static String version()      {  return "v0.30.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.30.0
+*
+*   DONE:   5/5/2018
+*   1) more doc update. latest on github: https://github.com/adey/bangali
+*   2) added section at bottom of docs for non-obvious rules, will add more here.
+*   3) added support for vents to be controlled with theromstat and room temperature.
+*   4) optimized code a bit so can run switches on / off checker every 1 minute on hubitat and keep runtime under 1 second.
+*   5) updated text on input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
+*   6) update settings page for rooms manager to be a bit more organized.
+*   7) added color notification for battery devices specified in individual rooms settings.
 *
 *  Version: 0.27.5
 *
@@ -529,6 +540,8 @@ definition (
 preferences	{
     page(name: "mainPage", content: "mainPage")
     page(name: "pageSpeakerSettings", content: "pageSpeakerSettings")
+    page(name: "pagePersonNameSettings", content: "pagePersonNameSettings")
+    page(name: "pagePersonColorSettings", content: "pagePersonColorSettings")
 }
 
 def mainPage()  {
@@ -553,8 +566,21 @@ def pageSpeakerSettings()   {
     def j = str.size()
     def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
     if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
-    dynamicPage(name: "pageSpeakerSettings", title: "Speaker Settings", install: true, uninstall: true)     {
-        section("Speaker selection:")       {
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
+//    ifDebug("$colorsList")
+    def nameString = []
+    def colorString = []
+    presenceSensors.each        {
+        if (it)     {
+            nameString << (settings["${it.getId()}Name"] ?: '')
+            colorString << (settings["${it.getId()}Color"] ? colorsRGB[settings["${it.getId()}Color"]][1] : '')
+        }
+    }
+    dynamicPage(name: "pageSpeakerSettings", title: "Annoucement Settings", install: true, uninstall: true)     {
+        section("Speakers for annoucement:")       {
 //            	if (musicPlayers) {
 //                input "volume", "number", title: "Temporarily change volume", description: "0-100% (default value = 30%)", required: false
 //            	}
@@ -566,7 +592,10 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Speaker volume?\nselect any speaker to set."
         }
-        section("Announce only between hours:")     {
+        section("Lights for announcement with color:")   {
+            input "announceSwitches", "capability.switch", title: "Which switches?", required: true, multiple: true, submitOnChange: true
+        }
+        section("Spoken announcement only between hours:")     {
             if (playerDevice)        {
                 input "startHH", "number", title: "From hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
                 input "endHH", "number", title: "To hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
@@ -576,25 +605,25 @@ def pageSpeakerSettings()   {
                 paragraph "Announce to hour?\nselect either presence or time announcement to set"
             }
         }
-        section("Time announcement:")     {
+        section("Arrival and departure announcement")      {
             if (playerDevice)
-                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false,
-                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]]
+                input "speakerAnnounce", "bool", title: "Announce with speaker when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
             else
-                paragraph "Announce time?\nselect speaker devices to set."
-        }
-        section("Presence sensors and names:")      {
-            input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: false, multiple: true, submitOnChange: true
+                paragraph "Announce when presence sensors arrive or depart?\nselect speaker to set."
+            if (announceSwitches)
+                input "speakerAnnounceColor", "bool", title: "Announce with color when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce with color when presence sensors arrive or depart?\nselect announce with color lights to set."
+            if (speakerAnnounce || speakerAnnounceColor)
+                input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: true, multiple: true, submitOnChange: true
+            else
+                paragraph "Which presence sensors?\nselect either announce with speaker or color to set"
             if (presenceSensors)
-                input "presenceNames", "text", title: "'$msgSeparator' delmited names in same sequence as presence sensors?", required: true, multiple: false
+                href "pagePersonNameSettings", title: "Specify names for presence sensors", description: "$nameString"
             else
-                paragraph "'$msgSeparator' delmited names?\nselect presence sensors to set."
+                paragraph "Specify names for presence sensors\nselect presence sensors to set."
         }
-		section("Arrival and departure announcement:")        {
-            if (playerDevice && presenceSensors)
-                input "speakerAnnounce", "bool", title: "Announce when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            else
-                paragraph "Announce when presence sensors arrive or depart?\nselect presence sensors and speaker(s) to set."
+		section("Arrival and departure announcement text:")        {
             if (playerDevice && speakerAnnounce)    {
                 paragraph "In the following texts '&' will be replaced with persons name(s) and a random string will be used if there are multiple '$msgSeparator' separated strings."
                 paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
@@ -604,27 +633,19 @@ def pageSpeakerSettings()   {
                 input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
             }
             else    {
-                paragraph "Welcome home greeting?\nselect announce to set."
-                paragraph "Welcome home greeting closer?\nselect announce to set."
-                paragraph "Left home announcement?\nselect announce to set."
-                paragraph "Left home announcement closer?\nselect announce to set."
+                paragraph "Welcome home greeting?\nselect speaker announce to set."
+                paragraph "Welcome home greeting closer?\nselect speaker announce to set."
+                paragraph "Left home announcement?\nselect speaker announce to set."
+                paragraph "Left home announcement closer?\nselect speaker announce to set."
             }
         }
         section("Arrival and departure announcement with color:")   {
-            if (presenceSensors)
-                input "speakerAnnounceColor", "bool", title: "Announce with color when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            if (speakerAnnounceColor)
+                href "pagePersonColorSettings", title: "Choose colors for presence sensors", description: "$colorString"
             else
-                paragraph "Announce with color when presence sensors arrive or depart?\nselect presence sensor(s) to set."
-            if (speakerAnnounceColor)    {
-                input "presenceColorString", "text", title: "Comma delimited colors?", required: true, multiple: false
-                input "presenceSwitches", "capability.switch", title: "Which switches?", required: true, multiple: true
-            }
-            else    {
-                paragraph "Comma delimited colors?\nselect announce with color to set."
-                paragraph "Which switches?\nselect announce with color to set."
-            }
+                paragraph "Choose colors for presence sensors\nselect announce with color to set."
         }
-        section("Welcome greeting and left annoucement settings:")      {
+        section("Trigger annoucement settings:")      {
             if (speakerAnnounce || speakerAnnounceColor)    {
                 input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensor(s) close?",
                                                 required: (!motionSensors ? true : false), multiple: true
@@ -639,17 +660,63 @@ def pageSpeakerSettings()   {
                 paragraph "Left home announcement how many seconds after?\nselect announce to set."
             }
         }
-        section("Battery status:")     {
+        section("Time announcement:")     {
             if (playerDevice)
+                input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false,
+                                options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]]
+            else
+                paragraph "Announce time?\nselect speaker devices to set."
+        }
+        section("Battery announcement:")     {
+            if (playerDevice || announceSwitches)
                 input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
             else
-                paragraph "Annouce battery status when?\nselect either speakers or speech device to set"
+                paragraph "Annouce battery status when?\nselect speakers or switches to set"
             if (batteryTime)
                 input "batteryLevel", "number", title: "Battery level below which to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
             else
                 paragraph "Battery level to include in status?\nselect battery time to set."
+            if (batteryTime && announceSwitches)        {
+                input "batteryOkColor", "enum", title: "Battery all OK color?", required: true, multiple: false, options: colorsList
+                input "batteryLowColor", "enum", title: "Battery low color?", required: true, multiple: false, options: colorsList
+            }
+            else        {
+                paragraph "Battery all OK warning color?\nselect battery time to set."
+                paragraph "Battery low warning color?\nselect battery time to set."
+            }
         }
 	}
+}
+
+def pagePersonNameSettings()           {
+    ifDebug("pagePersonNameSettings")
+    def namesList = []
+    dynamicPage(name: "pagePersonNameSettings", title: "Presence sensor names:", install: false, uninstall: false)     {
+        presenceSensors.each        {
+            def itID = it.getId()
+            def itDN = it.getDisplayName()
+            section("")      {
+                input "${itID}Name", "text", title: "$itDN Name?", required: true, multiple: false
+            }
+        }
+    }
+}
+
+def pagePersonColorSettings()           {
+    ifDebug("pagePersonColorSettings")
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
+    dynamicPage(name: "pagePersonColorSettings", title: "Choose notification color:", install: false, uninstall: false)     {
+        presenceSensors.each        {
+            def itID = it.getId()
+            def itDN = it.getDisplayName()
+            section("")      {
+                input "${itID}Color", "enum", title: "$itDN Color?", required: true, multiple: false, options: colorsList
+            }
+        }
+    }
 }
 
 def installed()		{  initialize()  }
@@ -657,7 +724,7 @@ def installed()		{  initialize()  }
 def updated()		{
     ifDebug("updated")
 	initialize()
-//    announceSetup()
+    announceSetup()
     if (getHubType() == _SmartThings)       runEvery5Minutes(processChildSwitches)
     else                                    schedule("33 0/1 * * * ?", processChildSwitches)
     schedule("0 0/15 * 1/1 * ? *", tellTime)
@@ -700,7 +767,12 @@ def roomStateHistory(evt)        {
 //  name: occupancy | source: DEVICE | unit: null | value: vacant | isDigital: false | isPhysical: false |
 
     def rSH = [state: evt.value, time: new Date(now()).format("yyyy-MM-dd'T'HH:mm:ssZ", location.timeZone)]
-    if (!state.rSH)     state.rSH = [:];
+    if (!state.rSH)     {
+        state.rSH = [:]
+        ifDebug("rSH initialized")
+    }
+    else
+        ifDebug("rSH $evt.displayName $evt.deviceId $evt.value")
     if (state.rSH[(evt.deviceId)])      state.rSH[(evt.deviceId)] << rSH;
     else                                state.rSH[(evt.deviceId)] = rSH;
 /*    state.rSH.each     { dID, dMap ->
@@ -717,25 +789,29 @@ private announceSetup()     {
     state.personsColors = [:]
     state.colorsToRotate = [:]
     if (!speakerAnnounce && !speakerAnnounceColor)   return;
-    def i = presenceSensors.size()
-    def str = presenceNames.split(msgSeparator)
-    def j = str.size()
-    def str2, k
+//    def i = presenceSensors.size()
+//    def str = presenceNames.split(msgSeparator)
+//    def j = str.size()
+//    def str2, k
+/*
     if (speakerAnnounceColor)       {
         str2 = presenceColorString.split(',')
         k = str2.size()
     }
+*/
 //    ifDebug("announceSetup: $i | $j")
-    if (i == j && (!speakerAnnounceColor || i == k))     {
-        i = 0
+//    if (i == j && speakerAnnounceColor)     {
+//        i = 0
         presenceSensors.each        {
             def itID = it.getId()
-            state.whoCameHome.personNames << [(itID):(i < j ? str[i].trim() : '')]
+//            state.whoCameHome.personNames << [(itID):(i < j ? str[i].trim() : '')]
+            state.whoCameHome.personNames << [(itID):settings["${itID}Name"]]
             if (speakerAnnounceColor)       {
-                def hue = convertRGBToHueSaturation((i < k ? str2[i].trim() : 'White'))
+//                def hue = convertRGBToHueSaturation((i < k ? str2[i].trim() : 'white'))
+                def hue = convertRGBToHueSaturation(settings["${itID}Color"])
                 state.personsColors << [(itID):hue]
             }
-            i = i + 1
+//            i = i + 1
         }
         if (presenceSensors)     {
             subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
@@ -743,9 +819,10 @@ private announceSetup()     {
         }
         if (contactSensors)     subscribe(contactSensors, "contact.closed", contactClosedEventHandler);
         if (motionSensors)      subscribe(motionSensors, "motion.active", contactClosedEventHandler);
-    }
-    else
-        ifDebug("rooms manager: number of sensors and names don't match.", 'error')
+//    }
+//    else
+//        ifDebug("rooms manager: number of sensors and names don't match.", 'error')
+    def str, i
     state.welcomeHome = [:]
 //    state.welcomeHome1 = [:]
 //    state.welcomeHome2 = [:]
@@ -930,23 +1007,23 @@ private setupColorRotation()        {
     if (!state.colorsRotating)       {
         state.colorsRotating = true
         state.colorsIndex = 0
-        presenceSwitches.on()
-        presenceSwitches.setLevel(99)
+        announceSwitches.on()
+        announceSwitches.setLevel(99)
         rotateColors()
     }
 }
 
 def rotateColors()      {
 //    presenceSwitches.setColor(state.colorsToRotate."$state.colorsIndex")
-    presenceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
-    presenceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
+    announceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
+    announceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
     state.colorsRotateSeconds = (state.colorsRotateSeconds >= 5 ? state.colorsRotateSeconds - 5 : 0)
     state.colorsIndex = (state.colorsIndex < (state.colorsToRotate.size() -1) ? state.colorsIndex + 1 : 0)
     if (state.colorsRotateSeconds > 0)      runIn(5, rotateColors)
     else        {
         state.colorsRotating = false
         state.colorsToRotate = [:]
-        presenceSwitches.off()
+        announceSwitches.off()
     }
 }
 
@@ -1116,14 +1193,18 @@ def getLastStateDate(childID)      {
 
 def processChildSwitches()      {
     def time = now()
-    def hT = getHubType()
-    childApps.each	{ child ->
+/*    childApps.each	{ child ->
         def modeAndDoW = child.checkRoomModesAndDoW()
 //        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
         if (modeAndDoW)     {
             child.switchesOnOrOff(true)
             if (hT == _SmartThings)     pause(10);
         }
+    }
+*/
+    childApps.each  { child ->
+        if (child.checkAndTurnOnOffSwitchesC())
+            if (getHubType() == _SmartThings)     pause(10);
     }
     ifDebug("${now() - time} ms")
 }
@@ -1143,13 +1224,46 @@ def batteryCheck()      {
     }
     def bat
     def batteryNames = ''
+    def batteryLow = false
     allBatteries.each      {
         bat = it.currentValue("battery")
-        if (bat < batteryLevel)     batteryNames = batteryNames + (it.displayName ?: it.name) + ', ';
+        if (bat < batteryLevel)         {
+            batteryLow = true
+            batteryNames = batteryNames + (it.displayName ?: it.name) + ', '
+        }
     }
-    state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
+    if (announceSwitches && batteryOkColor && batteryLowColor)        {
+        def color = convertRGBToHueSaturation((colorsRGB[(batteryLow ? batteryLowColor : batteryOkColor)][1]))
+        state.colorNotificationColor = color
+        setupColorNotification()
+    }
+    if (speakerDevices || speechDevices || musicPlayers)        {
+        state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
                                                        "no device battery below $batteryLevel percent.")
-    speakIt(state.lastBatteryUpdate)
+        speakIt(state.lastBatteryUpdate)
+    }
+}
+
+def setupColorNotification()        {
+    if (!state.colorsRotating)       {
+        state.colorNotifyTimes = 5
+        notifyWithColor()
+    }
+    else
+        runIn(10, setupColorNotification)
+}
+
+def notifyWithColor()      {
+    if ((state.colorNotifyTimes % 2) == 1)    {
+        announceSwitches.on()
+        announceSwitches.setLevel(99)
+        announceSwitches.setHue(state.colorNotificationColor.hue)
+        announceSwitches.setSaturation(state.colorNotificationColor.saturation)
+    }
+    else
+        announceSwitches.off()
+    state.colorNotifyTimes = state.colorNotifyTimes - 1
+    if (state.colorNotifyTimes >= 0)      runIn(1, notifyWithColor)
 }
 
 def tellTime()      {
@@ -1176,7 +1290,8 @@ private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level)
 
 private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()
-	def rgb = (colorsRGB[str] ?: colorsRGB['white'])
+    ifDebug("$str | ${colorsRGB[str]}")
+	def rgb = (colorsRGB[str][0] ?: colorsRGB['white'][0])
     float r = rgb[0] / 255
     float g = rgb[1] / 255
     float b = rgb[2] / 255
@@ -1202,54 +1317,80 @@ private convertRGBToHueSaturation(setColorTo)      {
 //------------------------------------------------------------------------------------------------------------------------//
 
 @Field final Map    colorsRGB = [
-        aliceblue: [240, 248, 255],             antiquewhite: [250, 235, 215],          aqua: [0, 255, 255],
-        aquamarine: [127, 255, 212],            azure: [240, 255, 255],                 beige: [245, 245, 220],
-        bisque: [255, 228, 196],                black: [0, 0, 0],                       blanchedalmond: [255, 235, 205],
-        blue: [0, 0, 255],                      blueviolet: [138, 43, 226],             brown: [165, 42, 42],
-        burlywood: [222, 184, 135],             cadetblue: [95, 158, 160],              chartreuse: [127, 255, 0],
-        chocolate: [210, 105, 30],              coral: [255, 127, 80],                  cornflowerblue: [100, 149, 237],
-        cornsilk: [255, 248, 220],              crimson: [220, 20, 60],                 cyan: [0, 255, 255],
-        darkblue: [0, 0, 139],                  darkcyan: [0, 139, 139],                darkgoldenrod: [184, 134, 11],
-        darkgray: [169, 169, 169],              darkgreen: [0, 100, 0],                 darkgrey: [169, 169, 169],
-        darkkhaki: [189, 183, 107],             darkmagenta: [139, 0, 139],             darkolivegreen: [85, 107, 47],
-        darkorange: [255, 140, 0],              darkorchid: [153, 50, 204],             darkred: [139, 0, 0],
-        darksalmon: [233, 150, 122],            darkseagreen: [143, 188, 143],          darkslateblue: [72, 61, 139],
-        darkslategray: [47, 79, 79],            darkslategrey: [47, 79, 79],            darkturquoise: [0, 206, 209],
-        darkviolet: [148, 0, 211],              deeppink: [255, 20, 147],               deepskyblue: [0, 191, 255],
-        dimgray: [105, 105, 105],               dimgrey: [105, 105, 105],               dodgerblue: [30, 144, 255],
-        firebrick: [178, 34, 34],               floralwhite: [255, 250, 240],           forestgreen: [34, 139, 34],
-        fuchsia: [255, 0, 255],                 gainsboro: [220, 220, 220],             ghostwhite: [248, 248, 255],
-        gold: [255, 215, 0],                    goldenrod: [218, 165, 32],              gray: [128, 128, 128],
-        green: [0, 128, 0],                     greenyellow: [173, 255, 47],            grey: [128, 128, 128],
-        honeydew: [240, 255, 240],              hotpink: [255, 105, 180],               indianred: [205, 92, 92],
-        indigo: [75, 0, 130],                   ivory: [255, 255, 240],                 khaki: [240, 230, 140],
-        lavender: [230, 230, 250],              lavenderblush: [255, 240, 245],         lawngreen: [124, 252, 0],
-        lemonchiffon: [255, 250, 205],          lightblue: [173, 216, 230],             lightcoral: [240, 128, 128],
-        lightcyan: [224, 255, 255],             lightgoldenrodyellow: [250, 250, 210],  lightgray: [211, 211, 211],
-        lightgreen: [144, 238, 144],            lightgrey: [211, 211, 211],             lightpink: [255, 182, 193],
-        lightsalmon: [255, 160, 122],           lightseagreen: [32, 178, 170],          lightskyblue: [135, 206, 250],
-        lightslategray: [119, 136, 153],        lightslategrey: [119, 136, 153],        lightsteelblue: [176, 196, 222],
-        lightyellow: [255, 255, 224],           lime: [0, 255, 0],                      limegreen: [50, 205, 50],
-        linen: [250, 240, 230],                 magenta: [255, 0, 255],                 maroon: [128, 0, 0],
-        mediumaquamarine: [102, 205, 170],      mediumblue: [0, 0, 205],                mediumorchid: [186, 85, 211],
-        mediumpurple: [147, 112, 219],          mediumseagreen: [60, 179, 113],         mediumslateblue: [123, 104, 238],
-        mediumspringgreen: [0, 250, 154],       mediumturquoise: [72, 209, 204],        mediumvioletred: [199, 21, 133],
-        midnightblue: [25, 25, 112],            mintcream: [245, 255, 250],             mistyrose: [255, 228, 225],
-        moccasin: [255, 228, 181],              navajowhite: [255, 222, 173],           navy: [0, 0, 128],
-        oldlace: [253, 245, 230],               olive: [128, 128, 0],                   olivedrab: [107, 142, 35],
-        orange: [255, 165, 0],                  orangered: [255, 69, 0],                orchid: [218, 112, 214],
-        palegoldenrod: [238, 232, 170],         palegreen: [152, 251, 152],             paleturquoise: [175, 238, 238],
-        palevioletred: [219, 112, 147],         papayawhip: [255, 239, 213],            peachpuff: [255, 218, 185],
-        peru: [205, 133, 63],                   pink: [255, 192, 203],                  plum: [221, 160, 221],
-        powderblue: [176, 224, 230],            purple: [128, 0, 128],                  rebeccapurple: [102, 51, 153],
-        red: [255, 0, 0],                       rosybrown: [188, 143, 143],             royalblue: [65, 105, 225],
-        saddlebrown: [139, 69, 19],             salmon: [250, 128, 114],                sandybrown: [244, 164, 96],
-        seagreen: [46, 139, 87],                seashell: [255, 245, 238],              sienna: [160, 82, 45],
-        silver: [192, 192, 192],                skyblue: [135, 206, 235],               slateblue: [106, 90, 205],
-        slategray: [112, 128, 144],             slategrey: [112, 128, 144],             snow: [255, 250, 250],
-        springgreen: [0, 255, 127],             steelblue: [70, 130, 180],              tan: [210, 180, 140],
-        teal: [0, 128, 128],                    thistle: [216, 191, 216],               tomato: [255, 99, 71],
-        turquoise: [64, 224, 208],              violet: [238, 130, 238],                wheat: [245, 222, 179],
-        white: [255, 255, 255],                 whitesmoke: [245, 245, 245],            yellow: [255, 255, 0],
-        yellowgreen: [154, 205, 50]
+    aliceblue: [[240, 248, 255], 'Alice Blue'],             antiquewhite: [[250, 235, 215], 'Antique White'],
+    aqua: [[0, 255, 255], 'Aqua'],                          aquamarine: [[127, 255, 212], 'Aquamarine'],
+    azure: [[240, 255, 255], 'Azure'],                      beige: [[245, 245, 220], 'Beige'],
+    bisque: [[255, 228, 196], 'Bisque'],                    black: [[0, 0, 0], 'Black'],
+    blanchedalmond: [[255, 235, 205], 'Blanched Almond'],   blue: [[0, 0, 255], 'Blue'],
+    blueviolet: [[138, 43, 226], 'Blue Violet'],            brown: [[165, 42, 42], 'Brown'],
+    burlywood: [[222, 184, 135], 'Burly Wood'],             cadetblue: [[95, 158, 160], 'Cadet Blue'],
+    chartreuse: [[127, 255, 0], 'Chartreuse'],              chocolate: [[210, 105, 30], 'Chocolate'],
+    coral: [[255, 127, 80], 'Coral'],                       cornflowerblue: [[100, 149, 237], 'Corn Flower Blue'],
+    cornsilk: [[255, 248, 220], 'Corn Silk'],               crimson: [[220, 20, 60], 'Crimson'],
+    cyan: [[0, 255, 255], 'Cyan'],                          darkblue: [[0, 0, 139], 'Dark Blue'],
+    darkcyan: [[0, 139, 139], 'Dark Cyan'],                 darkgoldenrod: [[184, 134, 11], 'Dark Golden Rod'],
+    darkgray: [[169, 169, 169], 'Dark Gray'],               darkgreen: [[0, 100, 0], 'Dark Green'],
+    darkgrey: [[169, 169, 169], 'Dark Grey'],               darkkhaki: [[189, 183, 107], 'Dark Khaki'],
+    darkmagenta: [[139, 0, 139],  'Dark Magenta'],          darkolivegreen: [[85, 107, 47], 'Dark Olive Green'],
+    darkorange: [[255, 140, 0], 'Dark Orange'],             darkorchid: [[153, 50, 204], 'Dark Orchid'],
+    darkred: [[139, 0, 0], 'Dark Red'],                     darksalmon: [[233, 150, 122], 'Dark Salmon'],
+    darkseagreen: [[143, 188, 143], 'Dark Sea Green'],      darkslateblue: [[72, 61, 139], 'Dark Slate Blue'],
+    darkslategray: [[47, 79, 79], 'Dark Slate Gray'],       darkslategrey: [[47, 79, 79], 'Dark Slate Grey'],
+    darkturquoise: [[0, 206, 209], 'Dark Turquoise'],       darkviolet: [[148, 0, 211], 'Dark Violet'],
+    deeppink: [[255, 20, 147], 'Deep Pink'],                deepskyblue: [[0, 191, 255], 'Deep Sky Blue'],
+    dimgray: [[105, 105, 105], 'Dim Gray'],                 dimgrey: [[105, 105, 105], 'Dim Grey'],
+    dodgerblue: [[30, 144, 255], 'Dodger Blue'],            firebrick: [[178, 34, 34], 'Fire Brick'],
+    floralwhite: [[255, 250, 240], 'Floral White'],         forestgreen: [[34, 139, 34], 'Forest Green'],
+    fuchsia: [[255, 0, 255], 'Fuchsia'],                    gainsboro: [[220, 220, 220], 'Gainsboro'],
+    ghostwhite: [[248, 248, 255], 'Ghost White'],           gold: [[255, 215, 0], 'Gold'],
+    goldenrod: [[218, 165, 32], 'Golden Rod'],              gray: [[128, 128, 128], 'Gray'],
+    green: [[0, 128, 0], 'Green'],                          greenyellow: [[173, 255, 47], 'Green Yellow'],
+    grey: [[128, 128, 128], 'Grey'],                        honeydew: [[240, 255, 240], 'Honey Dew'],
+    hotpink: [[255, 105, 180], 'Hot Pink'],                 indianred: [[205, 92, 92], 'Indian Red'],
+    indigo: [[75, 0, 130], 'Indigo'],                       ivory: [[255, 255, 240], 'Ivory'],
+    khaki: [[240, 230, 140], 'Khaki'],                      lavender: [[230, 230, 250], 'Lavender'],
+    lavenderblush: [[255, 240, 245], 'Lavender Blush'],     lawngreen: [[124, 252, 0], 'Lawn Green'],
+    lemonchiffon: [[255, 250, 205], 'Lemon Chiffon'],       lightblue: [[173, 216, 230], 'Light Blue'],
+    lightcoral: [[240, 128, 128], 'Light Coral'],           lightcyan: [[224, 255, 255], 'Light Cyan'],
+    lightgoldenrodyellow: [[250, 250, 210], 'Light Golden Rod Yellow'],
+    lightgray: [[211, 211, 211], 'Light Gray'],             lightgreen: [[144, 238, 144], 'Light Green'],
+    lightgrey: [[211, 211, 211], 'Light Grey'],             lightpink: [[255, 182, 193], 'Light Pink'],
+    lightsalmon: [[255, 160, 122], 'Light Salmon'],         lightseagreen: [[32, 178, 170], 'Light Sea Green'],
+    lightskyblue: [[135, 206, 250], 'Light Sky Blue'],      lightslategray: [[119, 136, 153], 'Light Slate Gray'],
+    lightslategrey: [[119, 136, 153], 'Light Slate Grey'],  lightsteelblue: [[176, 196, 222], 'Ligth Steel Blue'],
+    lightyellow: [[255, 255, 224], 'Light Yellow'],         lime: [[0, 255, 0], 'Lime'],
+    limegreen: [[50, 205, 50], 'Lime Green'],               linen: [[250, 240, 230], 'Linen'],
+    magenta: [[255, 0, 255], 'Magenta'],                    maroon: [[128, 0, 0], 'Maroon'],
+    mediumaquamarine: [[102, 205, 170], 'Medium Aquamarine'],
+    mediumblue: [[0, 0, 205], 'Medium Blue'],               mediumorchid: [[186, 85, 211], 'Medium Orchid'],
+    mediumpurple: [[147, 112, 219], 'Medium Purple'],       mediumseagreen: [[60, 179, 113], 'Medium Sea Green'],
+    mediumslateblue: [[123, 104, 238], 'Medium Slate Blue'],
+    mediumspringgreen: [[0, 250, 154], 'Medium Spring Green'],
+    mediumturquoise: [[72, 209, 204], 'Medium Turquoise'],  mediumvioletred: [[199, 21, 133], 'Medium Violet Red'],
+    midnightblue: [[25, 25, 112], 'Medium Blue'],           mintcream: [[245, 255, 250], 'Mint Cream'],
+    mistyrose: [[255, 228, 225], 'Misty Rose'],             moccasin: [[255, 228, 181], 'Moccasin'],
+    navajowhite: [[255, 222, 173], 'Navajo White'],         navy: [[0, 0, 128], 'Navy'],
+    oldlace: [[253, 245, 230], 'Old Lace'],                 olive: [[128, 128, 0], 'Olive'],
+    olivedrab: [[107, 142, 35], 'Olive Drab'],              orange: [[255, 165, 0], 'Orange'],
+    orangered: [[255, 69, 0], 'Orange Red'],                orchid: [[218, 112, 214], 'Orchid'],
+    palegoldenrod: [[238, 232, 170], 'Pale Golden Rod'],    palegreen: [[152, 251, 152], 'Pale Green'],
+    paleturquoise: [[175, 238, 238], 'Pale Turquoise'],     palevioletred: [[219, 112, 147], 'Pale Violet Red'],
+    papayawhip: [[255, 239, 213], 'Papaya Whip'],           peachpuff: [[255, 218, 185], 'Peach Cuff'],
+    peru: [[205, 133, 63], 'Peru'],                         pink: [[255, 192, 203], 'Pink'],
+    plum: [[221, 160, 221], 'Plum'],                        powderblue: [[176, 224, 230], 'Powder Blue'],
+    purple: [[128, 0, 128], 'Purple'],                      rebeccapurple: [[102, 51, 153], 'Rebecca Purple'],
+    red: [[255, 0, 0], 'Red'],                              rosybrown: [[188, 143, 143], 'Rosy Brown'],
+    royalblue: [[65, 105, 225], 'Royal Blue'],              saddlebrown: [[139, 69, 19], 'Saddle Brown'],
+    salmon: [[250, 128, 114], 'Salmon'],                    sandybrown: [[244, 164, 96], 'Sandy Brown'],
+    seagreen: [[46, 139, 87], 'Sea Green'],                 seashell: [[255, 245, 238], 'Sea Shell'],
+    sienna: [[160, 82, 45], 'Sienna'],                      silver: [[192, 192, 192], 'Silver'],
+    skyblue: [[135, 206, 235], 'Sky Blue'],                 slateblue: [[106, 90, 205], 'Slate Blue'],
+    slategray: [[112, 128, 144], 'Slate Gray'],             slategrey: [[112, 128, 144], 'Slate Grey'],
+    snow: [[255, 250, 250], 'Snow'],                        springgreen: [[0, 255, 127], 'Spring Green'],
+    steelblue: [[70, 130, 180], 'Steel Blue'],              tan: [[210, 180, 140], 'Tan'],
+    teal: [[0, 128, 128], 'Teal'],                          thistle: [[216, 191, 216], 'Thistle'],
+    tomato: [[255, 99, 71], 'Tomato'],                      turquoise: [[64, 224, 208], 'Turquoise'],
+    violet: [[238, 130, 238], 'Violet'],                    wheat: [[245, 222, 179], 'Wheat'],
+    white: [[255, 255, 255], 'White'],                      whitesmoke: [[245, 245, 245], 'White Smoke'],
+    yellow: [[255, 255, 0], 'Yellow'],                      yellowgreen: [[154, 205, 50], 'Yellow Green']
 ]

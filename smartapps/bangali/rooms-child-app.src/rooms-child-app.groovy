@@ -37,10 +37,21 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.27.5"  }
+public static String version()      {  return "v0.30.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.30.0
+*
+*   DONE:   5/5/2018
+*   1) more doc update. latest on github: https://github.com/adey/bangali
+*   2) added section at bottom of docs for non-obvious rules, will add more here.
+*   3) added support for vents to be controlled with theromstat and room temperature.
+*   4) optimized code a bit so can run switches on / off checker every 1 minute on hubitat and keep runtime under 1 second.
+*   5) updated text on input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
+*   6) update settings page for rooms manager to be a bit more organized.
+*   7) added color notification for battery devices specified in individual rooms settings.
 *
 *  Version: 0.27.5
 *
@@ -1317,7 +1328,6 @@ private pageRule(params)   {
     def ruleFromTimeOffset = settings["fromTimeOffset$ruleNo"]
     def ruleToTimeOffset = settings["toTimeOffset$ruleNo"]
     def ruleTimerOverride = (settings["noMotion$ruleNo"] || settings["noMotionEngaged$ruleNo"] || settings["dimTimer$ruleNo"] || settings["noMotionAsleep$ruleNo"])
-    def allActions = location.helloHome?.getPhrases()*.label
     def ruleType = settings["type$ruleNo"]
     def levelOptions = []
     levelOptions << [AL:"Auto Level (and color temperature)"]
@@ -1327,7 +1337,6 @@ private pageRule(params)   {
         levelOptions << it
     }
 //    ifDebug("levelOptions: $levelOptions")
-    if (allActions)     allActions.sort();
     boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
     dynamicPage(name: "pageRule", title: "Edit Rule", install: false, uninstall: false)   {
         section()     {
@@ -1428,6 +1437,12 @@ private pageRule(params)   {
                     paragraph "Fan on at temperature?\nset fan switch to set."
                     paragraph "Fan speed with what temperature increments?\nset fan switch to set."
                 }
+            }
+            section("Vent control?", hideable: false)		{
+                if (useThermostat && roomVents)
+                    paragraph "Rooms vents will be automatically controlled with thermostat and room temperature."
+                else
+                    paragraph "Enabled when using thermostat and room vents is set."
             }
         }
     }
@@ -1545,6 +1560,8 @@ private pageRuleOthers(params)   {
     else if (state.passedParams)
         state.pageRuleNo = state.passedParams.ruleNo
     def ruleNo = state.pageRuleNo
+    def allActions = location.helloHome?.getPhrases()*.label
+    if (allActions)     allActions.sort();
     dynamicPage(name: "pageRuleOthers", title: "Edit Rule Execute", install: false, uninstall: false)   {
         section("Routines/pistons and more:", hideable: false)     {
             input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
@@ -1817,7 +1834,13 @@ private pageRoomTemperature()       {
                 }
             }
             section("Room fan:", hideable: false)		{
-                input "roomFanSwitch", "capability.switch", title: "Fan switch?", required: false, multiple: false, submitOnChange: true
+                input "roomFanSwitch", "capability.switch", title: "Fan switch?", required: false, multiple: false
+            }
+            section("Room vents:", hideable: false)		{
+                if (useThermostat)
+                    input "roomVents", "capability.switch", title: "Vents?", required: false, multiple: true
+                else
+                    paragraph "Vents?\nenabled when using thermostat."
             }
         }
         else        {
@@ -2546,7 +2569,8 @@ def	motionActiveEventHandler(evt)	{
     }
     unscheduleAll("motion active handler")
     if (roomState == engaged)     {
-        if (whichNoMotion == lastMotionActive && state.noMotionEngaged && !isRoomEngaged())      {
+//        if (whichNoMotion == lastMotionActive && state.noMotionEngaged && !isRoomEngaged(false,true,false,true,false))      {
+        if (whichNoMotion == lastMotionActive && state.noMotionEngaged)      {
             updateChildTimer(state.noMotionEngaged)
             runIn(state.noMotionEngaged, roomVacant)
         }
@@ -2568,16 +2592,17 @@ def	motionActiveEventHandler(evt)	{
         child.generateEvent(engaged)
         return
     }
-    def cVContact = contactSensor?.currentContact
+/*    def cVContact = contactSensor?.currentContact
     if (contactSensor && ((!cVContact.contains(open) && !contactSensorOutsideDoor) || (!cVContact.contains(closed) && contactSensorOutsideDoor)))      {
         if (['occupied', 'checking'].contains(roomState))
             child.generateEvent(engaged)
         else if (roomState == vacant)
             child.generateEvent(occupied)
-    }
-    else if (['checking', 'vacant'].contains(roomState))     {
-        if ((powerDevice && powerValueEngaged && powerDevice.currentPower >= powerValueEngaged &&
-            (powerTriggerFromVacant || roomState != vacant)) || isRoomEngaged())
+    }*/
+    if (['checking', 'vacant'].contains(roomState))     {
+//        if (powerDevice && powerValueEngaged && powerDevice.currentPower >= powerValueEngaged &&
+//            (powerTriggerFromVacant || roomState != vacant)) || isRoomEngaged())
+        if (isRoomEngaged())
             child.generateEvent(engaged)
         else if (powerDevice && powerValueAsleep && powerDevice.currentPower >= powerValueAsleep &&
                 (powerTriggerFromVacant || roomState != vacant))
@@ -2599,7 +2624,8 @@ def	motionInactiveEventHandler(evt)     {
     if (!checkPauseModesAndDoW())    return;
 	def roomState = child?.currentValue(occupancy)
     if (roomState == engaged)     {
-        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged())      {
+//        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged(false,true,false,true,false))      {
+        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged(false,true,false,true,true))      {
             updateChildTimer(state.noMotionEngaged)
             runIn(state.noMotionEngaged, roomVacant)
         }
@@ -2708,9 +2734,10 @@ def occupiedSwitchOnEventHandler(evt)       {
     else
         child.generateEvent(newState)
 */
-    if (roomState == vacant)
-        child.generateEvent(occupied)
-    else if (roomState == checking)
+//    if (roomState == vacant)
+//        child.generateEvent(occupied)
+//    else if (roomState == checking)
+    if (['vacant', 'checking'].contains(roomState))
         child.generateEvent(isRoomEngaged() ? engaged : occupied)
     else if (state.noMotion)    {
         // If state didn't change, reset the timer unless motion sensor inactive will handle it
@@ -3300,6 +3327,9 @@ def processCoolHeat()       {
             if (roomFanSwitch)      {
                 roomFanSwitch.off(); pauseIt()
             }
+            if (useThermostat && roomVents && ['1', '2', '3'].contains(maintainRoomTemp))        {
+                roomVents.off(); pauseIt()
+            }
         }
         updateMaintainIndP(temp)
         updateThermostatIndP(isHere)
@@ -3402,6 +3432,14 @@ def processCoolHeat()       {
                 state.roomCoolTurnedOn = false
                 (useThermostat ? roomThermostat.auto() : roomCoolSwitch.off()); pauseIt()
             }
+            if (useThermostat && roomVents)
+                if (roomThermostat.currentThermostatOperatingState == 'cooling')      {
+                    def ventLevel = (((temperature - coolLow) * 100 ) / (coolHigh - coolLow)).round(0)
+                    ventLevel = (ventLevel > 100 ? 100 : (ventLevel > 0 ?: 0))
+                    roomVents.setLevel(ventLevel); pauseIt()
+                }
+                else
+                    roomVents.off(); pauseIt()
         }
         if (['2', '3'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomHeatSwitch)))      {
             def heatHigh = thisRule.heatTemp + (tempRange / 2f).round(1)
@@ -3425,6 +3463,14 @@ def processCoolHeat()       {
                     updateMaintainIndicator = false
                 }
             }
+            if (useThermostat && roomVents)
+                if (roomThermostat.currentThermostatOperatingState == 'heating')      {
+                    def ventLevel = (((temperature - heatLow) * 100 ) / (heatHigh - heatLow)).round(0)
+                    ventLevel = (ventLevel > 100 ? 100 : (ventLevel > 0 ?: 0))
+                    roomVents.setLevel(ventLevel); pauseIt()
+                }
+                else
+                    roomVents.off(); pauseIt()
         }
     }
     else if (contactSensorsRT && !contactSensorsRT.currentContact.contains(open))     {
@@ -3437,6 +3483,9 @@ def processCoolHeat()       {
             state.roomThermoTurnedOn = false
             state.roomHeatTurnedOn = false
             (useThermostat ? roomThermostat.auto() : roomHeatSwitch.off()); pauseIt()
+        }
+        if (useThermostat && roomVents && ['1', '2', '3'].contains(maintainRoomTemp))        {
+            roomVents.off(); pauseIt()
         }
     }
     if (roomFanSwitch)        {
@@ -3721,16 +3770,19 @@ def handleSwitches(data)	{
 //                processCoolHeat()
     }
     else if (newState == engaged)       {
-        if (state.noMotionEngaged && !isRoomEngaged(false,true,false,true,false))      {
+        if (state.noMotionEngaged && !isRoomEngaged(false,true,false,true,true))      {
             updateChildTimer(state.noMotionEngaged)
             runIn(state.noMotionEngaged, roomVacant)
         }
     }
     else if (newState == occupied)     {
-        if (state.noMotion)     {
+        if (state.noMotion && (!motionSensors || whichNoMotion == lastMotionActive ||
+                                                (whichNoMotion == lastMotionInactive && !motionSensors.currentMotion.contains('active'))))      {
+            updateChildTimer(state.noMotion)
+            runIn(state.noMotion, roomVacant)
+        }
+/*        if (state.noMotion)     {
             if (motionSensors)      {
-//                    def motionValue = motionSensors.currentMotion
-//                    def mV = motionValue.contains('active')
                 if (whichNoMotion == lastMotionActive ||
                     (whichNoMotion == lastMotionInactive && !motionSensors.currentMotion.contains('active')))      {
                     updateChildTimer(state.noMotion)
@@ -3745,6 +3797,7 @@ def handleSwitches(data)	{
 //                    }
             }
         }
+*/
     }
 //    }
     else if (newState == checking)     {
@@ -5071,9 +5124,11 @@ def repeatAlarm()	{
         child.alarmOff(true)
 }
 
-def checkRoomModesAndDoW()      {
+def checkAndTurnOnOffSwitchesC()      {
     if (awayModes && awayModes.contains(location.currentMode))    return false;
-    return checkPauseModesAndDoW()
+    if (!checkPauseModesAndDoW())       return false;
+    switchesOnOrOff(true)
+    return true
 }
 
 private checkPauseModesAndDoW()  {

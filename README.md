@@ -561,6 +561,10 @@
                 <td>Fan switch</td>
                 <td>Fan switch to use in rules</td>
             </tr>
+            <tr>
+                <td>Room vents</td>
+                <td>Room vents to automate with thermostat and room temperature.</td>
+            </tr>
         </table>
     </ul>
 </ul>
@@ -781,6 +785,13 @@
                         <td>Temperature increments with which to increment fan speed.</td>
                     </tr>
                 </table>
+                <p>Room vents control:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Rooms vents</td>
+                        <td style="width:85%">Room vents if specified are automatically controlled with thermostat and temperature.</td>
+                    </tr>
+                </table>
             </ul>
         </ul>
     </ul>
@@ -842,9 +853,40 @@
 
 <h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
-<p>If you want to support development of the app here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager / occupancy.</i> But if you do donate please also know that it is much appreciated, thank you. Donate here: https://www.paypal.me/dey</p>
+<p>Like the app? Like this post please. 😁</p>
+
+<p>If you want to support development of the app here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager / occupancy.</i> But if you do donate please also know that it is much appreciated and thank you. Donate here: https://www.paypal.me/dey</p>
 
 <p>&nbsp;</p>
+
+<h5>Non-obvious rules:</h5>
+<p>1. Outdoor lights with no motion sensor?
+    <ul>
+        Setup a room `Outdoor` with a rule with the following settings specified for the rule:  
+        <ul>
+           - Name of the rule.  
+           - Time from and to settings when the lights should turn on and off respectively.  
+           - Lights or other switches to turn off.  
+           - Optionally you can also specify the level, color and color temperature or use a Holiday Light rule that you have setup.  
+        </ul>
+        The light will turn on at the time from time and turn off at the time to time. Off course you could create multiple such rules in this Outdoor room to turn off different lights at different times even on different days of the week.
+    </ul>
+</p>
+<p>2. Turn off switches after X seconds with no motion sensor?
+    <ul>
+        Setup a room `Outdoor` with a rule with the following settings specified for the rule:  
+        <ul>
+           - Name of the rule.  
+           - Time from and to settings when the lights should turn on and off respectively.  
+           - Lights or other switches to turn off.  
+           - Optionally you can also specify the level, color and color temperature or use a Holiday Light rule that you have setup.  
+        </ul>
+        The light will turn on at the time from time and turn off at the time to time.  
+    </ul>
+</p>
+
+<p>&nbsp;</p>
+
 <div id="screenshots-table">
     <table>
         <tr>
