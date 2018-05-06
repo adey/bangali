@@ -50,7 +50,7 @@ private static boolean isDebug()    {  return true  }
 *   3) added support for vents to be controlled with theromstat and room temperature.
 *   4) optimized code a bit so can run switches on / off checker every 1 minute on hubitat and keep runtime under 1 second.
 *   5) updated text on input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
-*   6) update settings page for rooms manager to be a bit more organized.
+*   6) updated settings page for rooms manager to be a bit more organized.
 *   7) added color notification for battery devices specified in individual rooms settings.
 *
 *  Version: 0.27.5
@@ -3434,7 +3434,7 @@ def processCoolHeat()       {
             }
             if (useThermostat && roomVents)
                 if (roomThermostat.currentThermostatOperatingState == 'cooling')      {
-                    def ventLevel = (((temperature - coolLow) * 100 ) / (coolHigh - coolLow)).round(0)
+                    def ventLevel = (((temperature - coolLow) * 100) / (coolHigh - coolLow)).round(0)
                     ventLevel = (ventLevel > 100 ? 100 : (ventLevel > 0 ?: 0))
                     roomVents.setLevel(ventLevel); pauseIt()
                 }

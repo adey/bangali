@@ -5,11 +5,15 @@
 
 <p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
 
-<p><i>You can continue reading here for the summarized version or read the more detailed version on Github which also describes the settings:</i></p>
+<p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
 <p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
+
 <p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor inputs. This smartapp makes that possible.</p>
 
 <p>If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. <i>But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about.</i> 🙂</p>
+
+<p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
+<p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
 
 <p>Additionally, these room occupancy devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.</p>
 
@@ -862,26 +866,54 @@
 <h5>Non-obvious rules:</h5>
 <p>1. Outdoor lights with no motion sensor?
     <ul>
-        Setup a room `Outdoor` with a rule with the following settings specified for the rule:  
+        Setup a room say `Outdoor` with the following settings specified for the rule:  
         <ul>
-           - Name of the rule.  
-           - Time from and to settings when the lights should turn on and off respectively.  
-           - Lights or other switches to turn off.  
-           - Optionally you can also specify the level, color and color temperature or use a Holiday Light rule that you have setup.  
+            <table class="wikitable" style="width:100%">
+                <tr>
+                    <td style="width:90%">Name of the rule.</td>
+                </tr>
+                <tr>
+                    <td>Time from and to settings when the lights should turn on and off respectively. </td>
+                </tr>
+                <tr>
+                    <td>Lights or other switches to turn off.</td>
+                </tr>
+                <tr>
+                    <td>Optionally you can also specify the level, color and color temperature or use a Holiday Light rule that you have setup.</td>
+                </tr>
+            </table>
         </ul>
         The light will turn on at the time from time and turn off at the time to time. Off course you could create multiple such rules in this Outdoor room to turn off different lights at different times even on different days of the week.
     </ul>
 </p>
-<p>2. Turn off switches after X seconds with no motion sensor?
+<p>2. Turn off switches after X seconds with no motion sensor? (power saver)
     <ul>
-        Setup a room `Outdoor` with a rule with the following settings specified for the rule:  
+        Setup a room with the following Engaged settings:  
         <ul>
-           - Name of the rule.  
-           - Time from and to settings when the lights should turn on and off respectively.  
-           - Lights or other switches to turn off.  
-           - Optionally you can also specify the level, color and color temperature or use a Holiday Light rule that you have setup.  
+            <table class="wikitable" style="width:100%">
+                <tr>
+                    <td style="width:90%">Set the switches you want turned off as engaged switches.</td>
+                </tr>
+                <tr>
+                    <td>Specify the seconds after which you want the light turned off as the timeout setting.</td>
+                </tr>
+            </table>
         </ul>
-        The light will turn on at the time from time and turn off at the time to time.  
+        Then add a rule with the following settings:  
+        <ul>
+            <table class="wikitable" style="width:100%">
+                <tr>
+                    <td style="width:90%">Name of the rule.</td>
+                </tr>
+                <tr>
+                    <td>From the state drop down pick state as Engaged.</td>
+                </tr>
+                <tr>
+                    <td>All switches in Engaged settings as switches to turn on.</td>
+                </tr>
+            </table>
+        </ul>
+        Any of those lights when turned on will be turned off after that specified number of seconds.  
     </ul>
 </p>
 
