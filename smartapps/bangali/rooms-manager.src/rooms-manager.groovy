@@ -25,6 +25,20 @@ private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
 *
+*  Version: 0.35.0
+*
+*   DONE:   5/11/2018
+*   1) added option for buttons to set a state but not toggle from that state.
+*   2) added option to set locked state with power value.
+*   3) added option for contact sensors to not trigger engaged for use with landing or hallway areas.
+*   4) added option to use only selective room motion sensors for motion during asleep mode for night lights.
+*   5) changed options for when to turn on night lights.
+*   6) added option to only run `execution` rules when state changes. this means once the state changes and the lights have been set, if you change the light settings those will not be reset till the room changes away from the current state.
+*   7) added timer display to rooms occupancy device for asleep state.
+*   8) organized settings in rooms manager.
+*   9) updated docs.
+*   10) couple of bug fixes.
+*
 *  Version: 0.30.0
 *
 *   DONE:   5/5/2018
@@ -32,7 +46,7 @@ private static boolean isDebug()    {  return true  }
 *   2) added section at bottom of docs for non-obvious rules, will add more here.
 *   3) added support for vents to be controlled with theromstat and room temperature.
 *   4) optimized code a bit so can run switches on / off checker every 1 minute on hubitat and keep runtime under 1 second.
-*   5) updated text on input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
+*   5) updated text and input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
 *   6) updated settings page for rooms manager to be a bit more organized.
 *   7) added color notification for battery devices specified in individual rooms settings.
 *
@@ -525,6 +539,9 @@ import groovy.transform.Field
 @Field final String _SmartThings = 'ST'
 @Field final String _Hubitat     = 'HU'
 
+@Field final int    pauseMSecST = 10
+@Field final int    pauseMSecHU = 50
+
 definition (
     name: "rooms manager",
     namespace: "bangali",
@@ -542,6 +559,11 @@ preferences	{
     page(name: "pageSpeakerSettings", content: "pageSpeakerSettings")
     page(name: "pagePersonNameSettings", content: "pagePersonNameSettings")
     page(name: "pagePersonColorSettings", content: "pagePersonColorSettings")
+    page(name: "pageAnnouncementSpeakerTimeSettings", content: "pageAnnouncementSpeakerTimeSettings")
+    page(name: "pageArrivalDepartureSettings", content: "pageArrivalDepartureSettings")
+    page(name: "pageAnnouncementTextHelp", content: "pageAnnouncementTextHelp")
+    page(name: "pageSunAnnouncementSettings", content: "pageSunAnnouncementSettings")
+    page(name: "pageBatteryAnnouncementSettings", content: "pageBatteryAnnouncementSettings")
 }
 
 def mainPage()  {
@@ -561,11 +583,11 @@ def mainPage()  {
 
 def pageSpeakerSettings()   {
     ifDebug("pageSpeakerSettings")
-    def i = (presenceSensors ? presenceSensors.size() : 0)
-    def str = (presenceNames ? presenceNames.split(msgSeparator) : [])
-    def j = str.size()
+//    def i = (presenceSensors ? presenceSensors.size() : 0)
+//    def str = (presenceNames ? presenceNames.split(msgSeparator) : [])
+//    def j = str.size()
     def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
-    if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
+//    if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
     def colorsList = []
     colorsRGB.each  { k, v ->
         colorsList << ["$k":"${v[1]}"]
@@ -580,85 +602,14 @@ def pageSpeakerSettings()   {
         }
     }
     dynamicPage(name: "pageSpeakerSettings", title: "Annoucement Settings", install: true, uninstall: true)     {
-        section("Speakers for annoucement:")       {
-//            	if (musicPlayers) {
-//                input "volume", "number", title: "Temporarily change volume", description: "0-100% (default value = 30%)", required: false
-//            	}
-            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
-            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?", required: false, multiple: true, submitOnChange: true
-            input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
-            if (playerDevice)
-                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
-            else
-                paragraph "Speaker volume?\nselect any speaker to set."
+        section("Spoken announcement settings:")     {
+            href "pageAnnouncementSpeakerTimeSettings", title: "Spoken announcement settings", description: (playerDevice ? "Tap to change existing settings" : "Tap to configure")
         }
         section("Lights for announcement with color:")   {
-            input "announceSwitches", "capability.switch", title: "Which switches?", required: true, multiple: true, submitOnChange: true
+            input "announceSwitches", "capability.switch", title: "Which switches?", required: false, multiple: true, submitOnChange: true
         }
-        section("Spoken announcement only between hours:")     {
-            if (playerDevice)        {
-                input "startHH", "number", title: "From hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
-                input "endHH", "number", title: "To hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
-            }
-            else        {
-                paragraph "Announce from hour?\nselect either presence or time announcement to set"
-                paragraph "Announce to hour?\nselect either presence or time announcement to set"
-            }
-        }
-        section("Arrival and departure announcement")      {
-            if (playerDevice)
-                input "speakerAnnounce", "bool", title: "Announce with speaker when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            else
-                paragraph "Announce when presence sensors arrive or depart?\nselect speaker to set."
-            if (announceSwitches)
-                input "speakerAnnounceColor", "bool", title: "Announce with color when presence sensors arrive or depart?", required: false, multiple: false, defaultValue: false, submitOnChange: true
-            else
-                paragraph "Announce with color when presence sensors arrive or depart?\nselect announce with color lights to set."
-            if (speakerAnnounce || speakerAnnounceColor)
-                input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: true, multiple: true, submitOnChange: true
-            else
-                paragraph "Which presence sensors?\nselect either announce with speaker or color to set"
-            if (presenceSensors)
-                href "pagePersonNameSettings", title: "Specify names for presence sensors", description: "$nameString"
-            else
-                paragraph "Specify names for presence sensors\nselect presence sensors to set."
-        }
-		section("Arrival and departure announcement text:")        {
-            if (playerDevice && speakerAnnounce)    {
-                paragraph "In the following texts '&' will be replaced with persons name(s) and a random string will be used if there are multiple '$msgSeparator' separated strings."
-                paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have', depending on the number of name(s) in the list."
-                input "welcomeHome", "text", title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &'
-                input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
-                input "leftHome", "text", title: "Left home announcement?", required: true, multiple: false, defaultValue: '&has left home'
-                input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
-            }
-            else    {
-                paragraph "Welcome home greeting?\nselect speaker announce to set."
-                paragraph "Welcome home greeting closer?\nselect speaker announce to set."
-                paragraph "Left home announcement?\nselect speaker announce to set."
-                paragraph "Left home announcement closer?\nselect speaker announce to set."
-            }
-        }
-        section("Arrival and departure announcement with color:")   {
-            if (speakerAnnounceColor)
-                href "pagePersonColorSettings", title: "Choose colors for presence sensors", description: "$colorString"
-            else
-                paragraph "Choose colors for presence sensors\nselect announce with color to set."
-        }
-        section("Trigger annoucement settings:")      {
-            if (speakerAnnounce || speakerAnnounceColor)    {
-                input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensor(s) close?",
-                                                required: (!motionSensors ? true : false), multiple: true
-                input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensor(s)?",
-                                                required: (!contactSensors ? true : false), multiple: true
-                input "secondsAfter", "number", title: "Left home announcement how many seconds after?",
-                                                required: true, multiple: false, defaultValue: 15, range: "5..100"
-            }
-            else    {
-                paragraph "Welcome home greeting when which contact sensor(s) close?\nselect announce to set."
-                paragraph "Welcome home greeting with motion on which motion sensor(s)?\nselect announce to set."
-                paragraph "Left home announcement how many seconds after?\nselect announce to set."
-            }
+        section("Arrival and departure settings")       {
+            href "pageArrivalDepartureSettings", title: "Arrival and departure settings", description: (speakerAnnounce || speakerAnnounceColor ? "Tap to change existing settings" : "Tap to configure")
         }
         section("Time announcement:")     {
             if (playerDevice)
@@ -667,23 +618,11 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
-        section("Battery announcement:")     {
-            if (playerDevice || announceSwitches)
-                input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
-            else
-                paragraph "Annouce battery status when?\nselect speakers or switches to set"
-            if (batteryTime)
-                input "batteryLevel", "number", title: "Battery level below which to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
-            else
-                paragraph "Battery level to include in status?\nselect battery time to set."
-            if (batteryTime && announceSwitches)        {
-                input "batteryOkColor", "enum", title: "Battery all OK color?", required: true, multiple: false, options: colorsList
-                input "batteryLowColor", "enum", title: "Battery low color?", required: true, multiple: false, options: colorsList
-            }
-            else        {
-                paragraph "Battery all OK warning color?\nselect battery time to set."
-                paragraph "Battery low warning color?\nselect battery time to set."
-            }
+        section("Sun announcement settings")       {
+            href "pageSunAnnouncementSettings", title: "Sun announcement settings", description: (sunAnnounce ? "Tap to change existing settings" : "Tap to configure")
+        }
+        section("Battery announcement settings")       {
+            href "pageBatteryAnnouncementSettings", title: "Battery announcement settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure")
         }
 	}
 }
@@ -719,14 +658,174 @@ def pagePersonColorSettings()           {
     }
 }
 
+def pageAnnouncementTextHelp()      {
+    dynamicPage(name: "pageAnnouncementTextHelp", title: "Announcement text format:", install: false, uninstall: false)     {
+        section()       {
+            paragraph "For announcement text all occurances of '&' is replaced with persons name(s)."
+            paragraph "If there are multiple '$msgSeparator' separated strings in each announcement text input, then a random string will be used from that list of strings when announcing each time."
+            paragraph "Similarly, all occurances of '&is' will be replaced with persons name(s) + ' is' or ' are' and '&has' with persons name(s) + ' has' or ' have'."
+            paragraph "Choice of 'is' or 'are' and 'has' or 'have' is based on the number of person name(s) in the list for that announcement."
+        }
+    }
+}
+
+def pageAnnouncementSpeakerTimeSettings()      {
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
+    dynamicPage(name: "pageAnnouncementSpeakerTimeSettings", title: "Speaker settings:", install: false, uninstall: false)     {
+        section("Speakers for annoucement:")       {
+            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?", required: false, multiple: true, submitOnChange: true
+            input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
+            if (playerDevice)
+                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
+            else
+                paragraph "Speaker volume?\nselect any speaker to set."
+        }
+        section("Spoken announcement during hours:")       {
+            if (playerDevice)        {
+                input "startHH", "number", title: "From hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
+                input "endHH", "number", title: "To hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+            }
+            else        {
+                paragraph "Announce from hour?\nselect either presence or time announcement to set"
+                paragraph "Announce to hour?\nselect either presence or time announcement to set"
+            }
+        }
+    }
+}
+
+def pageArrivalDepartureSettings()      {
+    def nameString = []
+    def colorString = []
+    presenceSensors.each        {
+        if (it)     {
+            nameString << (settings["${it.getId()}Name"] ?: '')
+            colorString << (settings["${it.getId()}Color"] ? colorsRGB[settings["${it.getId()}Color"]][1] : '')
+        }
+    }
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
+    dynamicPage(name: "pageArrivalDepartureSettings", title: "Arrival and departure settings", install: false, uninstall: false)     {
+        section("Arrival and departure announcement")      {
+            if (playerDevice)
+                input "speakerAnnounce", "bool", title: "Announce presence with speaker?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce presence with speaker?\nselect speaker to set."
+            if (announceSwitches)
+                input "speakerAnnounceColor", "bool", title: "Announce presence with color?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce presence with color??\nselect announce with color light to set."
+            if (speakerAnnounce || speakerAnnounceColor)
+                input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: true, multiple: true, submitOnChange: true
+            else
+                paragraph "Which presence sensors?\nselect either announce with speaker or color to set"
+            if (presenceSensors)
+                href "pagePersonNameSettings", title: "Names for presence sensor(s)", description: "$nameString"
+            else
+                paragraph "Names for presence sensor(s)\nselect presence sensor(s) to set."
+        }
+		section("Arrival and departure announcement text:")        {
+            if (playerDevice && speakerAnnounce)    {
+                href "pageAnnouncementTextHelp", title: "Accouncement text format help:", description: "Click to read"
+                input "welcomeHome", "text", title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &.'
+                input "welcomeHomeCloser", "text", title: "Welcome home greeting closer?", required: false, multiple: false
+                input "leftHome", "text", title: "Left home announcement?", required: true, multiple: false, defaultValue: '&has left home.'
+                input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
+            }
+            else    {
+                paragraph "Welcome home greeting?\nselect speaker announce to set."
+                paragraph "Welcome home greeting closer?\nselect speaker announce to set."
+                paragraph "Left home announcement?\nselect speaker announce to set."
+                paragraph "Left home announcement closer?\nselect speaker announce to set."
+            }
+        }
+        section("Arrival and departure announcement with color:")   {
+            if (speakerAnnounceColor)
+                href "pagePersonColorSettings", title: "Color(s) for presence sensor(s)", description: "$colorString"
+            else
+                paragraph "Color(s) for presence sensor(s)\nselect announce with color to set."
+        }
+        section("Trigger annoucement settings:")      {
+            if (speakerAnnounce || speakerAnnounceColor)    {
+                input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensor(s) close?",
+                                                required: (!motionSensors ? true : false), multiple: true
+                input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensor(s)?",
+                                                required: (!contactSensors ? true : false), multiple: true
+                input "secondsAfter", "number", title: "Left home announcement how many seconds after?",
+                                                required: true, multiple: false, defaultValue: 15, range: "5..100"
+            }
+            else    {
+                paragraph "Welcome home greeting when which contact sensor(s) close?\nselect announce to set."
+                paragraph "Welcome home greeting with motion on which motion sensor(s)?\nselect announce to set."
+                paragraph "Left home announcement how many seconds after?\nselect announce to set."
+            }
+        }
+    }
+}
+
+def pageSunAnnouncementSettings()      {
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
+    dynamicPage(name: "pageSunAnnouncementSettings", title: "Sun announcements:", install: false, uninstall: false)     {
+        section("")     {
+            if (announceSwitches)
+                input "sunAnnounce", "enum", title: "Sunrise/sunset announcement?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: [[null:"None"],[1:"Sunrise"],[2:"Sunset"],[3:"Both"]]
+            else
+                paragraph "Sunrise/sunset announcement?\nselect lights for announce by color to set"
+            if (['1', '3'].contains(sunAnnounce))
+                input "sunriseColor", "enum", title: "Sunrise color?", required: true, multiple: false, options: colorsList
+            else
+                paragraph "Sunrise color?\nset sunrise announcement to set"
+            if (['2', '3'].contains(sunAnnounce))
+                input "sunsetColor", "enum", title: "Sunset color?", required: true, multiple: false, options: colorsList
+            else
+                paragraph "Sunset color?\nset sunset announcement to set"
+        }
+    }
+}
+
+def pageBatteryAnnouncementSettings()      {
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers ? true : false)
+    dynamicPage(name: "pageBatteryAnnouncementSettings", title: "Battery announcement:", install: false, uninstall: false)     {
+        section("")     {
+            if (playerDevice || announceSwitches)
+                input "batteryTime", "time", title: "Annouce battery status when?", required: false, multiple: false, submitOnChange: true
+            else
+                paragraph "Annouce battery status when?\nselect speakers or switches to set"
+            if (batteryTime)
+                input "batteryLevel", "number", title: "Battery level below which to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
+            else
+                paragraph "Battery level to include in status?\nselect battery time to set."
+            if (batteryTime && announceSwitches)        {
+                input "batteryOkColor", "enum", title: "Battery all OK color?", required: true, multiple: false, options: colorsList
+                input "batteryLowColor", "enum", title: "Battery low color?", required: true, multiple: false, options: colorsList
+            }
+            else        {
+                paragraph "Battery all OK warning color?\nselect battery time to set."
+                paragraph "Battery low warning color?\nselect battery time to set."
+            }
+        }
+    }
+}
+
 def installed()		{  initialize()  }
 
 def updated()		{
     ifDebug("updated")
 	initialize()
+    def hT = getHubType()
+    if (hT == _Hubitat)     {
+        if (settings["presenceNames"])          app.removeSetting("presenceNames")
+        if (settings["presenceColorString"])    app.removeSetting("presenceColorString")
+    }
     announceSetup()
-    if (getHubType() == _SmartThings)       runEvery5Minutes(processChildSwitches)
-    else                                    schedule("33 0/1 * * * ?", processChildSwitches)
+    if (hT == _SmartThings)       runEvery5Minutes(processChildSwitches)
+    else                          schedule("33 0/1 * * * ?", processChildSwitches)
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
@@ -743,6 +842,8 @@ def initialize()	{
 //        subscribe(childRoomDevice, "button.pushed", buttonPushedEventHandler)
         subscribe(childRoomDevice, "occupancy", roomStateHistory)
 	}
+    if (announceSwitches && ['1', '3'].contains(sunAnnounce))       subscribe(location, "sunrise", sunriseEventHandler)
+    if (announceSwitches && ['2', '3'].contains(sunAnnounce))       subscribe(location, "sunset", sunsetEventHandler)
     state.lastBatteryUpdate = ''
 }
 
@@ -771,8 +872,7 @@ def roomStateHistory(evt)        {
         state.rSH = [:]
         ifDebug("rSH initialized")
     }
-    else
-        ifDebug("rSH $evt.displayName $evt.deviceId $evt.value")
+    ifDebug("rSH $evt.displayName | $evt.deviceId | $evt.value")
     if (state.rSH[(evt.deviceId)])      state.rSH[(evt.deviceId)] << rSH;
     else                                state.rSH[(evt.deviceId)] = rSH;
 /*    state.rSH.each     { dID, dMap ->
@@ -1008,15 +1108,15 @@ private setupColorRotation()        {
         state.colorsRotating = true
         state.colorsIndex = 0
         announceSwitches.on()
-        announceSwitches.setLevel(99)
+//        announceSwitches.setLevel(99)
         rotateColors()
     }
 }
 
 def rotateColors()      {
-//    presenceSwitches.setColor(state.colorsToRotate."$state.colorsIndex")
-    announceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
-    announceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
+    announceSwitches.setColor(state.colorsToRotate."$state.colorsIndex")
+//    announceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
+//    announceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
     state.colorsRotateSeconds = (state.colorsRotateSeconds >= 5 ? state.colorsRotateSeconds - 5 : 0)
     state.colorsIndex = (state.colorsIndex < (state.colorsToRotate.size() -1) ? state.colorsIndex + 1 : 0)
     if (state.colorsRotateSeconds > 0)      runIn(5, rotateColors)
@@ -1202,6 +1302,7 @@ def processChildSwitches()      {
         }
     }
 */
+//    def quarterHour = (((time % 3600000f) / 60000f).trunc(0) % 15) // quarter hour = 0
     childApps.each  { child ->
         if (child.checkAndTurnOnOffSwitchesC())
             if (getHubType() == _SmartThings)     pause(10);
@@ -1244,9 +1345,41 @@ def batteryCheck()      {
     }
 }
 
+def sunriseEventHandler()       {
+    state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunriseColor][1]))
+    setupColorNotification()
+}
+
+def sunsetEventHandler()       {
+    state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunsetColor][1]))
+    setupColorNotification()
+}
+
 def setupColorNotification()        {
     if (!state.colorsRotating)       {
-        state.colorNotifyTimes = 5
+        state.colorNotifyTimes = 9
+        state.colorSwitchSave = []
+        state.colorColorSave = []
+        state.colorColorTemperatureSave = []
+        state.colorColorTemperatureTrueSave = []
+        announceSwitches.each   {
+            state.colorSwitchSave << it.currentSwitch
+            state.colorColorSave << [hue: it.currentHue, saturation: it.currentSaturation, level: it.currentLevel]
+            def evts = it.events(max: 250)
+            def foundValue = false
+            def keepSearching = true
+            evts.each       {
+                if (!foundValue && keepSearching)
+                    if (it.value == 'setColorTemperature')     {
+                        foundValue = true
+                        state.colorColorTemperatureTrueSave << true
+                    }
+                    else if (['hue', 'saturation'].contains(it.name))
+                        keepSearching = false
+            }
+            if (!foundValue)        state.colorColorTemperatureTrueSave << false
+            state.colorColorTemperatureSave << it.currentColorTemperature
+        }
         notifyWithColor()
     }
     else
@@ -1254,16 +1387,35 @@ def setupColorNotification()        {
 }
 
 def notifyWithColor()      {
-    if ((state.colorNotifyTimes % 2) == 1)    {
-        announceSwitches.on()
-        announceSwitches.setLevel(99)
-        announceSwitches.setHue(state.colorNotificationColor.hue)
-        announceSwitches.setSaturation(state.colorNotificationColor.saturation)
+    ifDebug("notifyWithColor")
+    if ((state.colorNotifyTimes % 2f).trunc(0) == 1)    {
+        announceSwitches.on(); pauseIt()
+        announceSwitches.setColor(state.colorNotificationColor); pauseIt()
+//        announceSwitches.setLevel(99)
+//        announceSwitches.setHue(state.colorNotificationColor.hue)
+//        announceSwitches.setSaturation(state.colorNotificationColor.saturation)
     }
     else
-        announceSwitches.off()
+        announceSwitches.off(); pauseIt()
     state.colorNotifyTimes = state.colorNotifyTimes - 1
+//    if (state.colorNotifyTimes >= 0)      runIn(state.colorNotifyTimes % 2f).trunc(0) + 1, notifyWithColor)
     if (state.colorNotifyTimes >= 0)      runIn(1, notifyWithColor)
+    else        {
+        def i = 0
+        announceSwitches.each       {
+            ifDebug("$it | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
+            (state.colorColorTemperatureTrueSave[(i)] == true ? it.setColorTemperature(state.colorColorTemperatureSave[(i)]) :
+                                                                it.setColor(state.colorColorSave[(i)])); pauseIt(true)
+            (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
+            i = i + 1
+        }
+    }
+}
+
+private pauseIt(longOne = false)       {
+    def hT = getHubType()
+    if (hT == _SmartThings)     pause(pauseMSecST);
+    else if (hT == _Hubitat)    pauseExecution(pauseMSecHU * (longOne ? 10 : 1));
 }
 
 def tellTime()      {
@@ -1311,7 +1463,7 @@ private convertRGBToHueSaturation(setColorTo)      {
         }
         h /= 6
     }
-    return [hue: Math.round(h * 100), saturation: Math.round(s * 100)]
+    return [hue: Math.round(h * 100), saturation: Math.round(s * 100), level: Math.round(l * 100)]
 }
 
 //------------------------------------------------------------------------------------------------------------------------//

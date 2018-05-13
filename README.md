@@ -1,5 +1,6 @@
 # bangali's rooms automation
 
+```html
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
 <h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy for Smartthings and Hubitat</h2>
 
@@ -95,9 +96,9 @@
         </tr>
     </table>
 </ul>
-<p>&nbsp;</p>
 
-<p style="font-weight: bold; margin-top: 25px;">The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</p>
+<p>&nbsp;</p>
+<b>The next 6 settings group are for how the room is set to each of those 6 occupancy states and settings specific to that occupancy state.</b>
 <ul>
     <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsOccupied.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -105,8 +106,20 @@
     <p>Settings that specify how this occupancy state is set. Normally it is based on motion but there are also other ways of detecting Occupied state like a specific switch turning on. Available settings:</p>
     <table class="wikitable" style="width:900px">
         <tr>
-            <td style="width:15%">Switch</td>
-            <td style="width:85%">Switch which when turned on will set room occupancy state to Occupied</td>
+            <td style="width:15%">Button</td>
+            <td style="width:85%">Set room occupancy to Occupied state when button is pushed</td>
+        </tr>
+        <tr>
+            <td>Button number</td>
+            <td>Button number of button selected above</td>
+        </tr>
+        <tr>
+            <td>Only sets Occupied</td>
+            <td>Option to turn off toggling between Occupied and Vacant state for this button. When set to true the button will only set Occupied state and no longer toggle. This helps if you are pressing a button with no visual feedback to set the room to Occupied but accidentally press it twice and don't want the room to toggle to Vacant state when it is already in Occupied state.</td>
+        </tr>
+        <tr>
+            <td>Switch</td>
+            <td>Switch which when turned on will set room occupancy state to Occupied</td>
         </tr>
         <tr>
             <td>Timeout</td>
@@ -143,6 +156,10 @@
             <td>Button number of button selected above</td>
         </tr>
         <tr>
+            <td>Only sets Engaged</td>
+            <td>Option to turn off toggling between Engaged and Vacant state for this button. When set to true the button will only set Engaged state and no longer toggle. This helps if you are pressing a button with no visual feedback to set the room to Engaged but accidentally press it twice and don't want the room to toggle to Vacant state when it is already in Engaged state.</td>
+        </tr>
+        <tr>
             <td>Presence sensor actions</td>
             <td>Choose if room occupancy state should switch with presence sensor:
                 <ul>
@@ -172,6 +189,10 @@
             <td>Power value in watts which when reached will set room occupancy to Engaged</td>
         </tr>
         <tr>
+            <td>Trigger from vacant</td>
+            <td>When false room will need to be in a state other than Vacant for the Asleep state to be triggered</td>
+        </tr>
+        <tr>
             <td>Power stays below</td>
             <td>Power value has to stay below power value above for this many seconds before room state timeout countdown will start. This is keep room state from changing frequently with power value fluctuating.</td>
         </tr>
@@ -182,6 +203,10 @@
         <tr>
             <td>Outside door</td>
             <td>For use with outside doors like garage doors where the Engaged state is triggered with motion if the door is open</td>
+        </tr>
+        <tr>
+            <td>Does not trigger Engaged</td>
+            <td>For use with areas like landing or hallway leading to different rooms with contact sensor on those doors. You want any of the room doors opening to turn on the lights even before the landing/hallway motion sensor detects motion but you do not want these doors to set the landing/hallway to Engaged. Turn on this setting in that case.</td>
         </tr>
         <tr>
             <td>Timeout</td>
@@ -258,12 +283,16 @@
             <td>Button number of button selected above</td>
         </tr>
         <tr>
+            <td>Only sets Asleep</td>
+            <td>Option to turn off toggling between Asleep and Vacant state for this button. When set to true the button will only set Asleep state and no longer toggle. This helps if you are pressing a button by the bedside to set the room to Asleep but accidentally press it twice and don't want the room to toggle to Vacant state when it is already in Asleep state.</td>
+        </tr>
+        <tr>
             <td>Switch</td>
             <td>Switch which when turned off will set room occupancy to Asleep</td>
         </tr>
         <tr>
             <td>Power value</td>
-            <td>Pause music player when room occupancy changes to Vacant</td>
+            <td>Power value in watts which when reached will set room occupancy to Asleep</td>
         </tr>
         <tr>
             <td>Trigger from vacant</td>
@@ -301,6 +330,10 @@
                 <td>Set color temperature when turning on switches above</td>
             </tr>
             <tr>
+                <td>Which motion sensors?</td>
+                <td>Pick which room motion sensors will trigger night lights when Asleep. If you multiple motion sensors in the room and only want some of them trigger night lights but not others, you can pick the ones here that should trigger night lights.</td>
+            </tr>
+            <tr>
                 <td>Timeout</td>
                 <td>Value in seconds for night light timeout</td>
             </tr>
@@ -332,6 +365,18 @@
             <td>Set Locked state when switch turns on or turns off</td>
         </tr>
         <tr>
+            <td>Power value</td>
+            <td>Power value in watts which when reached will set room occupancy to Locked</td>
+        </tr>
+        <tr>
+            <td>Trigger from vacant</td>
+            <td>When false room will need to be in a state other than Vacant for the Locked state to be triggered</td>
+        </tr>
+        <tr>
+            <td>Power stays below</td>
+            <td>Power value has to stay below power value above for this many seconds before room state timeout countdown will start. This is to keep room state from changing frequently with power value fluctuating.</td>
+        </tr>
+        <tr>
             <td>Contact</td>
             <td>Contact to set room occupancy to Locked</td>
         </tr>
@@ -351,7 +396,7 @@
 </ul>
 
 <p>&nbsp;</p>
-<p style="font-weight: bold; margin-top: 25px;">These group of settings allow for light routine settings used in the rules.</p>
+<b>These group of settings allow for light routine settings used in the rules.</b>
 <ul>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Auto Level 'AL' Settings</h5>
@@ -484,7 +529,8 @@
     </ul>
 </ul>
 
-<p style="font-weight: bold; margin-top: 25px;">Temperature settings is their own group.</p>
+<p>&nbsp;</p>
+<b>Temperature settings is their own group.</b>
 
 <ul>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsTemperature.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -573,7 +619,8 @@
     </ul>
 </ul>
 
-<p style="font-weight: bold; margin-top: 25px;">Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</p>
+<p>&nbsp;</p>
+<b>Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</b>
 
 <ul>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
@@ -850,8 +897,10 @@
 <p><b>rooms manager smartapp:</b></p>
 <a href="https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy">https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy</a>
 
+<p>&nbsp;</p>
 <p><b>rooms child smartapp:</b></p>
 <a href="https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy">https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-child-app.src/rooms-child-app.groovy</a>
+
 <p>&nbsp;</p>
 <p>Then go to ST app -> Automation tab -> Add a Smartapp -> My apps in ST app and install rooms manager app then create your rooms within rooms manager.</p>
 
@@ -919,39 +968,15 @@
 
 <p>&nbsp;</p>
 
+<b>Here are a couple of screenshots of the device tiles for a Rooms Occupancy device from SmartThings. Note this is not applicable for Hubitat since Hubitat does not have device tiles, at least for now.</b>
 <div id="screenshots-table">
     <table>
         <tr>
-            <td style="padding:5px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026136-d367e612-b997-11e7-885f-de855d9e444e.png">
+            <td style="padding:25px">
+                <img height="500" src="https://raw.githubusercontent.com/adey/bangali/master/resources/screens/Rooms%20Occupancy%20Device%20Tiles%20-%20Screen%201.png">
             </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026131-d23495ec-b997-11e7-8bb7-adc8aa1000b7.png">
-            </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026137-d3829390-b997-11e7-9d07-1899a6cace35.png">
-            </td>
-        </tr>
-        <tr>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026138-d39e1bf6-b997-11e7-86bd-22ba97467597.png">
-            </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026133-d26e175e-b997-11e7-88bc-ebe103cba53a.png">
-            </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026132-d251cc52-b997-11e7-9dcb-3bffab4094f0.png">
-            </td>
-        </tr>
-        <tr>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026135-d34e0b2a-b997-11e7-950a-d2e88e7cc2f2.png">
-            </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026139-d3b7aab2-b997-11e7-91b9-74340fdd5a1c.png">
-            </td>
-            <td style="padding:15px">
-                <img height="400" src="https://user-images.githubusercontent.com/319291/32026134-d285d5b0-b997-11e7-9387-b679be8410b8.png">
+            <td style="padding:25px">
+                <img height="500" src="https://raw.githubusercontent.com/adey/bangali/master/resources/screens/Rooms%20Occupancy%20Device%20Tiles%20-%20Screen%202.png">
             </td>
         </tr>
     </table>
