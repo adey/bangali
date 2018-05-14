@@ -228,19 +228,23 @@
     <table class="wikitable" style="width:900px">
         <tr>
             <td style="width:15%">Dim timer</td>
-            <td style="width:85%">Dim lights for how many seconds for visible notification of checking state and that lights and switches will be turned off</td>
+            <td style="width:85%">Dim lights for how many seconds for visible notification of checking state and that lights and switches will be turned off.</td>
         </tr>
         <tr>
             <td>Dim level by</td>
-            <td>If any lights are on dim them by this level</td>
+            <td>If any lights are on dim them by this level.</td>
         </tr>
         <tr>
             <td>Dim level to</td>
-            <td>If no lights are on turn them on at this level</td>
+            <td>If no lights are on turn them on at this level.</td>
+        </tr>
+        <tr>
+            <td>Lux value?</td>
+            <td>If no lights are on turn them on only when lux is at or below this lux value.</td>
         </tr>
         <tr>
             <td>Do not restore</td>
-            <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant</td>
+            <td>When transitioning from Checking state to another state do not restore the light levels to their previous value if that state is Vacant.</td>
         </tr>
     </table>
     <br />
@@ -621,6 +625,7 @@
 
 <p>&nbsp;</p>
 <b>Here are the rest of the settings starting with the heart of the app - Maintain Rules, which allows you to maintain automation rules for the room and turn them in to smart rooms.</b>
+<p>&nbsp;</p>
 
 <ul>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">

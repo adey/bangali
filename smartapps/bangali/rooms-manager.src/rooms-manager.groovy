@@ -624,6 +624,9 @@ def pageSpeakerSettings()   {
         section("Battery announcement settings")       {
             href "pageBatteryAnnouncementSettings", title: "Battery announcement settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure")
         }
+        section("Process execution rule(s) only on state change? (global setting overrides setting at room level)", hideable: false)		{
+            input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
+        }
 	}
 }
 
@@ -824,8 +827,9 @@ def updated()		{
         if (settings["presenceColorString"])    app.removeSetting("presenceColorString")
     }
     announceSetup()
-    if (hT == _SmartThings)       runEvery5Minutes(processChildSwitches)
-    else                          schedule("33 0/1 * * * ?", processChildSwitches)
+    if (!onlyOnStateChange)
+        if (hT == _SmartThings)       runEvery5Minutes(processChildSwitches)
+        else                          schedule("33 0/1 * * * ?", processChildSwitches)
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
@@ -834,6 +838,7 @@ def initialize()	{
     ifDebug("initialize")
     unsubscribe()
     unschedule()
+    state.colorsRotating = false
 	ifDebug("there are ${childApps.size()} rooms.")
 	childApps.each	{ child ->
 		ifDebug("room: ${child.label} id: ${child.id}")
@@ -873,8 +878,11 @@ def roomStateHistory(evt)        {
         ifDebug("rSH initialized")
     }
     ifDebug("rSH $evt.displayName | $evt.deviceId | $evt.value")
-    if (state.rSH[(evt.deviceId)])      state.rSH[(evt.deviceId)] << rSH;
-    else                                state.rSH[(evt.deviceId)] = rSH;
+//    if (state.rSH[(evt.deviceId)])      state.rSH[(evt.deviceId)] << rSH;
+//    else                                state.rSH[(evt.deviceId)] = rSH;
+    if (!state.rSH[(evt.deviceId)])      state.rSH[(evt.deviceId)] = []
+    state.rSH[(evt.deviceId)] << rSH;
+//    else                                state.rSH = [(evt.deviceId): rSH];
 /*    state.rSH.each     { dID, dMap ->
         state.rSH[dID] = dMap.sort  { a, b -> b.value <=> a.value  }
     }
@@ -1114,16 +1122,19 @@ private setupColorRotation()        {
 }
 
 def rotateColors()      {
-    announceSwitches.setColor(state.colorsToRotate."$state.colorsIndex")
+    ifDebug("rotateColors")
+    ifDebug("$state.colorsIndex | $state.colorsRotateSeconds | ${state.colorsToRotate."$state.colorsIndex"} | ")
+    announceSwitches.setColor(state.colorsToRotate."$state.colorsIndex"); pauseIt()
 //    announceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
 //    announceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
     state.colorsRotateSeconds = (state.colorsRotateSeconds >= 5 ? state.colorsRotateSeconds - 5 : 0)
     state.colorsIndex = (state.colorsIndex < (state.colorsToRotate.size() -1) ? state.colorsIndex + 1 : 0)
-    if (state.colorsRotateSeconds > 0)      runIn(5, rotateColors)
+    if (state.colorsRotateSeconds > 0)
+        runIn(5, rotateColors)
     else        {
         state.colorsRotating = false
         state.colorsToRotate = [:]
-        announceSwitches.off()
+        pauseIt(true); announceSwitches.off(); pauseIt()
     }
 }
 
@@ -1406,6 +1417,7 @@ def notifyWithColor()      {
             ifDebug("$it | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
             (state.colorColorTemperatureTrueSave[(i)] == true ? it.setColorTemperature(state.colorColorTemperatureSave[(i)]) :
                                                                 it.setColor(state.colorColorSave[(i)])); pauseIt(true)
+            (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
             (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
             i = i + 1
         }
