@@ -1756,7 +1756,7 @@ private pageAsleepSettings() {
                 input "nightSetCT", "number", title: "Set color temperature when turning ON?", required: false, multiple: false, defaultValue: null, range: "1500..7500"
                 input "nightMotionSensors", "enum", title: "Use which room motion sensor(s)?", description: "All room motion sensor(s)", required: false, multiple: true, defaultValue: null, options: roomMotionSensors
                 input "noMotionAsleep", "number", title: "Timeout seconds for night lights?", required: false, multiple: false, defaultValue: null, range: "5..99999"
-                input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true, defaultValue: 1,
+                input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true,
                                         options: [[1:"Motion in ASLEEP state"],[2:"State changes to ASLEEP"],[3:"State changes away from ASLEEP"]]
                 input "nightButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
                 if (nightButton)        {
@@ -2609,7 +2609,8 @@ def	motionActiveEventHandler(evt)	{
     if (!checkPauseModesAndDoW())    return;
 	def roomState = child?.currentValue(occupancy)
     if (roomState == asleep)		{
-        if (nightMotionSensors && !nightMotionSensors.contains(evt.id))     return;
+        ifDebug("$nightMotionSensors | $evt.id | ${!nightMotionSensors.contains(evt.deviceId)}")
+        if (nightMotionSensors && !nightMotionSensors.contains(evt.deviceId))     return;
         if (nightSwitches && nightTurnOn.contains('1'))      {
             dimNightLights()
             if (state.noMotionAsleep && whichNoMotion != lastMotionInactive)    {
@@ -2695,7 +2696,7 @@ def	motionInactiveEventHandler(evt)     {
         }
     }
     else if (roomState == asleep && nightSwitches && nightTurnOn.contains('1'))     {
-        if (!nightMotionSensors || nightMotionSensors.contains(evt.id))      {
+        if (!nightMotionSensors || nightMotionSensors.contains(evt.deviceId))      {
             if (whichNoMotion == lastMotionInactive && !motionActive)        {
                 if (state.noMotionAsleep)       updateChildTimer(state.noMotionAsleep);
                 runIn((state.noMotionAsleep ?: 1), nightSwitchesOff)
