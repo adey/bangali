@@ -3089,7 +3089,7 @@ def	contactOpenEventHandler(evt)	{
 */
 
     if (roomState == engaged && isRoomEngaged(false,false,false,false,true))        {
-        refreshEngagedTimer(roomState)
+        refreshEngagedTimer(engaged)
         return
     }
     if (contactSensorOutsideDoor)       {
@@ -3147,7 +3147,7 @@ def	contactClosedEventHandler(evt)     {
 */
 
     if (roomState == engaged && isRoomEngaged(false,false,false,false,true))        {
-        refreshEngagedTimer(roomState)
+        refreshEngagedTimer(engaged)
         return
     }
     if (contactSensorOutsideDoor)       {
