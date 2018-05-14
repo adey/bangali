@@ -2999,7 +2999,7 @@ def	engagedSwitchOnEventHandler(evt)     {
     if (roomState != engaged)
         child.generateEvent(engaged)
     else
-        refreshEngagedTimer(roomState)
+        refreshEngagedTimer(engaged)
 }
 
 def	engagedSwitchOffEventHandler(evt)	{
@@ -3222,7 +3222,7 @@ def musicPlayingEventHandler(evt)       {
     else if (hasOccupiedDevice() && roomState == vacant)
         child.generateEvent(checking)
     else
-        refreshEngagedTimer(roomState)
+        refreshEngagedTimer(engaged)
 }
 
 def musicStoppedEventHandler(evt)       {
