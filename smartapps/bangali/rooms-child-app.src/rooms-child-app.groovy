@@ -3042,7 +3042,7 @@ private refreshOccupiedTimer(roomState = null)   {
     }
     if (roomState == occupied && state.noMotion)      {
         updateChildTimer(state.noMotion)
-        runIn(state.noMotionEngaged, roomVacant)
+        runIn(state.noMotion, roomVacant)
     }
 }
 
@@ -3155,7 +3155,7 @@ def	contactClosedEventHandler(evt)     {
         if (['checking', 'vacant'].contains(roomState))    {
             if (hasOccupiedDevice())
                 child.generateEvent(checking)
-            else
+            else if (cV.contains(open))
                 child.generateEvent(engaged)
         }
         else if (roomState == occupied && !contactSensorNotTriggersEngaged)
