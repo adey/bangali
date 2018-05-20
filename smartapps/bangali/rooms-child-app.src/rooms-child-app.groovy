@@ -2609,7 +2609,7 @@ def	motionActiveEventHandler(evt)	{
     if (!checkPauseModesAndDoW())    return;
 	def roomState = child?.currentValue(occupancy)
     if (roomState == asleep)		{
-        ifDebug("$nightMotionSensors | $evt.id | ${!nightMotionSensors.contains(evt.deviceId)}")
+        ifDebug("$nightMotionSensors | $evt.deviceId | ${(nightMotionSensors ? !nightMotionSensors.contains(evt.deviceId) : false)}")
         if (nightMotionSensors && !nightMotionSensors.contains(evt.deviceId))     return;
         if (nightSwitches && nightTurnOn.contains('1'))      {
             dimNightLights()
