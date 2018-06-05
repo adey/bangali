@@ -4,3 +4,5 @@ resources/.DS_Store
 smartapps/.DS_Store
 .DS_Store
 resources/.DS_Store
+devicetypes/bangali/apixu-weather.src/api-response.txt
+devicetypes/bangali/apixu-weather.src/apixu-weather.groovy

@@ -20,10 +20,27 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.35.0"  }
+public static String version()      {  return "v0.40.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.40.0
+*
+*   DONE:   6/1/2018
+*   1) cleaned up the settings page for rooms manager.
+*   2) updated rooms device settings to deal with ST change of json parser which broke settings.
+*   3) for rooms device events added a little more descriptive text.
+// TODO make time range display actual time range not just the time type.
+*   4) overhauled the view all settings page which had fallen behind.
+*   5) added link to help text on github in app
+*   6) added setting for how fast room changes to VACANT if currently ASLEEP and room contact sensor is left open
+*   7) added setting for optional time range to set room to ENGAGED, LOCKED or ASLEEP with power wattage.
+*   8) for CHECKING state added a lux value above which light will not get turned on for CHECKING state.
+*   9) seperated the setting for reset ENGAGED and reset ASLEEP wtihout transitioning through the CHECKING state.
+*   10) added fix to handle time preference settings for hubitat which does not handle timezone correctly for these settings.
+*   11) introduced motion active check for when room state is transitioning to CHECKING state.
+*   12) cleaned up some small bugs here and there along with some code cleanup.
 *
 *  Version: 0.35.0
 *
@@ -618,14 +635,17 @@ def pageSpeakerSettings()   {
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
-        section("Sun announcement settings")       {
+        section("Sun announcement settings:")       {
             href "pageSunAnnouncementSettings", title: "Sun announcement settings", description: (sunAnnounce ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Battery announcement settings")       {
+        section("Battery announcement settings:")       {
             href "pageBatteryAnnouncementSettings", title: "Battery announcement settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure")
         }
         section("Process execution rule(s) only on state change? (global setting overrides setting at room level)", hideable: false)		{
             input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
+        }
+        section("Help:")     {
+            href "", title: "Help text on Github", style: "external", url: "https://github.com/adey/bangali/blob/master/README.md", description: "Click link to open in browser", image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png", required: false
         }
 	}
 }
@@ -1315,6 +1335,7 @@ def processChildSwitches()      {
 */
 //    def quarterHour = (((time % 3600000f) / 60000f).trunc(0) % 15) // quarter hour = 0
     childApps.each  { child ->
+        ifDebug("processChildSwitches: $child.label")
         if (child.checkAndTurnOnOffSwitchesC())
             if (getHubType() == _SmartThings)     pause(10);
     }

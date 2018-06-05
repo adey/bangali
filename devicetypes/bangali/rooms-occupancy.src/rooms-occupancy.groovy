@@ -24,10 +24,52 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.27.5"  }
+public static String version()      {  return "v0.40.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.40.0
+*
+*   DONE:   6/1/2018
+*   1) cleaned up the settings page for rooms manager.
+*   2) updated rooms device settings to deal with ST change of json parser which broke settings.
+*   3) for rooms device events added a little more descriptive text.
+// TODO make time range display actual time range not just the time type.
+*   4) overhauled the view all settings page which had fallen behind.
+*   5) added link to help text on github in app
+*   6) added setting for how fast room changes to VACANT if currently ASLEEP and room contact sensor is left open
+*   7) added setting for optional time range to set room to ENGAGED, LOCKED or ASLEEP with power wattage.
+*   8) for CHECKING state added a lux value above which light will not get turned on for CHECKING state.
+*   9) seperated the setting for reset ENGAGED and reset ASLEEP wtihout transitioning through the CHECKING state.
+*   10) added fix to handle time preference settings for hubitat which does not handle timezone correctly for these settings.
+*   11) introduced motion active check for when room state is transitioning to CHECKING state.
+*   12) cleaned up some small bugs here and there along with some code cleanup.
+*
+*  Version: 0.35.0
+*
+*   DONE:   5/11/2018
+*   1) added option for buttons to set a state but not toggle from that state.
+*   2) added option to set locked state with power value.
+*   3) added option for contact sensors to not trigger engaged for use with landing or hallway areas.
+*   4) added option to use only selective room motion sensors for motion during asleep mode for night lights.
+*   5) changed options for when to turn on night lights.
+*   6) added option to only run `execution` rules when state changes. this means once the state changes and the lights have been set, if you change the light settings those will not be reset till the room changes away from the current state.
+*   7) added timer display to rooms occupancy device for asleep state.
+*   8) organized settings in rooms manager.
+*   9) updated docs.
+*   10) couple of bug fixes.
+*
+*  Version: 0.30.0
+*
+*   DONE:   5/5/2018
+*   1) more doc update. latest on github: https://github.com/adey/bangali
+*   2) added section at bottom of docs for non-obvious rules, will add more here.
+*   3) added support for vents to be controlled with theromstat and room temperature.
+*   4) optimized code a bit so can run switches on / off checker every 1 minute on hubitat and keep runtime under 1 second.
+*   5) updated text and input settings for rooms manager. some of this is a BREAKING CHANGE and you will need to specify names and colors again.
+*   6) updated settings page for rooms manager to be a bit more organized.
+*   7) added color notification for battery devices specified in individual rooms settings.
 *
 *  Version: 0.27.5
 *
@@ -528,11 +570,13 @@ metadata {
         namespace: "bangali",
         author: "bangali")		{
 		capability "Actuator"
+// for hubitat comment the next line and uncomment the one after that is currently commented
 		capability "Button"
 //		capability "PushableButton"		// hubitat changed `Button` to `PushableButton`  2018-04-20
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
+// for hubitat comment the next line and uncomment the one after that is currently commented
 		capability "Lock Only"
 //		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
@@ -551,6 +595,7 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+// for hubitat uncomment the next line
 //		command "push"		// for use with hubitat useful with dashbooard 2018-04-24
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
@@ -569,12 +614,12 @@ metadata {
 			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, multiple: false, defaultValue: true
 			input "alarmTime", "time", title: "Alarm Time?", required: false, multiple: false
 			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
-			input "alarmSound", "enum", title:"Sound?", required: (alarmTime ? true : false), multiple: false,
-								options: [[1:"Bell 1"], [2:"Bell 2"], [3:"Dogs Barking"], [4:"Fire Alarm"], [5:"Piano"], [6:"Lightsaber"]]
+			input "alarmSound", "enum", title:"Sound?", required: (alarmTime ? true : false), multiple: false, defaultValue: null,
+								options: ["0":"Bell 1", "1":"Bell 2", "2":"Dogs Barking", "3":"Fire Alarm", "4":"Piano", "5":"Lightsaber"]
 			input "alarmRepeat", "number", title: "Repeat?", description: "1-999", required: (alarmTime ? true : false), range: "1..999"
 			input "alarmDayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
-								options: [[null:"All Days of Week"],[8:"Monday to Friday"],[9:"Saturday & Sunday"],[2:"Monday"], \
-										  [3:"Tuesday"],[4:"Wednesday"],[5:"Thursday"],[6:"Friday"],[7:"Saturday"],[1:"Sunday"]]
+								options: ["ADW0":"All Days of Week","ADW8":"Monday to Friday","ADW9":"Saturday & Sunday","ADW2":"Monday", \
+										  "ADW3":"Tuesday","ADW4":"Wednesday","ADW5":"Thursday","ADW6":"Friday","ADW7":"Saturday","ADW1":"Sunday"]
 		}
 	}
 
@@ -970,25 +1015,25 @@ def getHubType()        {
 
 def setupAlarmC()	{
 	if (parent)		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek);
-	if (alarmDayOfWeek)      {
+	if (alarmDayOfWeek != 'ADW0')      {
         state.alarmDayOfWeek = []
         switch(alarmDayOfWeek)       {
-            case '1':	state.alarmDayOfWeek << 'Mon';		break
-			case '2':	state.alarmDayOfWeek << 'Tue';		break
-			case '3':	state.alarmDayOfWeek << 'Wed';		break
-			case '4':	state.alarmDayOfWeek << 'Thu';		break
-			case '5':	state.alarmDayOfWeek << 'Fri';		break
-			case '6':	state.alarmDayOfWeek << 'Sat';		break
-			case '7':	state.alarmDayOfWeek << 'Sun';		break
-            case '8':   ['Mon','Tue','Wed','Thu','Fri'].each    { state.alarmDayOfWeek << it };    break
-            case '9':   ['Sat','Sun'].each						{ state.alarmDayOfWeek << it };    break
-            default:    state.alarmDayOfWeek = null;		break
+            case 'ADW1':	state.alarmDayOfWeek << 'Mon';		break
+			case 'ADW2':	state.alarmDayOfWeek << 'Tue';		break
+			case 'ADW3':	state.alarmDayOfWeek << 'Wed';		break
+			case 'ADW4':	state.alarmDayOfWeek << 'Thu';		break
+			case 'ADW5':	state.alarmDayOfWeek << 'Fri';		break
+			case 'ADW6':	state.alarmDayOfWeek << 'Sat';		break
+			case 'ADW7':	state.alarmDayOfWeek << 'Sun';		break
+            case 'ADW8':   	['Mon','Tue','Wed','Thu','Fri'].each		{ state.alarmDayOfWeek << it };    break
+            case 'ADW9':   	['Sat','Sun'].each							{ state.alarmDayOfWeek << it };    break
+            default:  		state.alarmDayOfWeek = null;		break
         }
     }
     else
         state.alarmDayOfWeek = ''
 	if (alarmSound)
-		state.alarmSound = [1:"Bell 1", 2:"Bell 2", 3:"Dogs Barking", 4:"Fire Alarm", 5:"Piano", 6:"Lightsaber"][alarmSound as Integer]
+		state.alarmSound = ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer]
 	else
 		state.alarmSound = ''
 	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
@@ -1027,6 +1072,8 @@ def push(button)		{
 
 def lock()		{  locked() }
 
+def unlock()	{  vacant()  }
+
 def occupied()	{	stateUpdate('occupied')		}
 
 def checking()	{	stateUpdate('checking')		}
@@ -1063,10 +1110,10 @@ private updateOccupancy(occupancy = null) 	{
 	occupancy = occupancy?.toLowerCase()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
 	if (!occupancy || !(buttonMap.containsKey(occupancy))) {
-    	ifDebug("${device.displayName}: Missing or invalid parameter room occupancy: $occupancy")
+    	ifDebug("Missing or invalid parameter room occupancy: $occupancy")
         return
     }
-	sendEvent(name: "occupancy", value: occupancy, descriptionText: "${device.displayName} changed to ${occupancy}", isStateChange: true, displayed: true)
+	sendEvent(name: "occupancy", value: occupancy, descriptionText: "$device.displayName changed to $occupancy", isStateChange: true, displayed: true)
     def button = buttonMap[occupancy]
 	if (getHubType() == _SmartThings)
 		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
@@ -1077,13 +1124,13 @@ private updateOccupancy(occupancy = null) 	{
 }
 
 def alarmOn()	{
-	sendEvent(name: "occupancy", value: 'alarm', descriptionText: "alarm is on", isStateChange: true, displayed: true)
+	sendEvent(name: "occupancy", value: 'alarm', descriptionText: "$device.displayName alarm is on", isStateChange: true, displayed: true)
 	runIn(2, alarmOff)
 }
 
 def alarmOff(endLoop = false)	{
 	if (device.currentValue('occupancy') == 'alarm' || endLoop)
-		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "alarm is off", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "$device.displayName alarm is off", isStateChange: true, displayed: true)
 	if (endLoop)	unschedule();
 	else			runIn(1, alarmOn);
 }
@@ -1128,7 +1175,7 @@ def deviceList(devicesMap)		{
 }
 
 private	resetTile(occupancy)	{
-    sendEvent(name: occupancy, value: occupancy, descriptionText: "reset tile ${occupancy} to ${occupancy}", isStateChange: true, displayed: false)
+    sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", isStateChange: true, displayed: false)
 }
 
 def generateEvent(newState = null)		{
@@ -1540,4 +1587,4 @@ private formatduration(long value, boolean friendly = false, granularity = 's', 
 }
 */
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" "rooms occupancy: " + msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" "$device.displayName device " + msg  }

@@ -1,5 +1,6 @@
 # bangali's rooms automation
 
+```html
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
 <h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy for Smartthings and Hubitat</h2>
 
@@ -67,7 +68,7 @@
         </tr>
         <tr>
             <td>Motion event</td>
-            <td>Motion event to use for timeout. Choose the motion active event to start the timeout if your motion sensor does not generate a motion inactive event following the motion active event.</td>
+            <td>Motion event to use for timeout. Choose the motion active event to start the timeout if your motion sensor does not generate a motion inactive event following the motion active event rather stays continuously active with no inactive event in between.</td>
         </tr>
         <tr>
             <td>Presence sensor(s)</td>
@@ -188,6 +189,18 @@
             <td>Power value in watts which when reached will set room occupancy to Engaged</td>
         </tr>
         <tr>
+            <td>Power time range</td>
+            <td>Allows specifying <i>time range from - to</i> and matches to current time when evaluating power value for setting state. Supports the following values:
+                <ul>
+                    <ul>
+                        <li>Sunrise:&emsp;&emsp;&emsp;Matches to local sunrise time with offset if specified</li>
+                        <li>Sunset:&emsp;&emsp;&emsp;&ensp;Matches to local sunset time with offset if specified</li>
+                        <li>Time:&emsp;&emsp;&emsp;&emsp;&ensp;Matches to specific time/li>
+                    </ul>
+                </ul>
+            </td>
+        </tr>
+        <tr>
             <td>Trigger from vacant</td>
             <td>When false room will need to be in a state other than Vacant for the Asleep state to be triggered</td>
         </tr>
@@ -298,6 +311,18 @@
             <td>Power value in watts which when reached will set room occupancy to Asleep</td>
         </tr>
         <tr>
+            <td>Power time range</td>
+            <td>Allows specifying <i>time range from - to</i> and matches to current time when evaluating power value for setting state. Supports the following values:
+                <ul>
+                    <ul>
+                        <li>Sunrise:&emsp;&emsp;&emsp;Matches to local sunrise time with offset if specified</li>
+                        <li>Sunset:&emsp;&emsp;&emsp;&ensp;Matches to local sunset time with offset if specified</li>
+                        <li>Time:&emsp;&emsp;&emsp;&emsp;&ensp;Matches to specific time/li>
+                    </ul>
+                </ul>
+            </td>
+        </tr>
+        <tr>
             <td>Trigger from vacant</td>
             <td>When false room will need to be in a state other than Vacant for the Asleep state to be triggered</td>
         </tr>
@@ -370,6 +395,18 @@
         <tr>
             <td>Power value</td>
             <td>Power value in watts which when reached will set room occupancy to Locked</td>
+        </tr>
+        <tr>
+            <td>Power time range</td>
+            <td>Allows specifying <i>time range from - to</i> and matches to current time when evaluating power value for setting state. Supports the following values:
+                <ul>
+                    <ul>
+                        <li>Sunrise:&emsp;&emsp;&emsp;Matches to local sunrise time with offset if specified</li>
+                        <li>Sunset:&emsp;&emsp;&emsp;&ensp;Matches to local sunset time with offset if specified</li>
+                        <li>Time:&emsp;&emsp;&emsp;&emsp;&ensp;Matches to specific time/li>
+                    </ul>
+                </ul>
+            </td>
         </tr>
         <tr>
             <td>Trigger from vacant</td>
@@ -874,10 +911,62 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Mode and Other Settings</h5>
     <p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
+    <ul>
+        <table class="wikitable" style="width:900px">
+            <tr>
+                <td style="width:15%">Away modes</td>
+                <td style="width:85%">The room is set to VACANT when mode changes to any of these away modes.</td>
+            </tr>
+            <tr>
+                <td>Pause automation modes</td>
+                <td>When in any of these modes all automation is paused for rooms.</td>
+            </tr>
+            <tr>
+                <td>Days of week</td>
+                <td>Days of week which no automation should run, like say you didn't want to run any automation on Sundays.</td>
+            </tr>
+            <tr>
+                <td>Celsius</td>
+                <td>Set this to switch input and display from fahrenheit to celsius.</td>
+            </tr>
+            <tr>
+                <td>Icon URL</td>
+                <td>Icon to use for this room in Rooms Manager.</td>
+            </tr>
+            <tr>
+                <td>Turn off</td>
+                <td>This turns off all switches when no rules match so you don't need to create a rule for Vacant state to turn off lights.</td>
+            </tr>
+            <tr>
+                <td>Only on state change</td>
+                <td>This processes the rules every 5 minutes on ST and every 1 minute on Hubitat to process the rules and set any matching switches .</td>
+            </tr>
+            <tr>
+                <td>Volume</td>
+                <td>Volume for announcements when music device is specified.</td>
+            </tr>
+            <tr>
+                <td>Contact announce</td>
+                <td>Announce when contact sensors open.</td>
+            </tr>
+            <tr>
+                <td>Contact stays open announcement</td>
+                <td>If contacts specified are outside doors this lets you select intervals in which to announce the door is open till its closed again.</td>
+            </tr>
+            <tr>
+                <td>Rooms_device.on()</td>
+                <td>Ability to select which state represents on() when device is turned on programmatically from webCoRE, Smart Lighting or Rules Engine.</td>
+            </tr>
+        </table>
+    </ul>
     <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsViewAll.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>View All Settings</h5>
     <p>What the name says.</p>
+    <p>&nbsp;</p>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Link to help text on Github</h5>
+    <p>Opens browser window with help text on Github.</p>
 </ul>
 
 <p>&nbsp;</p>
