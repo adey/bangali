@@ -37,8 +37,8 @@ private static boolean isDebug()    {  return true  }
 *   3) for rooms device events added a little more descriptive text.
 // TODO make time range display actual time range not just the time type.
 *   4) overhauled the view all settings page which had fallen behind.
-*   5) added link to help text on github in app
-*   6) added setting for how fast room changes to VACANT if currently ASLEEP and room contact sensor is left open
+*   5) added link to help text on github in app.
+*   6) added setting for how fast room changes to VACANT if currently ASLEEP and room contact sensor is left open.
 *   7) added setting for optional time range to set room to ENGAGED, LOCKED or ASLEEP with power wattage.
 *   8) for CHECKING state added a lux value above which light will not get turned on for CHECKING state.
 *   9) seperated the setting for reset ENGAGED and reset ASLEEP wtihout transitioning through the CHECKING state.

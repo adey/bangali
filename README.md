@@ -429,6 +429,10 @@
             <td>When true turn off switches when room occupancy changes to Locked</td>
         </tr>
         <tr>
+            <td>Override</td>
+            <td>When true allows use of devices in Locked state that would otherwise cause another room state to be activated.</td>
+        </tr>
+        <tr>
             <td>Timeout</td>
             <td>Option to turn off Locked state after certain number of hours</td>
         </tr>
@@ -999,9 +1003,12 @@
 
 <h5>When creating a room first give the room a name and save the room then go back in to the room to add various settings to the room. This is because the app uses app state to manage the rules and in ST the app state is not consistent till the app has been saved once.</h5>
 
-<p>Like the app? Like this post please. 😁</p>
+<h4><i>Like the rooms app and want to contribute? Here are some options:</i></h4>
 
-<p>If you want to support development of the app here is the donation link. To be clear ... <i>no donation is required or expected to use rooms manager / occupancy.</i> But if you do donate please also know that it is much appreciated and thank you. Donate here: https://www.paypal.me/dey</p>
+* Like this post to help other users find this app
+* Submit a feature request on this thread or by creating an issue on Github
+* Submit a bug for something that is not working quite right here or on Github
+* Donate to support development of the app: [donate here.](https://www.paypal.me/dey)
 
 <p>&nbsp;</p>
 
