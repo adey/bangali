@@ -45,7 +45,7 @@ private static boolean isDebug()    {  return true  }
 *  Version: 0.45.0
 *
 *   DONE:   6/12/2018
-*   1) added support for executing any device any command to rules.
+*   1) for hubitat only added support for executing any device any command to rules.
 *   2) added option to reset ENGAGED if contact stays open but still engaged using another device like power.
 *   3) added option for LOCKED to override other devices that trigger other states. this excludes buttons that activate another state because by pressing a button user is expressing explicit intent to switch to that state.
 *   4) added option to view all settings page to show a non-anonymized version for user to view locally.
