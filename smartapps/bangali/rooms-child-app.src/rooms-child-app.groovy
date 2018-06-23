@@ -1329,6 +1329,7 @@ private pageRule(params)   {
     }
 //    ifDebug("levelOptions: $levelOptions")
     boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
+    def hT = getHubType()
     dynamicPage(name: "pageRule", title: "Edit Rule", install: false, uninstall: false)   {
         section()     {
             ifDebug("rule number page ${ruleNo}")
@@ -1394,9 +1395,11 @@ private pageRule(params)   {
                                                                                             required: false, multiple: false, defaultValue: null, range: "1500..6500"
                 input "switchesOff$ruleNo", "capability.switch", title: "Turn OFF which switches?", required: false, multiple: true
             }
-            section("")     {
-            	href "pageRuleCommands", title: "Device commands",
-                    description: "${(settings["device$ruleNo"] ? settings["device$ruleNo"].toString() + ': ' + (settings["cmds$ruleNo"] ?: '') : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
+            if (hT == _Hubitat)     {
+                section("")     {
+            	    href "pageRuleCommands", title: "Device commands",
+                        description: "${(settings["device$ruleNo"] ? settings["device$ruleNo"].toString() + ': ' + (settings["cmds$ruleNo"] ?: '') : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
+                }
             }
             section("")     {
             	href "pageRuleOthers", title: "Routines/pistons and more",
@@ -1557,15 +1560,15 @@ private pageRuleCommands(params)   {
     def ruleNo = state.pageRuleNo
     def deviceIs = settings["device$ruleNo"]
     def allCmds = deviceIs?.getSupportedCommands()
-    ifDebug("$allCmds")
+    ifDebug("deviceIs: $deviceIs | allCmds: $allCmds")
     allCmds.each    {
         it.each    {
             ifDebug("$it")
         }
     }
-    dynamicPage(name: "pageRuleOthers", title: "Edit Rule Execute", install: false, uninstall: false)   {
+    dynamicPage(name: "pageRuleCommands", title: "Edit Rule Execute", install: false, uninstall: false)   {
         section("Device commands to run:", hideable: false)     {
-            input "device$ruleNo", "capability.*", title: "Issue command to device?", required: false, multiple: false
+            input "device$ruleNo", "capability.*", title: "Issue command to device?", required: false, multiple: false, submitOnChange: true
             input "cmds$ruleNo", "enum", title: "Commands to call?", required: false, multiple: true, defaultValue: null, options: allCmds
         }
     }
