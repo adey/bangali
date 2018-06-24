@@ -937,13 +937,6 @@ def updated()		{
         runEvery1Hour(checkDeviceHealth)
         runIn(1, checkDeviceHealth)
     }
-    healthAddDevices.each       {
-        ifDebug("$it")
-        it.each     {
-            ifDebug("$it")
-        }
-    }
-
     if (batteryTime)        schedule(batteryTime, batteryCheck)
 }
 
