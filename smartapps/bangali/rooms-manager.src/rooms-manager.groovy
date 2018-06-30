@@ -20,10 +20,21 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.45.0"  }
+public static String version()      {  return "v0.50.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.50.0
+*
+*   DONE:   6/30/2018
+*   1) added icons to main settings page for a room in hubitat. ST already shows these icons on the settings page.
+*   2) added option to hide advanced settings.
+*   3) added setting to adjust cooling and heating temperature by 0.5ªF when outside temperature is respectively over 90ªF and below 32ªF.
+*   4) rewrote temperature management to be more consistent.
+*   5) cleaned up rooms manager settings.
+*   6) added option for how often device health message should be announced.
+*   7) fixed a bug here and there.
 *
 *  Version: 0.45.0
 *
@@ -633,35 +644,35 @@ def pageSpeakerSettings()   {
         }
     }
     dynamicPage(name: "pageSpeakerSettings", title: "Annoucement Settings", install: true, uninstall: true)     {
-        section("Spoken announcement settings:")     {
+        section("")     {
             href "pageAnnouncementSpeakerTimeSettings", title: "Spoken announcement settings", description: (playerDevice ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Color announcement settings:")     {
+        section("")     {
             href "pageAnnouncementColorTimeSettings", title: "Color announcement settings", description: (announceSwitches ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Arrival and departure settings")       {
+        section("")       {
             href "pageArrivalDepartureSettings", title: "Arrival and departure settings", description: (speakerAnnounce || speakerAnnounceColor ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Time announcement:")     {
+        section("")     {
             if (playerDevice)
                 input "timeAnnounce", "enum", title: "Announce time?", required: false, multiple: false,
                                 options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]]
             else
                 paragraph "Announce time?\nselect speaker devices to set."
         }
-        section("Sun announcement settings:")       {
+        section("")       {
             href "pageSunAnnouncementSettings", title: "Sun announcement settings", description: (sunAnnounce ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Battery announcement settings:")       {
+        section("")       {
             href "pageBatteryAnnouncementSettings", title: "Battery announcement settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure")
         }
-        section("Device health settings:")       {
+        section("")       {
             href "pageDeviceHealthSettings", title: "Device health settings", description: (checkHealth ? "Tap to change existing settings" : "Tap to configure")
         }
         section("Process execution rule(s) only on state change? (global setting overrides setting at room level)", hideable: false)		{
             input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
         }
-        section("Help:")     {
+        section("")     {
             href "", title: "Help text on Github", style: "external", url: "https://github.com/adey/bangali/blob/master/README.md", description: "Click link to open in browser", image: "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png", required: false
         }
 	}
@@ -888,17 +899,10 @@ def pageDeviceHealthSettings()      {
 
         }
         section("Speak health announcement:")      {
-            if (checkHealth && playerDevice)    {
-//                input "healthAnnounce", "bool", title: "Announce device health status?", required: true, multiple: false, defaultValue: true, submitOnChange: true
-//                if (healthAnnounce)
-                    input "healthHours", "enum", title: "Every how many hours?", required: true, multiple: false, defaultValue: false, options: [null:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
-//                else
-//                    paragraph "Every how many hours?\nselect speakers to set"
-//            }
-//            else    {
-//                paragraph "Announce device health status?\nselect speakers to set"
-//                paragraph "Every how many hours?\nselect speakers to set"
-            }
+            if (checkHealth && playerDevice)
+                input "healthEvery", "enum", title: "Every how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
+            else
+                paragraph "Every how many hours?\nselect check health to set."
         }
         section("Announce with color:")      {
             if (checkHealth && announceSwitches)        {
@@ -907,7 +911,7 @@ def pageDeviceHealthSettings()      {
             }
             else        {
                 paragraph "Device health OK color?\nselect check health to set."
-                paragraph "Device health warning color?\nselect check health to set."
+                paragraph "Device health warning color?"
             }
         }
         if (hT == _Hubitat)
@@ -1219,7 +1223,7 @@ private whoCameHome(presenceSensor, left = false)      {
     def pID = presenceSensor.getId()
     def presenceName = state.whoCameHome.personNames[(pID)]
     if (!presenceName)      return;
-    ifDebug("presenceName: $presenceName")
+    ifDebug("presenceName: $presenceName | left: $left")
 /*    if (left)       {
         if (state.whoCameHome.persons && state.whoCameHome.persons.contains(presenceName))
             state.whoCameHome.persons.remove(presenceName)
@@ -1492,6 +1496,7 @@ def tellTime()      {
 }
 
 def checkDeviceHealth()     {
+    ifDebug("${now()}")
     def cDT = new Date(now() - (eventHours.toInteger() * 3600000l))
     ifDebug("$cDT")
     def hT = getHubType()
@@ -1537,12 +1542,13 @@ def checkDeviceHealth()     {
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (healthHours)        {
+    if (healthEvery)        {
         if (state.healthHours == 0 && dHC && (speakerDevices || speechDevices || musicPlayers))
             speakIt(state.lastDeviceHealthUpdate)
-        state.healthHours = (state.healthHours == 0 ? healthHours as Integer : state.healthHours - 1)
+        state.healthHours = (state.healthHours == 0 ? healthEvery as Integer : state.healthHours - 1)
     }
-    ifDebug("healthHours: $healthHours | $state.lastDeviceHealthUpdate")
+    ifDebug("healthEvery: $healthEvery | $state.lastDeviceHealthUpdate")
+    ifDebug("${now()}")
 }
 
 def allDevices()       {
