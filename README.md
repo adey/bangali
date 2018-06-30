@@ -442,7 +442,7 @@
 <p>&nbsp;</p>
 <b>These group of settings allow for light routine settings used in the rules.</b>
 <ul>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Auto Level 'AL' Settings</h5>
     <p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified. Also allows specifying hours before and after wake and sleep times the light level and color temperature should be dimmed for optimal light levels.</p>
     <table class="wikitable" style="width:900px">
@@ -530,7 +530,7 @@
         </tr>
     </table>
     <p>&nbsp;</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsHolidayLights3.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Holiday Lights 'HL' Settings</h5>
     <p>Settings to specify holiday light patterns for use in rules during various holiday seasons. Allows for rotating colors through or slow twinkling any set of lights specified in the rules.</p>
     <ul>
@@ -650,6 +650,10 @@
             <tr>
                 <td>Outdoor temperature</td>
                 <td>Outdoor temperature sensor that is not currently used but have plans to use</td>
+            </tr>
+            <tr>
+                <td>Adjust temperature</td>
+                <td>Adjust cooling and heating temperature by 0.5ªF when outside temperature is respectively over 90ªF and below 32ªF</td>
             </tr>
             <tr>
                 <td>Fan switch</td>
