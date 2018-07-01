@@ -1,9 +1,9 @@
 # bangali's rooms automation
 
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
-<h2 style="padding-top: 27px">Rooms Manager with Rooms Occupancy for Smartthings and Hubitat</h2>
+<h2 style="padding-top: 27px">Rooms Manager: Smarter Rooms: Personalized automation with Occupancy for Smartthings and Hubitat</h2>
 
-<p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
+<p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable personalized automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
 
 <p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
 <p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
