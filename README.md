@@ -1,5 +1,3 @@
-# bangali's rooms automation
-
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
 <h2 style="padding-top: 27px">Rooms Manager: Smarter Rooms: Personalized home automation with Occupancy</h2>
 
