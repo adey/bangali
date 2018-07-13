@@ -13,24 +13,24 @@
 * <h5>Rooms settings:</h5>
 
   * Set room occupancy state with:
-   * Presence sensors.
-   * Motion sensors.
-   * Contact sensors.
-   * Music players.
-   * Button pushes.
-   * Switches on and off.
-   * Power wattage.
+    * Presence sensors.
+    * Motion sensors.
+    * Contact sensors.
+    * Music players.
+    * Button pushes.
+    * Switches on and off.
+    * Power wattage.
   * Create rules that evaluate:
-   * For all rules:
-     * Room occupancy state
-     * Hub mode
-     * Day of week
-     * Lux value
-     * Humidity range
-     * Date filter
-     * Time trigger
-   * For temperature rules only:
-       * Temperature
+    * For all rules:
+      * Room occupancy state
+      * Hub mode
+      * Day of week
+      * Lux value
+      * Humidity range
+      * Date filter
+      * Time trigger
+    * For temperature rules only:
+      * Temperature
   * Rules allow you to:
     * For execution rules:
       * Turn on and off lights / switches.
