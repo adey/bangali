@@ -7,6 +7,7 @@
 
 <h4>Here is a summary of features for the quick reader.</h4>
 
+
 * <h5>Rooms settings:</h5>
   * Set room occupancy state with:
    * Presence sensors.
