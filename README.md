@@ -8,6 +8,7 @@
 <h4>Here is a summary of features for the quick reader.</h4>
 
 * <h5>Rooms settings:</h5>
+
   * Set room occupancy state with:
    * Presence sensors.
    * Motion sensors.
@@ -50,8 +51,10 @@
     * Turn on night lights with motion while room state is asleep.
     * Turn on outdoor lights on a daily schedule.
 * <h5>Rooms occupancy device settings:</h5>
+
   * Set alarm to play on a daily or weekly schedule for each room.
 * <h5>Rooms manager settings:</h5>
+
   * Check and announce:
     * Device battery status.
     * Device health monitoring status.
