@@ -1034,10 +1034,6 @@
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsViewAll.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>View All Settings</h5>
     <p>What the name says.</p>
-    <p>&nbsp;</p>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
-    <h5>Link to help text on Github</h5>
-    <p>Opens browser window with help text on Github.</p>
 </ul>
 
 <p>&nbsp;</p>
