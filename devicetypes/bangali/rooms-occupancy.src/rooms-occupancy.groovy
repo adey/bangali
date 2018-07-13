@@ -24,10 +24,46 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.40.0"  }
+public static String version()      {  return "v0.52.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.52.5
+*
+*   DONE:   7/9/2018
+*   1) added occupany icon to rooms device state for use with Hubitat.
+*	2) added icons to settings for rooms device for Hubitat
+*	3) added icons to settings for rooms manager for Hubitat
+*	4) optimized performance of device health check on Hubitat.
+*	5) started cleaning up code for room state replay.
+*	6) added option to announce sunset and sunrise with speaker along with the color option that was already there.
+*	7) added more granular control for window shade level.
+*	8) added processing for room cool or heat rules on room state change.
+*	9) swatted a bug here and a bug there.
+*
+*  Version: 0.50.0
+*
+*   DONE:   6/30/2018
+*   1) added icons to main settings page for a room in hubitat. ST already shows these icons on the settings page.
+*   2) added option to hide advanced settings.
+*   3) added setting to adjust cooling and heating temperature by 0.5ªF when outside temperature is respectively over 90ªF and below 32ªF.
+*   4) rewrote temperature management to be more consistent.
+*   5) cleaned up rooms manager settings.
+*   6) added option for how often device health message should be announced.
+*   7) fixed a bug here and there.
+*
+*  Version: 0.45.0
+*
+*   DONE:   6/12/2018
+*   1) added support for executing any device any command to rules.
+*   2) added option to reset ENGAGED if contact stays open but still engaged using another device like power.
+*   3) added option for LOCKED to override other devices that trigger other states. this excludes buttons that activate another state because by pressing a button user is expressing explicit intent to switch to that state.
+*   4) added option to view all settings page to show a non-anonymized version for user to view locally.
+*   5) updated timer countdown to be more uniform. hopefully :-)
+*   6) updated settings in rooms manager to be more uniform.
+*   7) added device health check with option to notify via speaker and/or color. this checks if the device has communicated with the hub in X number of hours, where X is configured through settings.
+*   8) for hubitat only added option to check additional devices for device health even if those devices are not used with rooms.
 *
 *  Version: 0.40.0
 *
@@ -160,8 +196,8 @@ private static boolean isDebug()    {  return true  }
 *       temperature and sets to cooling or heating mode but never turns off the thermostat.
 *   4) added support for named holiday light strings which can be used in automation rules.
 *   5) restructred the rules page a bit so not everything is on one page.
-*   6) added speech synthesis device for using things for annoucements.
-*   7) added random closing string to welcome and left home annoucements.
+*   6) added speech synthesis device for using things for announcements.
+*   7) added random closing string to welcome and left home announcements.
 *
 *  Version: 0.16.0
 *
@@ -190,12 +226,12 @@ private static boolean isDebug()    {  return true  }
 *  Version: 0.14.4
 *
 *   DONE:   2/26/2018
-*   1) added support for battery check and annoucement on low battery.
+*   1) added support for battery check and announcement on low battery.
 *
 *  Version: 0.14.2
 *
 *   DONE:   2/25/2018
-*   1) added setting for annoucement volume.
+*   1) added setting for announcement volume.
 *   2) added support for outside door open/close announcement.
 *
 *  Version: 0.14.0
@@ -244,7 +280,7 @@ private static boolean isDebug()    {  return true  }
 *
 *   DONE:   2/1/2018
 // TODO
-*   1) added support for time announce function. straightforward annoucement for now but likely to get fancier ;-)
+*   1) added support for time announce function. straightforward announcement for now but likely to get fancier ;-)
 *   2) added rule name to display in rules page.
 *   3) added support for power value stays below a certain number of seconds before triggering engaged or asleep.
 *   4) added support for vacant switch. except this sets room to vacant when turned OFF not ON.
@@ -256,7 +292,7 @@ private static boolean isDebug()    {  return true  }
 *   DONE:   1/26/2018
 *   1) added support for switch to set room to locked.
 *   2) added support for random welcome home and left home messages. multiple messages can be specified delimited
-*       by comma and one of them will be randomly picked when making the annoucement.
+*       by comma and one of them will be randomly picked when making the announcement.
 *   3) added support for switch to set room to asleep.
 *
 *  Version: 0.10.6
@@ -580,6 +616,8 @@ metadata {
 		capability "Lock Only"
 //		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
+// for hubitat uncomment the next line
+//		attribute "occupancyIcon", "String"
 		attribute "alarmEnabled", "boolean"
 		attribute "alarmTime", "String"
 		attribute "alarmDayOfWeek", "String"
@@ -1108,14 +1146,19 @@ private	stateUpdate(newState)		{
 
 private updateOccupancy(occupancy = null) 	{
 	occupancy = occupancy?.toLowerCase()
+	def hT = getHubType()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
 	if (!occupancy || !(buttonMap.containsKey(occupancy))) {
     	ifDebug("Missing or invalid parameter room occupancy: $occupancy")
         return
     }
 	sendEvent(name: "occupancy", value: occupancy, descriptionText: "$device.displayName changed to $occupancy", isStateChange: true, displayed: true)
+	if (hT == _Hubitat)		{
+		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${occupancy?.capitalize()}State.png"
+		sendEvent(name: "occupancyIcon", value: "<br /><br /><img src=$img height=160 width=156><br /><br />", descriptionText: "$device.displayName $occupancy icon", isStateChange: true, displayed: true)
+	}
     def button = buttonMap[occupancy]
-	if (getHubType() == _SmartThings)
+	if (hT == _SmartThings)
 		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 	else
 		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)

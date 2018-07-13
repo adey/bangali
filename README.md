@@ -1,9 +1,69 @@
 # bangali's rooms automation
 
 <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png" width="175" style="float:left; width:110px; height:80px; padding-right: 30px;">
-<h2 style="padding-top: 27px">Rooms Manager: Smarter Rooms: Personalized automation with Occupancy for Smartthings and Hubitat</h2>
+<h2 style="padding-top: 27px">Rooms Manager: Smarter Rooms: Personalized home automation with Occupancy</h2>
 
-<p style="padding-top: 35px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable personalized automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
+<h3 style="padding-top: 5px">Features:</h3>
+
+<h4>Here is a summary of features for the quick reader.</h4>
+
+* <h5>Rooms settings:</h5>
+  * Set room occupancy state with:
+   * Presence sensors.
+   * Motion sensors.
+   * Contact sensors.
+   * Music players.
+   * Button pushes.
+   * Switches on and off.
+   * Power wattage.
+  * Create rules that evaluate:
+   * For all rules:
+     * Room occupancy state
+     * Hub mode
+     * Day of week
+     * Lux value
+     * Humidity range
+     * Date filter
+     * Time trigger
+   * For temperature rules only:
+       * Temperature
+  * Rules allow you to:
+    * For execution rules:
+      * Turn on and off lights / switches.
+        * Auto adjust level and color temperature when turning on lights.
+        * Set light color when turning on.
+        * Setup recurring schedules for holiday light show including annually recurring holidays.
+        * On Hubitat, send any command to any device.
+        * Run pistons.
+        * Run routines.
+        * Start and stop music players.
+        * Set window shade position.
+    * For temperature rules:
+      * Maintain room temperature with thermostat or in-room AC and heaters.
+      * Turn fan on/off and manage fan speed with room temperature.
+      * Control vents with room temperature.
+  * Other settings:
+    * Setup multiple color routines for holiday light shows.
+    * Announce when:
+      * Contact sensor stays open.
+      * Outside door is opened.
+    * Turn on night lights with motion while room state is asleep.
+    * Turn on outdoor lights on a daily schedule.
+* <h5>Rooms occupancy device settings:</h5>
+  * Set alarm to play on a daily or weekly schedule for each room.
+* <h5>Rooms manager settings:</h5>
+  * Check and announce:
+    * Device battery status.
+    * Device health monitoring status.
+  * Announce:
+    * Arrival and departure by name including with randomly selected greetings.
+    * Time every quarter, half or on the hour.
+    * Sunrise and sunset.
+  * Announcements support speakers and / or lights.
+
+<h3 style="padding-top: 5px">Occupancy states, settings and other details:</h3>
+
+<p style="padding-top: 25px">While ST has a concept of rooms it is essentially a grouping mechanism which does not enable personalized automation. In contrast rooms occupancy considers the room as a meta device and automates common tasks associated with a “room” physical or virtual. <strong>What makes it really useful is not just the room's occupancy state but the ability to manage automation for rooms in a set of rules for the room based on the occupancy state of the room and data from various sensors.</strong> When creating a room device through the smartapp you are able to create these rules for the rooms making your rooms really smart.</p>
 
 <p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
 <p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
@@ -441,7 +501,7 @@
 <p>&nbsp;</p>
 <b>These group of settings allow for light routine settings used in the rules.</b>
 <ul>
-    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel2.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsLightLevel.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Auto Level 'AL' Settings</h5>
     <p>Settings to specify auto level and color temperature settings for the room which allows using 'AL' as a light level rule to automatically calculate and use these values based on time of day, wake and sleep time specified. Also allows specifying hours before and after wake and sleep times the light level and color temperature should be dimmed for optimal light levels.</p>
     <table class="wikitable" style="width:900px">
@@ -1015,7 +1075,7 @@
 
 <p>&nbsp;</p>
 
-<h5>Non-obvious rules:</h5>
+<h4>Non-obvious rules:</h4>
 <p>1. Outdoor lights with no motion sensor?
     <ul>
         Setup a room say `Outdoor` with the following settings specified for the rule:  
@@ -1080,6 +1140,17 @@
             </td>
             <td style="padding:25px">
                 <img height="500" src="https://raw.githubusercontent.com/adey/bangali/master/resources/screens/Rooms%20Occupancy%20Device%20Tiles%20-%20Screen%202.png">
+            </td>
+        </tr>
+    </table>
+</div>
+
+<b>Finally here is a screenshot of the rooms child settings page which captures all the settings groups available for each room:</b>
+<div id="screenshot-table">
+    <table>
+        <tr>
+            <td style="padding:25px">
+                <img height="1950" src="https://raw.githubusercontent.com/adey/bangali/master/resources/screens/Rooms%20Child%20Settings.png">
             </td>
         </tr>
     </table>
