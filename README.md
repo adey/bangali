@@ -9,6 +9,7 @@
 
 
 * <h5>Rooms settings:</h5>
+
   * Set room occupancy state with:
    * Presence sensors.
    * Motion sensors.
