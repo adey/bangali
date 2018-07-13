@@ -1465,7 +1465,7 @@ def sunsetEventHandler(evt = null)       {
     ifDebug("sunsetEventHandler", 'info')
     state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunsetColor][1]))
     setupColorNotification()
-    speakIt('Sun set, time is ' + format24format24hrTime() + ' hours.')
+    speakIt('Sun set, time is ' + format24hrTime() + ' hours.')
 }
 
 private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{

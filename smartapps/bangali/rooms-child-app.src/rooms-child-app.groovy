@@ -2753,7 +2753,7 @@ def updateSwitchAttributesToStateAndSubscribe()    {
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getRule(ruleNo, null, false)
-        if (thisRule && !thisRule.disabled)
+        if (thisRule && !thisRule.disabled)     {
             thisRule.switchesOn.each      {
                 def itID = it.getId()
                 if (!switchesID.contains(itID))      {
@@ -2774,6 +2774,7 @@ def updateSwitchAttributesToStateAndSubscribe()    {
                         if (it.hasCommand("vacancy"))       state.geSmartLightHasVacancy << ["$itID":true];
                     }
                 }
+        }
     }
     if (switches)       {
         subscribe(switches, "switch.on", switchOnEventHandler)
