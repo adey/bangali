@@ -37,10 +37,20 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.52.5"  }
+public static String version()      {  return "v0.55.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.55.0
+*
+*   DONE:   7/13/2018
+*   1) added support for ask alexa message for spoken announcements. (was added in v0.52.5 just announcing now)
+*   2) added support on SmartThings for ge dimmer switch and setting the operational mode of the switch. (was added in v0.52.5 just announcing now)
+*	3) added room button so you can use a single button to rotate thru selected room states.
+*	4) added support for mode in rooms manager in which to make announcements.
+*   5) added option to remove devices from health check.
+*   6) fixed a couple of bugs.
 *
 *  Version: 0.52.5
 *
@@ -872,6 +882,22 @@ private pageOnePager()      {
 }
 
 private pageOtherDevicesSettings()       {
+    def buttonNames = genericButtons
+    def roomButtonOptions = [:]
+    if (roomButton)      {
+        def roomButtonAttributes = roomButton.supportedAttributes
+        def attributeNameFound = false
+        roomButtonAttributes.each  { att ->
+            if (att.name == occupancy)      buttonNames = occupancyButtons;
+            if (att.name == 'numberOfButtons')      attributeNameFound = true;
+        }
+        def numberOfButtons = roomButton.currentNumberOfButtons
+        if (attributeNameFound && numberOfButtons)
+            for (def i = 0; i < numberOfButtons; i++)       roomButtonOptions << buttonNames[i];
+        else
+            roomButtonOptions << [null:"No buttons"]
+    }
+    def hT = getHubType()
 	dynamicPage(name: "pageOtherDevicesSettings", title: "Room Sensors", install: false, uninstall: false)      {
         section("MOTION SENSOR(s):", hideable: false)        {
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor?", required: false, multiple: true, submitOnChange: true
@@ -880,20 +906,31 @@ private pageOtherDevicesSettings()       {
             else
                 paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
+        section("ROOM BUTTON:", hideable: false)      {
+            input "roomButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to rotate states?", required: false, multiple: false, submitOnChange: true
+            if (roomButton)     {
+                input "buttonForRoom", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: roomButtonOptions
+                input "roomButtonStates", "enum", title: "Rotate thru which states?", required: true, multiple: true, options: [engaged, occupied, asleep, locked, vacant]
+            }
+            else        {
+                paragraph "Button number?\nselect button to set."
+                paragraph "Rotate thru which states?"
+            }
+        }
 		section("PRESENCE SENSOR(s):", hideable: false)      {
             input "personsPresence", "capability.presenceSensor", title: "Presence sensors?", required: false, multiple: true, submitOnChange: true
         }
         section("LUX SENSOR:", hideable: false)      {
             input "luxSensor", "capability.illuminanceMeasurement", title: "Which lux sensor?", required: false, multiple: false
         }
+        section("POWER METER:", hideable: false)      {
+            input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
+        }
         section("HUMIDITY SENSOR:", hideable: false)      {
             input "humiditySensor", "capability.relativeHumidityMeasurement", title: "Which humidity sensor?", required: false, multiple: false
         }
         section("MUSIC PLAYER:", hideable: false)      {
             input "musicDevice", "capability.musicPlayer", title: "Which music player?", required: false, multiple: false
-        }
-        section("POWER METER:", hideable: false)      {
-            input "powerDevice", "capability.powerMeter", title: "Which power meter?", required: false, multiple: false
         }
         section("WINDOW SHADE:", hideable: false)      {
             input "windowShades", "capability.windowShade", title: "Which window shade?", required: false, multiple: true
@@ -2316,6 +2353,11 @@ def updateRoom(adjMotionSensors)     {
         subscribe(adjMotionSensors, "motion.active", adjMotionActiveEventHandler)
         subscribe(adjMotionSensors, "motion.inactive", adjMotionInactiveEventHandler)
     }
+    if (roomButton)
+        if (hT == _SmartThings)
+            subscribe(roomButton, "button", roomButtonPushedEventHandler)
+        else
+            subscribe(roomButton, "pushed.$buttonForRoom", roomButtonPushedEventHandler)
     if (occupiedButton)
         if (hT == _SmartThings)
             subscribe(occupiedButton, "button", buttonPushedOccupiedEventHandler)
@@ -3054,6 +3096,29 @@ def adjMotionInactiveEventHandler(evt)      {
     def child = getChildDevice(getRoom())
     child.updateAdjMotionInd(0)
 //    child.updateAdjMotionInd((adjMotionSensors.currentMotion.contains('active') ? 1 : 0))
+}
+
+def	roomButtonPushedEventHandler(evt)     {
+    ifDebug("roomButtonPushedEventHandler", 'info')
+    if (!checkPauseModesAndDoW())    return;
+    if (getHubType() == _SmartThings)       {
+        if (!evt.data)      return;
+        def eD = new groovy.json.JsonSlurper().parseText(evt.data)
+        assert eD instanceof Map
+        if (!eD || (buttonForRoom && eD['buttonNumber'] && eD['buttonNumber'] != buttonForRoom as Integer))     return;
+    }
+    def child = getChildDevice(getRoom())
+    def roomState = child?.currentValue(occupancy)
+    def newRoomState = engaged
+    def nextState = false
+    roomButtonStates.each        {
+        if (nextState)      {
+            newRoomState = it
+            nextState = false
+        }
+        if (it == roomState)        nextState = true;
+    }
+    child."$newRoomState"()
 }
 
 def	buttonPushedOccupiedEventHandler(evt)     {
@@ -5673,7 +5738,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 
 def getAdjMotionSensors()  {
 //    ifDebug("getAdjMotionSensors", 'info')
-    return motionsensors
+    return motionSensors
 }
 
 def getAdjRoomDetails()  {
@@ -6109,11 +6174,14 @@ public  webCoRE_handler(evt)    {
 @Field final List    allSettingsVar = [
                         ["room sensor settings:"],
                         ["motionSensors", "Motion sensors:", null, true],
+                        ["roomButton", "Room button:", null, true],
+                        ["buttonForRoom", "Button number:", null, false, "or", "roomButton"],
+                        ["roomButtonStates", "Rotate thru states:", null, false, "or", "roomButton"],
                         ["personsPresence", "Presence sensors:", null, true],
                         ["luxSensor", "Lux sensor:", null, true],
+                        ["powerDevice", "Power device:", null, true],
                         ["humiditySensor", "Humidity sensor:", null, true],
                         ["musicDevice", "Music player:", null, true],
-                        ["powerDevice", "Power device:", null, true],
                         ["windowShades", "Window shades:", null, true],
 
                         ["occupied settings:"],

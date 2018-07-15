@@ -20,10 +20,20 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.52.5"  }
+public static String version()      {  return "v0.55.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.55.0
+*
+*   DONE:   7/13/2018
+*   1) added support for ask alexa message for spoken announcements. (was added in v0.52.5 just announcing now)
+*   2) added support on SmartThings for ge dimmer switch and setting the operational mode of the switch. (was added in v0.52.5 just announcing now)
+*	3) added room button so you can use a single button to rotate thru selected room states.
+*	4) added support for mode in rooms manager in which to make announcements.
+*   5) added option to remove devices from health check.
+*   6) fixed a couple of bugs.
 *
 *  Version: 0.52.5
 *
@@ -641,6 +651,7 @@ def mainPage()  {
 @Field final String _SpokenImage = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerSpoken.png"
 @Field final String _ColorImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerColor.png'
 @Field final String _PresenceImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerPresence.png'
+@Field final String _ModeImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerModes.png'
 @Field final String _TimeImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerTime.png'
 @Field final String _SunImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerSun2.png'
 @Field final String _BatteryImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerBattery.png'
@@ -676,6 +687,12 @@ def pageSpeakerSettings()   {
         }
         section("")     {
             href "pageAnnouncementColorTimeSettings", title: "${addImage(_ColorImage)}Color announcement settings", description: (announceSwitches ? "Tap to change existing settings" : "Tap to configure"), image: _ColorImage
+        }
+        section("")     {
+            if (playerDevice || announceSwitches)
+                input "announceInModes", "mode", title: "${addImage(_ModeImage)}Announce in modes?", required: false, multiple: true, image: _ModeImage
+            else
+                paragraph "${addImage(_ModeImage)}Announce in modes?\nselect announce speaker or light to set."
         }
         section("")       {
             href "pageArrivalDepartureSettings", title: "${addImage(_PresenceImage)}Arrival and departure settings", description: (speakerAnnounce || speakerAnnounceColor ? "Tap to change existing settings" : "Tap to configure"), image: _PresenceImage
@@ -954,6 +971,14 @@ def pageDeviceHealthSettings()      {
             section("")      {
                 input "healthAddDevices", "capability.*", title: "Check these devices?", required: false, multiple: true
             }
+        section("")      {
+            if (checkHealth)        {
+                input "healthNoCheckDevices", "capability.sensor", title: "Do not check these devices?", required: false, multiple: true
+            }
+            else        {
+                paragraph "Do not check these devices?\nselect check health to set."
+            }
+        }
     }
 }
 
@@ -974,6 +999,14 @@ def updated()		{
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (checkHealth)        {
         state.healthHours = 0
+        state.noCheckDevices = []
+        ifDebug("state.noCheckDevices: $state.noCheckDevices")
+        healthNoCheckDevices.each       {
+            ifDebug("state.noCheckDevices: $state.noCheckDevices")
+            ifDebug("state.noCheckDevices: $it")
+            state.noCheckDevices << it.id
+        }
+        ifDebug("state.noCheckDevices: $state.noCheckDevices")
         runEvery1Hour(checkDeviceHealth)
         runIn(1, checkDeviceHealth)
     }
@@ -1224,6 +1257,7 @@ def contactClosedEventHandler(evt = null)     {
 }
 
 private speakIt(str)     {
+    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -1252,6 +1286,7 @@ private speakIt(str)     {
 }
 
 private setupColorRotation()        {
+    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
     state.colorsRotateSeconds = state.colorsToRotate.size() * 30
     if (!state.colorsRotating)       {
         state.colorsRotating = true
@@ -1353,21 +1388,23 @@ def handleAdjRooms()    {
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
     def skipAdjRoomsMotionCheck = true
     def adjRoomDetailsMap = [:]
-    childApps.each	{ childAll ->
-        def adjRooms = childAll.getAdjRoomsSetting()
-        adjRoomDetailsMap << [(childAll.id):(adjRooms)]
+    childApps.each	{ c ->
+        def adjRooms = c.getAdjRoomsSetting()
+        adjRoomDetailsMap << [(c.id):(adjRooms)]
         if (adjRooms)       skipAdjRoomsMotionCheck = false;
     }
     if (skipAdjRoomsMotionCheck)        return false;
-    childApps.each	{ childAll ->
+    childApps.each	{ c ->
 //        def adjRoomDetails = childAll.getAdjRoomDetails()
-        def childID = childAll.id
+//        ifDebug("processing $child.label")
+        def childID = c.id
         def adjRooms = adjRoomDetailsMap[childID]
         def adjMotionSensors = []
         def adjMotionSensorsIds = []
         if (adjRooms)
             childApps.each	{ child ->
                 if (childID != child.id && adjRooms.contains(child.id))      {
+//                    ifDebug("checking $child.label")
                     def mS = child.getAdjMotionSensors()
                     if (mS)
                         mS.each      {
@@ -1379,9 +1416,9 @@ def handleAdjRooms()    {
                         }
                 }
             }
-        ifDebug("rooms manager: updating room $childAll.label", 'info')
+        ifDebug("rooms manager: updating room $c.label with adjacent motion sensors: $adjMotionSensors", 'info')
 //        ifDebug("$adjMotionSensors")
-        childAll.updateRoom(adjMotionSensors)
+        c.updateRoom(adjMotionSensors)
     }
     return true
 }
@@ -1473,6 +1510,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def setupColorNotification()        {
+    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -1568,7 +1606,9 @@ def checkDeviceHealth()     {
     ifDebug("$cDT")
     def hT = getHubType()
     def tD = []
-    def tDID = []
+    ifDebug("state.noCheckDevices: $state.noCheckDevices")
+    def tDID = state.noCheckDevices
+    ifDebug("tDID: $tDID")
     def itID
     def str = ''
     childApps.each      { child ->
@@ -1603,7 +1643,7 @@ def checkDeviceHealth()     {
 */
 
     tD.each     {
-        ifDebug("${now() - time} ms")
+//        ifDebug("${now() - time} ms")
         def deviceEventFound = false
         if (hT == _SmartThings)     {
             def lastEvents
@@ -1691,7 +1731,7 @@ def checkDeviceHealth()     {
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (healthEvery)        {
+    if (healthEvery != 0)        {
         if (state.healthHours == 0 && dHC && (speakerDevices || speechDevices || musicPlayers))
             speakIt(state.lastDeviceHealthUpdate)
         state.healthHours = (state.healthHours == 0 ? healthEvery as Integer : state.healthHours - 1)
