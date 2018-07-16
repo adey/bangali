@@ -10,7 +10,7 @@
 
 * <h5>Rooms settings:</h5>
 
-  * Set room occupancy state with:
+  * Set room occupancy state using any or all of the following devices:
     * Presence sensors.
     * Motion sensors.
     * Contact sensors.
@@ -27,7 +27,7 @@
       * Humidity range
       * Date filter
       * Time trigger
-    * For temperature rules only:
+    * For temperature rules additionally:
       * Temperature
   * Rules allow you to:
     * For execution rules:
@@ -35,11 +35,11 @@
         * Auto adjust level and color temperature when turning on lights.
         * Set light color when turning on.
         * Setup recurring schedules for holiday light show including annually recurring holidays.
-        * On Hubitat, send any command to any device.
-        * Run pistons.
-        * Run routines.
-        * Start and stop music players.
-        * Set window shade position.
+      * On Hubitat, send any command to any device.
+      * Run pistons.
+      * Run routines.
+      * Start and stop music players.
+      * Set window shade position.
     * For temperature rules:
       * Maintain room temperature with thermostat or in-room AC and heaters.
       * Turn fan on/off and manage fan speed with room temperature.
