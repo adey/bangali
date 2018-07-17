@@ -1731,7 +1731,7 @@ def checkDeviceHealth()     {
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (healthEvery != 0)        {
+    if (healthEvery != null)        {
         if (state.healthHours == 0 && dHC && (speakerDevices || speechDevices || musicPlayers))
             speakIt(state.lastDeviceHealthUpdate)
         state.healthHours = (state.healthHours == 0 ? healthEvery as Integer : state.healthHours - 1)
