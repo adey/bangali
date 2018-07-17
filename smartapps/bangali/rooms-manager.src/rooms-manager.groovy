@@ -1510,7 +1510,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def setupColorNotification()        {
-    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
+    if (announceInModes && !announceInModes.contains(location.currentMode.toString()))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
