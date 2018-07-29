@@ -4003,7 +4003,7 @@ def processCoolHeat(roomState = null)       {
     if (roomFanSwitch)        {
         if  (turnOn && thisRule.fanOnTemp)        {
             def fanLowTemp      = (thisRule.fanOnTemp + 0f).round(1)
-            def fanMediumTemp   = (thisRule.fanOnTemp + thisRule.fanSpeedIncTemp + 0f).round(1)
+            def fanMediumTemp   = (thisRule.fanOnTemp + (thisRule.fanSpeedIncTemp * 1f)).round(1)
             def fanHighTemp     = (thisRule.fanOnTemp + (thisRule.fanSpeedIncTemp * 2f)).round(1)
 //            ifDebug("temperature: $temperature | fanOnTemp: $thisRule.fanOnTemp | fanLowTemp: $fanLowTemp | fanMediumTemp: $fanMediumTemp | fanHighTemp: $fanHighTemp")
             if (temperature >= fanHighTemp)         { roomFanSwitch.on(); pauseIt(); roomFanSwitch.setLevel(fanHigh); }
