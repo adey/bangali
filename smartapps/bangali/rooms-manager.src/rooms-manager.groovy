@@ -982,7 +982,7 @@ def pageDeviceHealthSettings()      {
 
         }
         section("")      {
-            if (checkHealth && playerDevice)
+            if (checkHealth && (playerDevice || announceSwitches))
                 input "healthEvery", "enum", title: "Announce every how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
             else
                 paragraph "Every how many hours?\nselect check health to set."
@@ -1710,7 +1710,7 @@ def checkDeviceHealth()     {
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (_healthCheck.contains(healthEvery.toInteger()))    {
+    if (_healthCheck.contains(healthEvery?.toInteger()))    {
         ifDebug("_healthCheck: $_healthCheck | healthEvery: $healthEvery | state.healthHours: $state.healthHours")
         if (state.healthHours == 0 && dHC)
             speakIt(state.lastDeviceHealthUpdate)
