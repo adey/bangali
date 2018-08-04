@@ -3919,11 +3919,11 @@ private calculateTimerLeft(rs)      {
     def eM = ((now() - state.previousState.date) / 1000l).toInteger()
 //    ifDebug("rS: $rS | eM: $eM | $state.previousState.date")
     switch(rs) {
-        case occupied:  eM = state.noMotion - eM;           break
-        case engaged:   eM = state.noMotionEngaged - eM;    break
-        case asleep:    eM = state.noAsleep - eM;           break
-        case locked:    eM = state.unLocked - eM;           break
-        default:                                            break
+        case occupied:  eM = (state.noMotion ? state.noMotion - eM : 0);                    break
+        case engaged:   eM = (state.noMotionEngaged ? state.noMotionEngaged - eM : 0);      break
+        case asleep:    eM = (state.noAsleep ? state.noAsleep - eM : 0);                    break
+        case locked:    eM = (state.unLocked ? state.unLocked - eM : 0);                    break
+        default:                                                                            break
     }
     return eM
 }
