@@ -5,6 +5,7 @@
 *   occupancy. it also allows many other actions like executing a routine or piston, turning on/off music and much
 *   more. see the wiki for more details. (note wiki is still in progress. ok there is really no content in the wiki.
 *   yet. but this is to reinforce my intention of putting the wiki together. ;-) will update with link once in place.)
+*
 *  Copyright (C) 2017 bangali
 *
 *  Contributors:
@@ -37,10 +38,35 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.55.0"  }
+public static String version()      {  return "v0.60.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.60.0
+*
+*   DONE:   8/1/2018
+*	1) BREAKING CHANGE: added color options in rooms to support the same colors as supported in rooms manager already.
+*       you will need to update any color settings for rules after this update.
+*	2) added option to select between pushable, holdable and double tap buttons on Hubitat.
+*	3) added support for multiple types of speaker devices for rooms child so those are available for announcements.
+*	4) added support for light bulbs to support announcement in each via color.
+*	5) added support for some announcements for doors and windows in rooms.
+*	6) optimized code for processing adjacent rooms when updated from rooms settings.
+*	7) collapsed option for sending command to any device instead of being able to support only the operational mode
+*		for ge siwtches on SmartThings. on Hubitat this supports sending any commands to any device from rules. on
+*		Smartthings, since ST does not supporting any device from input, it currently supprts any commands to any
+*		device that is of type switch.
+*	8) added more details for temperature rules when shown in view all settings.
+*	9) added option to support fans that only support on/off but not level settings.
+*	10) changed how time scheduling is handled to work around how infrequent Smartthings issue with sunrise and sunset.
+*	11) added support for variable volums to announcements.
+*	12) swatted a bug here and a bug there.
+*   13) BREAKING CHANGE: added multiple different occupancy icon sizes for use with Hubitat dashboard.
+*       you will need to update any dashaboards using occupancyIcon to use one of the new icons of different sizes.
+*	14) added image URL for occupancy icon for use for when Hubitat supports state attributes for image URL in dashboard.
+*	15) add a few more tiles for SmartThings for missing attributes like outside temperature, vents and couple of others.
+*	16) updated readme for github.
 *
 *  Version: 0.55.0
 *
@@ -667,6 +693,10 @@ import groovy.time.*
 
 @Field final String _ImgSize = '36'
 
+@Field final String pushAButton = 'pushableButton'
+@Field final String holdAButton = 'holdableButton'
+@Field final String doubleTapAButton = 'doubleTapableButton'
+
 definition	(
     name: "rooms child app",
     namespace: "bangali",
@@ -703,6 +733,10 @@ preferences {
     page(name: "pagePowerTime", title: "Power Time Range")
     page(name: "pageAdjacentRooms", title: "Adjacent Rooms Settings")
     page(name: "pageRoomTemperature", title: "Room Temperature Settings")
+    page(name: "pageAnnouncementSettings", title: "Announcement Settings")
+    page(name: "pageAnnouncementSpeakerTimeSettings", title: "Announcement Speaker Settings")
+    page(name: "pageAnnouncementColorTimeSettings", title: "Announcement Color Settings")
+    page(name: "pageAnnounceContacts", title: "Announce Contact Settings")
     page(name: "pageGeneralSettings", title: "General Settings")
     page(name: "pageAllSettings", title: "All Settings")
 }
@@ -731,6 +765,7 @@ def roomName()	{
     if (iconURL)    roomIconURL = iconURL
     else            roomIconURL = _RIimage
     def hT = getHubType()
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
 	dynamicPage(name: "roomName", title: "MAIN SETTINGS PAGE", install: true, uninstall: childCreated())		{
         section("")		{
             if (!childCreated())    {
@@ -802,11 +837,14 @@ def roomName()	{
     		}
             if (!hideAdvanced)
                 section("")     {
-        				href "pageAdjacentRooms", title: "${addImage(_ARimage)}ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure"), image: _ARimage
+        			href "pageAdjacentRooms", title: "${addImage(_ARimage)}ADJACENT ROOMS SETTINGS", description: (adjRoomSettings ? "Tap to change existing settings" : "Tap to configure"), image: _ARimage
         		}
+            if (!hideAdvanced)
+                section("")     {
+        			href "pageAnnouncementSettings", title: "${addImage(_ANimage)}ANNOUNCEMENT SETTINGS", description: (playerDevice || announceSwitches ? "Tap to change existing settings" : "Tap to configure"), image: _ANimage
+            	}
             section("")        {
     				href "pageGeneralSettings", title: "${addImage(_GEimage)}MODE & OTHER SETTINGS", description: (miscSettings ? "Tap to change existing settings" : "Tap to configure"), image: _GEimage
-
     		}
         }
         section("") {
@@ -907,7 +945,9 @@ private pageOtherDevicesSettings()       {
                 paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
         section("ROOM BUTTON:", hideable: false)      {
-            input "roomButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to rotate states?", required: false, multiple: false, submitOnChange: true
+            if (hT == _Hubitat)
+                input "roomButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "roomButton", "capability.${(hT == _SmartThings ? 'button' : roomButtonAction)}", title: "Button to rotate states?", required: false, multiple: false, submitOnChange: true
             if (roomButton)     {
                 input "buttonForRoom", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: roomButtonOptions
                 input "roomButtonStates", "enum", title: "Rotate thru which states?", required: true, multiple: true, options: [engaged, occupied, asleep, locked, vacant]
@@ -960,7 +1000,9 @@ private pageOccupiedSettings()      {
     def hT = getHubType()
     dynamicPage(name: "pageOccupiedSettings", title: "Occupied Settings", install: false, uninstall: false)     {
         section("Button for OCCUPIED state:", hideable: false)		{
-            input "occupiedButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (hT == _Hubitat)
+                input "occupiedButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "occupiedButton", "capability.${(hT == _SmartThings ? 'button' : occupiedButtonAction)}", title: "Button to set Occupied?", required: false, multiple: false, submitOnChange: true
             if (occupiedButton)       {
                 input "buttonIsOccupied", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: occupiedButtonOptions
                 input "buttonOnlySetsOccupied", "bool", title: "Button only sets Occupied?", description: "if false will toggle occupied and vacant", required: false, multiple: false, defaultValue: false
@@ -1017,7 +1059,9 @@ private pageEngagedSettings()       {
                             options: [[null:"No auto engaged"],[5:"Light traffic"],[7:"Medium Traffic"],[9:"Heavy Traffic"]]
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
-            input "engagedButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (hT == _Hubitat)
+                input "engagedButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "engagedButton", "capability.${(hT == _SmartThings ? 'button' : engagedButtonAction)}", title: "Button to set Engaged?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)      {
                 input "buttonIs", "enum", title: "Button number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
                 input "buttonOnlySetsEngaged", "bool", title: "Button only sets Engaged?", description: "if false will toggle engaged and vacant", required: false, multiple: false, defaultValue: false
@@ -1128,7 +1172,9 @@ private pageVacantSettings()      {
     def hT = getHubType()
 	dynamicPage(name: "pageVacantSettings", title: "Vacant Settings", install: false, uninstall: false)     {
         section("Button for VACANT state:", hideable: false)		{
-            input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button is pushed?", required: false, multiple: false, submitOnChange: true
+            if (hT == _Hubitat)
+                input "vacantButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : vacantButtonAction)}", title: "Button to set Vacant?", required: false, multiple: false, submitOnChange: true
             if (vacantButton)       {
                 input "buttonIsVacant", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: vacantButtonOptions
 //                input "buttonToggleWithVacant", "bool", title: "If room state is VACANT toggle to OCCUPIED state?", required: true, multiple: false, defaultValue: false, options: vacantButtonOptions
@@ -1330,7 +1376,7 @@ private pageRules()     {
                             ruleDesc = (thisRule.luxThreshold != null ? "$ruleDesc Lux=$thisRule.luxThreshold" : "$ruleDesc")
                             ruleDesc = (thisRule.piston ? "$ruleDesc Piston=$thisRule.piston" : "$ruleDesc")
                             ruleDesc = (thisRule.actions ? "$ruleDesc Routines=$thisRule.actions" : "$ruleDesc")
-                            ruleDesc = (thisRule.geSmartLight ? "$ruleDesc $thisRule.geSmartLight:$thisRule.geSmartLightAction" : "$ruleDesc")
+//                            ruleDesc = (thisRule.geSmartLight ? "$ruleDesc $thisRule.geSmartLight:$thisRule.geSmartLightAction" : "$ruleDesc")
                         }
                         if (thisRule.fromTimeType && thisRule.toTimeType)        {
                             def ruleFromTimeHHmm = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime, location.timeZone)) : '')
@@ -1388,6 +1434,10 @@ private pageRule(params)   {
         levelOptions << it
     }
 //    ifDebug("levelOptions: $levelOptions")
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
     boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
     def hT = getHubType()
     dynamicPage(name: "pageRule", title: "Edit Rule", install: false, uninstall: false)   {
@@ -1438,32 +1488,27 @@ private pageRule(params)   {
         if (ruleType != 't')      {
             section("Lights and switches to turn ON:", hideable: false)     {
                 input "switchesOn$ruleNo", "capability.switch", title: "Turn ON which switches?", required: false, multiple: true
-                input "setLevelTo$ruleNo", "enum", title: "Set level when Turning ON?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: levelOptions
-//                        options: [[AL:"Auto Level (and color temperature)"],[HL:"Holiday Lights"],
-//                                  [1:"1%"],[5:"5%"],[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
-                input "setColorTo$ruleNo", "enum", title: "Set color when turning ON?", required: false, multiple:false, defaultValue: null,
-                                                                                   options: [["Soft White":"Soft White - Default"],
-                                					                                         ["White":"White - Concentrate"],
-                                					                                         ["Daylight":"Daylight - Energize"],
-                                					                                         ["Warm White":"Warm White - Relax"],
-                                					                                         "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
+                input "setLevelTo$ruleNo", "enum", title: "Set level?", required: false, multiple: false, defaultValue: null, submitOnChange: true, options: levelOptions
+                input "setColorTo$ruleNo", "enum", title: "Set color?", required: false, multiple:false, defaultValue: null, options: colorsList
+//                    [["Soft White":"Soft White - Default"], ["White":"White - Concentrate"], ["Daylight":"Daylight - Energize"], ["Warm White":"Warm White - Relax"], "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Pink"]
                 if (settings["setLevelTo$ruleNo"] == 'AL' && autoColorTemperature)
-                    paragraph "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)\ncannot set when level is set to 'AL'."
+                    paragraph "Set color temperature?\ncannot set when level is set to 'AL'."
                 else
-                    input "setColorTemperatureTo$ruleNo", "number", title: "Set color temperature when turning ON? (if light supports color and color is specified this setting will be ignored.)",
+                    input "setColorTemperatureTo$ruleNo", "number", title: "Set color temperature? (if light supports color & color is specified setting will be ignored.)",
                                                                                             required: false, multiple: false, defaultValue: null, range: "1500..6500"
                 input "switchesOff$ruleNo", "capability.switch", title: "Turn OFF which switches?", required: false, multiple: true
             }
-            if (hT == _Hubitat && !hideAdvanced)     {
+//            if (hT == _Hubitat && !hideAdvanced)     {
+            if (!hideAdvanced)     {
                 section("")     {
             	    href "pageRuleCommands", title: "Device commands",
-                        description: "${(settings["device$ruleNo"] ? settings["device$ruleNo"].toString() + ': ' + (settings["cmds$ruleNo"] ?: '') : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
+                        description: "${(settings["device$ruleNo"] ? settings["device$ruleNo"].toString() + ' : ' + (settings["cmds$ruleNo"] ?: '') : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
                 }
             }
             if (!hideAdvanced)      {
                 section("")     {
                 	href "pageRuleOthers", title: "Routines/pistons and more",
-                        description: "${(settings["actions$ruleNo"] || settings["piston$ruleNo"] || settings["geSmartLight$ruleNo"] || settings["musicAction$ruleNo"]  || settings["shadePosition$ruleNo"] ? "Tap to change existing settings" : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
+                        description: "${(settings["actions$ruleNo"] || settings["piston$ruleNo"] || settings["musicAction$ruleNo"]  || settings["shadePosition$ruleNo"] ? "Tap to change existing settings" : "Tap to configure")}", params: [ruleNo: "$ruleNo"]
                 }
                 section("")     {
                 	href "pageRuleTimer", title: "Timer overrides", description: "${(ruleTimerOverride ? (settings["noMotion$ruleNo"] ?: '') + ', ' + (settings["noMotionEngaged$ruleNo"] ?: '') + ', ' + (settings["dimTimer$ruleNo"] ?: '')  + ', ' + (settings["noMotionAsleep$ruleNo"] ?: '') : 'Add timer overrides')}", params: [ruleNo: "$ruleNo"]
@@ -1490,8 +1535,7 @@ private pageRule(params)   {
                     if (roomFanSwitch)      {
                         input "fanOnTemp$ruleNo", "decimal", title: "Fan on at temperature?",
                                                 required: false, multiple: false, defaultValue: null, range: "${(isFarenheit ? '32..99' : '0..38')}", submitOnChange: true
-                        input "fanSpeedIncTemp$ruleNo", "decimal", title: "Fan speed with what temperature increments?",
-                                                required: (settings["fanOnTemp$ruleNo"]), multiple: false, range: "1..5"
+                        input "fanSpeedIncTemp$ruleNo", "decimal", title: "Fan speed with what temperature increments?", required: (settings["fanOnTemp$ruleNo"] ? true : false), defaultValue: 1, multiple: false, range: "1..5"
                     }
                     else        {
                         paragraph "Fan on at temperature?\nset fan switch to set."
@@ -1621,13 +1665,19 @@ private pageRuleCommands(params)   {
     else if (state.passedParams)
         state.pageRuleNo = state.passedParams.ruleNo
     def ruleNo = state.pageRuleNo
-    def deviceIs = settings["device$ruleNo"]
-    def allCmds = deviceIs?.getSupportedCommands()
+    def hT = getHubType()
+    def deviceIs = settings["device$ruleNo"], allCmds
+    if (deviceIs)
+        allCmds = deviceIs.getSupportedCommands().collect{ [(it):it.toString().capitalize()] }
+//    def allCmds = deviceIs?.getSupportedCommands()
+//    allCmds = allCmds.sort().unique()
     ifDebug("deviceIs: $deviceIs | allCmds: $allCmds")
+//    ifDebug("${settings["device$ruleNo"]}")
+//    ifDebug("${settings["cmds$ruleNo"]}")
     dynamicPage(name: "pageRuleCommands", title: "Edit Rule Execute", install: false, uninstall: false)   {
-        section("Device commands to run:", hideable: false)     {
-            input "device$ruleNo", "capability.*", title: "Issue command to device?", required: false, multiple: false, submitOnChange: true
-            input "cmds$ruleNo", "enum", title: "Commands to call?", required: false, multiple: true, defaultValue: null, options: allCmds
+        section("Device commands to issue:", hideable: false)     {
+            input "device$ruleNo", "capability.${(hT == _Hubitat ? '*' : 'switch')}", title: "Issue command to device?", required: false, multiple: false, submitOnChange: true
+            input "cmds$ruleNo", "enum", title: "Commands to call?", required: (deviceIs ? true : false), multiple: true, defaultValue: null, options: allCmds
         }
     }
 }
@@ -1640,22 +1690,26 @@ private pageRuleOthers(params)   {
     def ruleNo = state.pageRuleNo
     def allActions = location.helloHome?.getPhrases()*.label
     if (allActions)     allActions.sort();
-    def hT = getHubType()
-    if (hT == _SmartThings)
-        def geSmartLightSelected = (settings["geSmartLight$ruleNo"] && settings["geSmartLight$ruleNo"].hasCommand("occupancy") && settings["geSmartLight$ruleNo"].hasCommand("vacancy") ? true : false)
+//    def hT = getHubType()
+//    def geSmartLightSelected, geCmdOptions
+//    if (hT == _SmartThings)     {
+//        def deviceIs = settings["geSmartLight$ruleNo"]
+//        geSmartLightSelected = isGESmartLight(deviceIs)
+//        geCmdOptions = deviceIs?.getSupportedCommands()
+//    }
     dynamicPage(name: "pageRuleOthers", title: "Edit Rule Execute", install: false, uninstall: false)   {
         section("", hideable: false)     {
             input "actions$ruleNo", "enum", title: "Routines to execute?", required: false, multiple: true, defaultValue: null, options: allActions
             input "piston$ruleNo", "enum", title: "Piston to execute?", required: false, multiple: false, defaultValue: null, options: state.pList
         }
-        if (hT == _SmartThings)
-            section("", hideable: false)     {
-                input "geSmartLight$ruleNo", "capability.switch", title: "GE switch to set operating mode?", required: false, multiple: false, submitOnChange: true
-                if (geSmartLightSelected)
-                    input "geSmartLightAction$ruleNo", "enum", title: "To which operating mode?", required: true, multiple: false, options: [[1:"Occupancy"], [0:"Vacancy"]]
-                else
-                    paragraph "To which operating mode?\nselect ge smart light to set."
-            }
+//        if (hT == _SmartThings)
+//            section("", hideable: false)     {
+//                input "geSmartLight$ruleNo", "capability.switch", title: "GE switch to set operating mode?", required: false, multiple: false, submitOnChange: true
+//                if (geSmartLightSelected)
+//                    input "geSmartLightAction$ruleNo", "enum", title: "To which operating mode?", required: true, multiple: true, options: geCmdOptions
+//                else
+//                    paragraph "To which operating mode?\nselect ge smart light to set."
+//            }
         section("", hideable: false)     {
             if (musicDevice)
                 input "musicAction$ruleNo", "enum", title: "Start or stop music player?", required: false, multiple: false, defaultValue: null,
@@ -1673,12 +1727,19 @@ private pageRuleOthers(params)   {
     }
 }
 
+/*
+private isGESmartLight(geSmartLight)    {
+    return (geSmartLight && geSmartLight.hasCommand("occupancy") && geSmartLight.hasCommand("vacancy" && geSmartLight.hasCommand("manual")) ? true : false)
+}
+*/
+
 private dateInputValid(dateInputStart, dateInputEnd)       {
 //    ifDebug("dateInputValid")
     def returnDates = [null, null]
     if ((!dateInputStart || dateInputStart.size() < 8 || dateInputStart.size() > 10) ||
         (!dateInputEnd || dateInputEnd.size() < 8 || dateInputEnd.size() > 10))
         return returnDates
+    def dPS, dPE
     if (dateInputStart.toLowerCase().substring(0, 5) == 'yyyy/' || dateInputEnd.toLowerCase().substring(0, 5) == 'yyyy/')     {
         def dateIS = yearTranslate(dateInputStart)
         def dIS = Date.parse("yyyy/M/d HH:mm:ss z", dateIS + ' 00:00:00 ' + location.timeZone.getDisplayName())
@@ -1690,25 +1751,25 @@ private dateInputValid(dateInputStart, dateInputEnd)       {
                 dIS = dIS + 1.year
                 dIE = dIE + 1.year
             }
-        def dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssXXX")
-        def dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssXXX")
+        dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssZ")
+        dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssZ")
 //        if (!dPS || !dPE)    return returnDates;
 //        returnDates = [dPS, dPE]
     }
     else    {
         def dIS = Date.parse("yyyy/M/d HH:mm:ss z", dateInputStart + ' 00:00:00 ' + location.timeZone.getDisplayName())
 //    ifDebug("$dI")
-        def dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssXXX")
+        dPS = dIS.format("yyyy-MM-dd'T'HH:mm:ssZ")
         def dIE = Date.parse("yyyy/M/d HH:mm:ss z", dateInputEnd + ' 23:59:59 ' + location.timeZone.getDisplayName())
 //    ifDebug("$dI")
-        def dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssXXX")
+        dPE = dIE.format("yyyy-MM-dd'T'HH:mm:ssZ")
 //    ifDebug("$dP")
 //        if (!dPS || !dPE)    return returnDates;
 //        returnDates = [dPS, dPE]
     }
     if (!dPS || !dPE)    return returnDates;
     returnDates = [dPS, dPE]
-    ifDebug("returnDates: $returnDates")
+//    ifDebug("returnDates: $returnDates")
     return returnDates
 }
 
@@ -1724,7 +1785,7 @@ private yearTranslate(dateP)        {
         returnDate = nextYear + dateP.substring(4)
     else
         returnDate = dateP
-    ifDebug("yearTranslate: returnDate: $returnDate")
+//    ifDebug("yearTranslate: returnDate: $returnDate")
     return returnDate
 }
 
@@ -1769,7 +1830,9 @@ private pageAsleepSettings() {
 	dynamicPage(name: "pageAsleepSettings", title: "Asleep Settings", install: false, uninstall: false) {
         section("ASLEEP state settings:", hideable: false)		{
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to set room to ASLEEP?", required: false, multiple: false
-            input "asleepButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
+            if (hT == _Hubitat)
+                input "asleepButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "asleepButton", "capability.${(hT == _SmartThings ? 'button' : asleepButtonAction)}", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
             if (asleepButton)       {
                 input "buttonIsAsleep", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: asleepButtonOptions
                 input "buttonOnlySetsAsleep", "bool", title: "Button only sets Asleep?", description: "if false will toggle asleep and vacant", required: false, multiple: false, defaultValue: false
@@ -1820,7 +1883,9 @@ private pageAsleepSettings() {
                 input "noMotionAsleep", "number", title: "Timeout seconds for night lights?", required: false, multiple: false, defaultValue: null, range: "5..99999"
                 input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true,
                                         options: [[1:"Motion in ASLEEP state"],[2:"State changes to ASLEEP"],[3:"State changes away from ASLEEP"]]
-                input "nightButton", "capability.${(hT == _SmartThings ? 'button' : 'pushableButton')}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
+                if (hT == _Hubitat)
+                    input "nightButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+                input "nightButton", "capability.${(hT == _SmartThings ? 'button' : nightButtonAction)}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
                 if (nightButton)        {
                     input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
                     input "nightButtonAction", "enum", title: "Button Action?", required: true, multiple: false, defaultValue: null,
@@ -1936,9 +2001,11 @@ private pageRoomTemperature()       {
 	dynamicPage(name: "pageRoomTemperature", title: "Temperature Settings", install: false, uninstall: false)    {
         if (validThermostat)       {
             section("Maintain room temperature:", hideable: false)		{
-                input "tempSensors", "capability.temperatureMeasurement", title: "Room temperature sensor?", required: (['1', '2', '3'].contains(maintainRoomTemp)), multiple: true, submitOnChange: true
-                input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: false, multiple: false, defaultValue: 4,
-                                                                                options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
+                input "tempSensors", "capability.temperatureMeasurement", title: "Room temperature sensor?", required: false, multiple: true, submitOnChange: true
+                if (tempSensors)
+                    input "maintainRoomTemp", "enum", title: "Maintain room temperature?", required: (tempSensors ? true : false), multiple: false, defaultValue: 4, options: [[1:"Cool"], [2:"Heat"], [3:"Both"], [4:"Neither"]], submitOnChange: true
+                else
+                    paragraph "Maintain room temperature?\nselect temperature sensor to set."
                 if (['1', '2', '3'].contains(maintainRoomTemp))     {
                     input "useThermostat", "bool", title: "Use thermostat? (otherwise uses room ac and/or heater)", required: true, multiple: false, defaultValue: false, submitOnChange: true
                     if (useThermostat)      {
@@ -1949,7 +2016,7 @@ private pageRoomTemperature()       {
                     }
                 }
                 if (!useThermostat && ['1', '3'].contains(maintainRoomTemp))
-                    input "roomCoolSwitch", "capability.switch", title: "AC switch?", required: true, multiple: false, submitOnChange: true
+                    input "roomCoolSwitch", "capability.switch", title: "AC switch?", required: true, multiple: false
                 if (!useThermostat && ['2', '3'].contains(maintainRoomTemp))
                     input "roomHeatSwitch", "capability.switch", title: "Heater switch?", required: true, multiple: false
                 if (['1', '2', '3'].contains(maintainRoomTemp))     {
@@ -1964,10 +2031,10 @@ private pageRoomTemperature()       {
                     paragraph "Remember to setup temperature rule(s) for room cooling and/or heating."
 // TODO parametize the adjustment
                     if (outTempSensor)      {
-                        input "autoAdjustWithOutdoor", "bool", title: "Adjust temperature by 0.5ºF?", description: "When outside temperature < 32ºF or > 90ºF", required: true, multiple: false, defaultValue: true
+                        input "autoAdjustWithOutdoor", "bool", title: "Adjust temperature by ±0.5ºF?", description: "When outside temperature < 32ºF or > 90ºF", required: true, multiple: false, defaultValue: true
                     }
                     else        {
-                        paragraph "Adjust cooling / heating temperature by 0.5ºF?\nselect outdoor door temperature sensor to set."
+                        paragraph "Adjust temperature by ±0.5ºF?\nselect outdoor door temperature sensor to set."
                     }
                 }
             }
@@ -1979,7 +2046,10 @@ private pageRoomTemperature()       {
                         paragraph "Vents?\nenabled when using thermostat."
                 }
                 section("Room fan:", hideable: false)		{
-                    input "roomFanSwitch", "capability.switch", title: "Fan switch?", required: false, multiple: false
+                    if (tempSensors)
+                        input "roomFanSwitch", "capability.switch", title: "Fan switch?", required: false, multiple: false
+                    else
+                        paragraph "Fan switch?\nselect temperature sensor to set."
                 }
             }
         }
@@ -2007,6 +2077,125 @@ private pageAdjacentRooms()     {
             }
         }
 	}
+}
+
+def pageAnnouncementSettings()   {
+    def hT = getHubType()
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
+    dynamicPage(name: "pageAnnouncementSettings", title: "Announcement Settings", install: false, uninstall: false)     {
+        section("")     {
+            href "pageAnnouncementSpeakerTimeSettings", title: "Spoken announcement settings", description: (playerDevice ? "Tap to change existing settings" : "Tap to configure")
+            href "pageAnnouncementColorTimeSettings", title: "Color announcement settings", description: (announceSwitches ? "Tap to change existing settings" : "Tap to configure")
+            if (playerDevice || announceSwitches)
+                input "announceInModes", "mode", title: "Announce in modes?", required: false, multiple: true
+            else
+                paragraph "Announce in modes?\nselect announce speaker or light to set."
+        }
+        section("")     {
+            href "pageAnnounceContacts", title: "Announcement contacts settings", description: (announceDoor || announceContact || announceContactRT ? "Tap to change existing settings" : "Tap to configure")
+        }
+    }
+}
+
+def pageAnnouncementSpeakerTimeSettings()      {
+    def hT = getHubType()
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
+    dynamicPage(name: "pageAnnouncementSpeakerTimeSettings", title: "", install: false, uninstall: false)     {
+        section("Speakers for announcement:")       {
+            input "speakerDevices", "capability.audioNotification", title: "Which speakers?", required: false, multiple: true, submitOnChange: true
+            input "speechDevices", "capability.speechSynthesis", title: "Which speech devices?", required: false, multiple: true, submitOnChange: true
+            input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
+            if (hT == _SmartThings)
+                input "listOfMQs", "enum", title: "Select Ask Alexa Message Queues", options: state.askAlexaMQ, multiple: true, required: false
+            if (playerDevice)       {
+                input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
+                input "useVariableVolume", "bool", title: "Use variable volume?", required: true, multiple: false, defaultValue: false
+            }
+            else        {
+                paragraph "Speaker volume?\nselect any speaker to set."
+                paragraph "Use variable volume?"
+            }
+        }
+        section("Spoken announcement during hours:")       {
+            if (playerDevice)        {
+                input "startHH", "number", title: "From hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
+                input "endHH", "number", title: "To hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+            }
+            else        {
+                paragraph "Announce from hour?\nselect speaker to set"
+                paragraph "Announce to hour?"
+            }
+        }
+    }
+}
+
+def pageAnnouncementColorTimeSettings()      {
+    dynamicPage(name: "pageAnnouncementColorTimeSettings", title: "", install: false, uninstall: false)     {
+        section("Lights for announcement with color:")   {
+            input "announceSwitches", "capability.switch", title: "Which switches?", required: false, multiple: true, submitOnChange: true
+        }
+        section("Color announcement during hours:")       {
+            if (announceSwitches)        {
+                input "startHHColor", "number", title: "From hour?", description: "0..${(endHHColor ?: 23)}", required: true, multiple: false, defaultValue: 18, range: "0..${(endHH ?: 23)}", submitOnChange: true
+                input "endHHColor", "number", title: "To hour?", description: "${(startHHColor ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+            }
+            else        {
+                paragraph "Announce from hour?\nselect announce switches to set"
+                paragraph "Announce to hour?"
+            }
+        }
+    }
+}
+
+def pageAnnounceContacts()       {
+    def hT = getHubType()
+    def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
+    def colorsList = []
+    colorsRGB.each  { k, v ->
+        colorsList << ["$k":"${v[1]}"]
+    }
+    dynamicPage(name: "pageAnnounceContacts", title: "", install: false, uninstall: false)     {
+        section("Door announcements:")       {
+            if (contactSensor && (playerDevice || announceSwitches))
+                input "announceDoor", "bool", title: "Announce when door opened or closed?", required: false, multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce when door opened or closed?\nset contact sensor and announce devices to set"
+            if (announceDoor)
+                input "announceDoorSpeaker", "bool", title: "Announce with speaker?", required: true, multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce with speaker?\nselect door announcement & speaker to set"
+            if (announceDoor)
+                input "announceDoorColor", "enum", title: "Announce with color?", required: true, multiple: false, options: colorsList, submitOnChange: true
+            else
+                paragraph "Announce with color?\nselect door announcement & color bulb to set"
+            if (contactSensor && (playerDevice || announceSwitches))
+                input "announceContact", "enum", title: "Announce when door stays open?", required: false, multiple: false, defaultValue: null, options: [[1:"Every 1 minute"],[2:"Every 2 minutes"],[3:"Every 3 minutes"],[5:"Every 5 minutes"],[10:"Every 10 minutes"],[15:"Every 15 minutes"],[30:"Every 30 minutes"]]
+            else
+                paragraph "Announce when door stays open?\nset contact sensor and announce devices to set"
+            if (announceContact && playerDevice)
+                input "announceContactSpeaker", "bool", title: "Announce with speaker?", required: (announceContactColor ? false : true), multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce with speaker?\nselect door stays open announcement & speaker to set"
+            if (announceContact && announceSwitches)
+                input "announceContactColor", "enum", title: "Announce with color?", required: (announceContactSpeaker ? false : true), multiple: false, options: colorsList, submitOnChange: true
+            else
+                paragraph "Announce with color?\nselect door stays open announcement & color bulb to set"
+        }
+        section("Window announcements:")     {
+            if (contactSensorsRT && (playerDevice || announceSwitches))
+                input "announceContactRT", "bool", title: "Announce when window opened or closed?", required: false, multiple: true, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce when window opened or closed?\nset contact sensor and announce devices to set"
+            if (announceContactRT && playerDevice)
+                input "announceContactRTSpeaker", "bool", title: "Announce with speaker?", required: (announceContactRTColor ? false : true), multiple: false, defaultValue: false, submitOnChange: true
+            else
+                paragraph "Announce with speaker?\nselect window announcement & speaker to set"
+            if (announceContactRT && announceSwitches)
+                input "announceContactRTColor", "enum", title: "Announce with color?", required: (announceContactRTSpeaker ? false : true), multiple: false, options: colorsList, submitOnChange: true
+            else
+                paragraph "Announce with color?\nselect window announcement & color bulb to set"
+        }
+    }
 }
 
 private pageGeneralSettings()       {
@@ -2248,7 +2437,7 @@ private varRule(x)      {
     for (def i = 1; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
         def thisRule = getRule(ruleNo, '*', false)
-        if (!thisRule)      continue;
+        if (!thisRule || thisRule.disabled)      continue;
         def ruleDesc = "$ruleNo:"
         ruleDesc = (thisRule.disabled ? "$ruleDesc Disabled=$thisRule.disabled" : "$ruleDesc")
         ruleDesc = (thisRule.mode ? "$ruleDesc Mode=$thisRule.mode" : "$ruleDesc")
@@ -2270,22 +2459,32 @@ private varRule(x)      {
             ruleDesc = (thisRule.fromTimeType == timeTime() ? "$ruleDesc From=$ruleFromTimeHHmm" : (thisRule.fromTimeType == timeSunrise() ? "$ruleDesc From=Sunrise" : "$ruleDesc From=Sunset"))
             ruleDesc = (thisRule.toTimeType == timeTime() ? "$ruleDesc To=$ruleToTimeHHmm" : (thisRule.toTimeType == timeSunrise() ? "$ruleDesc To=Sunrise" : "$ruleDesc To=Sunset"))
         }
-        ruleDesc = (thisRule.device ? "$ruleDesc Device=$thisrule.device ${(thisrule.commands ? ": " + thisrule.commands : '')}" : "$ruleDesc")
-        ruleDesc = (thisRule.piston ? "$ruleDesc Piston=true" : "$ruleDesc")
-        ruleDesc = (thisRule.actions ? "$ruleDesc Routines=true" : "$ruleDesc")
-        ruleDesc = (thisRule.geSmartLight ? "$ruleDesc $thisRule.geSmartLight:$thisRule.geSmartLightAction" : "$ruleDesc")
-        ruleDesc = (thisRule.musicAction ? "$ruleDesc Music=${(thisRule.musicAction == '1' ? 'Start' : (thisRule.musicAction == '2' ? 'Pause' : 'Neither'))}" : "$ruleDesc")
-        if (thisRule.switchesOn)    {
-            ruleDesc = (thisRule.switchesOn ? "$ruleDesc ON=${(anonIt ? thisRule.switchesOn.size() : thisRule.switchesOn)}" : "$ruleDesc")
-            ruleDesc = (thisRule.level ? "$ruleDesc Level=$thisRule.level" : "$ruleDesc")
-            ruleDesc = (thisRule.color ? "$ruleDesc Color=$thisRule.color" : "$ruleDesc")
-            ruleDesc = (thisRule.colorTemperature ? "$ruleDesc Kelvin=$thisRule.colorTemperature" : "$ruleDesc")
+        ruleDesc = ruleDesc + ' Type=' + (thisRule.type == 't' ? 'Temperature' : 'Execution')
+        if (thisRule.type == 't')       {
+            ruleDesc = (thisRule.coolTemp ? "$ruleDesc Cool=$thisRule.coolTemp" : "$ruleDesc")
+            ruleDesc = (thisRule.heatTemp ? "$ruleDesc Heat=$thisRule.heatTemp" : "$ruleDesc")
+            ruleDesc = (thisRule.tempRange ? "$ruleDesc Range=$thisRule.tempRange" : "$ruleDesc")
+            ruleDesc = (thisRule.fanOnTemp ? "$ruleDesc Fan On=$thisRule.fanOnTemp" : "$ruleDesc")
+            ruleDesc = (thisRule.fanSpeedIncTemp ? "$ruleDesc Fan Increment=$thisRule.fanSpeedIncTemp" : "$ruleDesc")
         }
-        ruleDesc = (thisRule.switchesOff ? "$ruleDesc OFF=${(anonIt ? thisRule.switchesOff.size() : thisRule.switchesOff)}" : "$ruleDesc")
-        ruleDesc = (thisRule.noMotion ? "$ruleDesc Occupied Timer=${thisRule.noMotion}" : "$ruleDesc")
-        ruleDesc = (thisRule.noMotionEngaged ? "$ruleDesc Engaged Timer=${thisRule.noMotionEngaged}" : "$ruleDesc")
-        ruleDesc = (thisRule.dimTimer ? "$ruleDesc Checking Timer=${thisRule.dimTimer}" : "$ruleDesc")
-        ruleDesc = (thisRule.noMotionAsleep ? "$ruleDesc Asleep Timer=${thisRule.noMotionAsleep}" : "$ruleDesc")
+        else        {
+            ruleDesc = (thisRule.device ? "$ruleDesc Device=$thisRule.device ${(thisRule.commands ? ": " + thisRule.commands : '')}" : "$ruleDesc")
+            ruleDesc = (thisRule.piston ? "$ruleDesc Piston=true" : "$ruleDesc")
+            ruleDesc = (thisRule.actions ? "$ruleDesc Routines=true" : "$ruleDesc")
+    //        ruleDesc = (thisRule.geSmartLight ? "$ruleDesc $thisRule.geSmartLight:$thisRule.geSmartLightAction" : "$ruleDesc")
+            ruleDesc = (thisRule.musicAction ? "$ruleDesc Music=${(thisRule.musicAction == '1' ? 'Start' : (thisRule.musicAction == '2' ? 'Pause' : 'Neither'))}" : "$ruleDesc")
+            if (thisRule.switchesOn)    {
+                ruleDesc = (thisRule.switchesOn ? "$ruleDesc ON=${(anonIt ? thisRule.switchesOn.size() : thisRule.switchesOn)}" : "$ruleDesc")
+                ruleDesc = (thisRule.level ? "$ruleDesc Level=$thisRule.level" : "$ruleDesc")
+                ruleDesc = (thisRule.color ? "$ruleDesc Color=$thisRule.color" : "$ruleDesc")
+                ruleDesc = (thisRule.colorTemperature ? "$ruleDesc Kelvin=$thisRule.colorTemperature" : "$ruleDesc")
+            }
+            ruleDesc = (thisRule.switchesOff ? "$ruleDesc OFF=${(anonIt ? thisRule.switchesOff.size() : thisRule.switchesOff)}" : "$ruleDesc")
+            ruleDesc = (thisRule.noMotion ? "$ruleDesc Occupied Timer=${thisRule.noMotion}" : "$ruleDesc")
+            ruleDesc = (thisRule.noMotionEngaged ? "$ruleDesc Engaged Timer=${thisRule.noMotionEngaged}" : "$ruleDesc")
+            ruleDesc = (thisRule.dimTimer ? "$ruleDesc Checking Timer=${thisRule.dimTimer}" : "$ruleDesc")
+            ruleDesc = (thisRule.noMotionAsleep ? "$ruleDesc Asleep Timer=${thisRule.noMotionAsleep}" : "$ruleDesc")
+        }
         ruleString = ruleString + "\n${(hT == _Hubitat ? '\t\t' : '')}" + ruleDesc
     }
     return ruleString
@@ -2320,8 +2519,8 @@ def updated()	{
     if (!childCreated())    spawnChildDevice(app.label);
     if (!parent || !parent.handleAdjRooms())     {
         ifDebug("no adjacent rooms", 'info')
-        def adjMotionSensors = []
-        updateRoom(adjMotionSensors)
+//        def adjMotionSensors = []
+        updateRoom([], true)
     }
     def adjRoomNames = []
     adjRooms.each  {  adjRoomNames << parent.getARoomName(it)  }
@@ -2337,8 +2536,29 @@ def updated()	{
     child."${(isRoomEngaged() ? engaged : vacant)}"()
 }
 
-def updateRoom(adjMotionSensors)     {
+def updateRoom(adjMotionSensors, fromThis = false)     {
+    ifDebug("updateRoom $app.label $adjMotionSensors", 'info')
 //    ifDebug("adjMotionSensors")
+    if (!fromThis)      {
+        if (!state.adjMotionSensorsID && !adjMotionSensors)         return;
+        def aMSsID = (adjMotionSensors ? adjMotionSensors.collect{ it.getId() } : [])
+        ifDebug("$state.adjMotionSensorsID | $aMSsID")
+        def sameMSs = true
+        if (state.adjMotionSensorsID && aMSsID)         {
+            if (state.adjMotionSensorsID.size() != aMSsID.size())
+                sameMSs = false
+            else
+                aMSsID.each     {
+                    if (!state.adjMotionSensorsID.contains(it))     sameMSs = false;
+                }
+        }
+        else
+            sameMSs = false
+        if (sameMSs)        return;
+        state.adjMotionSensorsID = aMSsID
+    }
+    else
+        state.adjMotionSensorsID = []
 	initialize()
     def hT = getHubType()
     boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
@@ -2357,12 +2577,12 @@ def updateRoom(adjMotionSensors)     {
         if (hT == _SmartThings)
             subscribe(roomButton, "button", roomButtonPushedEventHandler)
         else
-            subscribe(roomButton, "pushed.$buttonForRoom", roomButtonPushedEventHandler)
+            subscribe(roomButton, "${(roomButtonAction == holdAButton ? 'held' : (roomButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonForRoom", roomButtonPushedEventHandler)
     if (occupiedButton)
         if (hT == _SmartThings)
             subscribe(occupiedButton, "button", buttonPushedOccupiedEventHandler)
         else
-            subscribe(occupiedButton, "pushed.$buttonIsOccupied", buttonPushedOccupiedEventHandler)
+            subscribe(occupiedButton, "${(occupiedButtonAction == holdAButton ? 'held' : (occupiedButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsOccupied", buttonPushedOccupiedEventHandler)
     if (occSwitches) {
     	subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
     	subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
@@ -2374,7 +2594,7 @@ def updateRoom(adjMotionSensors)     {
         else                                ind = 0;
     }*/
 //    child.updateAdjMotionInd(ind)
-//    ifDebug("updateRoom 2")
+    ifDebug("updateRoom 2", 'info')
     state.switchesHasLevel = [:]
     state.switchesHasColor = [:]
     state.switchesHasColorTemperature = [:]
@@ -2395,13 +2615,13 @@ def updateRoom(adjMotionSensors)     {
         subscribe(musicDevice, "status.stopped", musicStoppedEventHandler)
     }
 //    ifDebug("busyCheck: $busyCheck")
-    state.busyCheck = (busyCheck ? busyCheck as Integer : null)
+    state.busyCheck = (busyCheck && busyCheck.isInteger() ? busyCheck as Integer : null)
 //    if (engagedButton)  subscribe(engagedButton, "button.pushed", buttonPushedEventHandler)
     if (engagedButton)
         if (hT == _SmartThings)
             subscribe(engagedButton, "button", buttonPushedEventHandler)
         else
-            subscribe(engagedButton, "pushed.$buttonIs", buttonPushedEventHandler)
+            subscribe(engagedButton, "${(engagedButtonAction == holdAButton ? 'held' : (engagedButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIs", buttonPushedEventHandler)
     if (personsPresence)     {
     	subscribe(personsPresence, "presence.present", presencePresentEventHandler)
         subscribe(personsPresence, "presence.not present", presenceNotPresentEventHandler)
@@ -2441,10 +2661,10 @@ def updateRoom(adjMotionSensors)     {
         if (hT == _SmartThings)
             subscribe(vacantButton, "button", buttonPushedVacantEventHandler)
         else
-            subscribe(vacantButton, "pushed.$buttonIsVacant", buttonPushedVacantEventHandler)
+            subscribe(vacantButton, "${(vacantButtonAction == holdAButton ? 'held' : (vacantButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsVacant", buttonPushedVacantEventHandler)
     if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", vacantSwitchOffEventHandler);
 
-//    ifDebug("updateRoom 3")
+    ifDebug("updateRoom 3", 'info')
     if (luxSensor)      {
         subscribe(luxSensor, "illuminance", luxEventHandler)
         state.previousLux = getIntfromStr((String) luxSensor.currentIlluminance)
@@ -2465,7 +2685,7 @@ def updateRoom(adjMotionSensors)     {
         if (hT == _SmartThings)
             subscribe(asleepButton, "button", buttonPushedAsleepEventHandler)
         else
-            subscribe(asleepButton, "pushed.$buttonIsAsleep", buttonPushedAsleepEventHandler)
+            subscribe(asleepButton, "${(asleepButtonAction == holdAButton ? 'held' : (asleepButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsAsleep", buttonPushedAsleepEventHandler)
     if (asleepSwitch)      {
     	subscribe(asleepSwitch, "switch.on", asleepSwitchOnEventHandler)
     	subscribe(asleepSwitch, "switch.off", asleepSwitchOffEventHandler)
@@ -2475,7 +2695,7 @@ def updateRoom(adjMotionSensors)     {
         if (hT == _SmartThings)
             subscribe(nightButton, "button", nightButtonPushedEventHandler)
         else
-            subscribe(nightButton, "pushed.$nightButtonIs", nightButtonPushedEventHandler)
+            subscribe(nightButton, "${(nightButtonAction == holdAButton ? 'held' : (nightButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$nightButtonIs", nightButtonPushedEventHandler)
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     nightSwitches.each      {
         if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
@@ -2485,7 +2705,7 @@ def updateRoom(adjMotionSensors)     {
     state.nightSetCT = (nightSetCT ? nightSetCT as Integer : null)
     state.noAsleep = ((noAsleep && noAsleep >= 1) ? (noAsleep * 60 * 60) : null)
 
-//    ifDebug("updateRoom 4")
+    ifDebug("updateRoom 4", 'info')
     if (lockedContact) {
         subscribe(lockedContact, "contact.${(lockedContactCmd ? 'open' : 'closed')}", lockedContactOpenEventHandler)
         subscribe(lockedContact, "contact.${(lockedContactCmd ? 'closed' : 'open')}", lockedContactClosedEventHandler)
@@ -2529,16 +2749,25 @@ def updateRoom(adjMotionSensors)     {
     }
     else
         state.dayOfWeek = null
+
+    ifDebug("updateRoom 5", 'info')
     if (contactSensorsRT)      {
     	subscribe(contactSensorsRT, "contact.open", contactsRTOpenEventHandler)
         subscribe(contactSensorsRT, "contact.closed", contactsRTClosedEventHandler)
     }
     if (tempSensors)        subscribe(tempSensors, "temperature", temperatureEventHandler);
+    if (outTempSensor)      subscribe(outTempSensor, "temperature", updateOutTempInd)
+    if (roomVents)      {
+        subscribe(roomVents, "switch", updateVentIndP)
+        subscribe(roomVents, "level", updateVentIndP)
+    }
     updateRulesToState()
     updateSwitchAttributesToStateAndSubscribe()
 //    switchesOnOrOff()
     subscribe(location, "sunrise", scheduleFromToTimes)
     subscribe(location, "sunset", scheduleFromToTimes)
+    if (ht == _SmartThings)     subscribe(location, "askAlexaMQ", askAlexaMQHandler)
+    else                        state.askAlexaMQ = []
 
 /*
     def child = getChildDevice(getRoom())
@@ -2561,12 +2790,24 @@ def updateRoom(adjMotionSensors)     {
 */
 
 //    ifDebug("updateRoom runIns")
-    runIn(0, processCoolHeat)
+    runIn(0, updateIndicators)
     runIn(1, scheduleFromToTimes)
-    runIn(2, updateIndicators)
+    runIn(2, processCoolHeat)
 }
 
-def	initialize()	{ unsubscribe(); unschedule(); state.remove("pList") }
+def	initialize()    {
+    unsubscribe()
+    unschedule()
+    sendLocationEvent(name: "AskAlexaMQRefresh", isStateChange: true)
+    state.remove("pList")
+}
+
+def askAlexaMQHandler(evt) {
+    if (evt)
+        switch (evt.value) {
+            case "refresh":     (state.askAlexaMQ = evt.jsonData && evt.jsonData?.queues ? evt.jsonData.queues : []);   break;
+      }
+}
 
 /*
 def push(button)		{
@@ -2646,7 +2887,7 @@ def updateIndicators()      {
 //        ind = ''
 //        adjRooms.each     {  ind = ind + (ind.size() > 0 ? ', ' : '') + roomNames[it]  }
 //    }
-    child.updateContactRTInd((contactSensorsRT ? (contactSensorsRT.currentContact.contains('closed') ? 1 : 0) : -1))
+    child.updateContactRTIndC((contactSensorsRT ? (contactSensorsRT.currentContact.contains('closed') ? 1 : 0) : -1))
     child.updateAdjRoomsInd((adjRooms ? adjRooms.size() : -1))
 /*    if (adjMotionSensors)      {
         devValue = adjMotionSensors.currentMotion
@@ -2657,6 +2898,8 @@ def updateIndicators()      {
     updateThermostatIndP()
     updateFanIndP()
     child.setupAlarmC()
+    updateOutTempIndP()
+    updateVentIndP()
 //    child.updateThermoOverrideIndC(thermoOverride)
 }
 
@@ -2671,6 +2914,12 @@ private getAvgTemperature()     {
     temperatures.each   {  temperature = temperature + it  }
 //    ifDebug("to return: ${(temperature / countTempSensors)}")
     return (temperature / countTempSensors)
+}
+
+def updateOutTempIndP(evt = null)     {
+    ifDebug("updateOutTempIndP")
+    def child = getChildDevice(getRoom())
+    child.updateOutTempIndC((outTempSensor ? outTempSensor.currentTemperature : -1))
 }
 
 private isAnySwitchOn()   {
@@ -2789,8 +3038,8 @@ def updateSwitchAttributesToStateAndSubscribe()    {
     def hT = getHubType()
     def switches = []
     def switchesID = []
-    def geSmartLights = []
-    def geSmartLightsID = []
+//    def geSmartLights = []
+//    def geSmartLightsID = []
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
@@ -2806,6 +3055,7 @@ def updateSwitchAttributesToStateAndSubscribe()    {
                     if (it.hasCommand("setColorTemperature"))       state.switchesHasColorTemperature << ["$itID":true];
                 }
             }
+/*
             if (hT == _SmartThings)
                 thisRule.geSmartLight.each      {
                     def itID = it.getId()
@@ -2814,8 +3064,10 @@ def updateSwitchAttributesToStateAndSubscribe()    {
                         geSmartLightsID << itID
                         if (it.hasCommand("occupancy"))     state.geSmartLightHasOccupancy << ["$itID":true];
                         if (it.hasCommand("vacancy"))       state.geSmartLightHasVacancy << ["$itID":true];
+                        if (it.hasCommand("manual"))        state.geSmartLightHasManual << ["$itID":true];
                     }
                 }
+*/
         }
     }
     if (switches)       {
@@ -2824,13 +3076,17 @@ def updateSwitchAttributesToStateAndSubscribe()    {
     }
 }
 
-private getNextRule(ruleNo, ruleType = '*', getConditionsOnly = false)     {
-    for (def i = ruleNo as Integer; i < 11; i++)       {
+private getNextRule(ruleNo, ruleType = '*', checkState = true, getConditionsOnly = false)     {
+    def thisRule, i
+    for (i = ruleNo as Integer; i < 11; i++)       {
         def nextRuleNo = String.valueOf(i)
-        def thisRule = getRule(nextRuleNo, ruleType, true, getConditionsOnly)
-        if (thisRule && !thisRule.disabled)     return thisRule;
+        thisRule = getRule(nextRuleNo, ruleType, checkState, getConditionsOnly)
+//        ifDebug("getNextRule: $thisRule")
+//        if (thisRule)       ifDebug("getNextRule: $thisRule.disabled | ${!thisRule.disabled}");
+        if (thisRule && !thisRule.disabled)     break;
     }
-    return [ruleNo:'EOR']
+//    if (i < 11)     ifDebug("getNextRule: $thisRule");
+    return (i < 11 ? thisRule : [ruleNo:'EOR'])
 }
 
 private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = false)     {
@@ -2863,7 +3119,9 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
     def ruleToHumidity = settings["toHumidity$ruleNo"]
 //    def ruleFromDate = dateInputValid(settings["fromDate$ruleNo"], true)
 //    def ruleToDate = dateInputValid(settings["toDate$ruleNo"], false)
+//    ifDebug("${settings["fromDate$ruleNo"]}, ${settings["toDate$ruleNo"]}")
     def rD = dateInputValid(settings["fromDate$ruleNo"], settings["toDate$ruleNo"])
+//    ifDebug("rD: $rD")
     def ruleFromDate = (ruleType != 't' ? rD[0] : null)
     def ruleToDate = (ruleType != 't' ? rD[1] : null)
     def ruleFromTimeType = settings["fromTimeType$ruleNo"]
@@ -2910,14 +3168,15 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
         def ruleDeviceCmds = settings["cmds$ruleNo"]
         def rulePiston = settings["piston$ruleNo"]
         def ruleActions = settings["actions$ruleNo"]
-        def ruleGESmartLight = settings["geSmartLight$ruleNo"]
-        def ruleGESmartLightAction = settings["geSmartLightAction$ruleNo"]
+//        def ruleGESmartLight = settings["geSmartLight$ruleNo"]
+//        def ruleGESmartLightAction = settings["geSmartLightAction$ruleNo"]
         def ruleMusicAction = settings["musicAction$ruleNo"]
         def ruleShadePostion = settings["shadePosition$ruleNo"]
         def ruleSwitchesOn = settings["switchesOn$ruleNo"]
         def ruleSetLevelTo = settings["setLevelTo$ruleNo"]
         def ruleSetColorTo = settings["setColorTo$ruleNo"]
-        def ruleSetHueTo = returnHueAndSaturation(ruleSetColorTo)
+//        def ruleSetHueTo = returnHueAndSaturation(ruleSetColorTo)
+        def ruleSetHueTo = (ruleSetColorTo && colorsRGB[ruleSetColorTo] ? convertRGBToHueSaturation(colorsRGB[ruleSetColorTo][1]) : [])
         def ruleSetColorTemperatureTo = settings["setColorTemperatureTo$ruleNo"]
         def ruleSwitchesOff = settings["switchesOff$ruleNo"]
         def ruleNoMotion = settings["noMotion$ruleNo"]
@@ -2928,7 +3187,7 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
                 (ruleFromHumidity && ruleToHumidity) ||
                 ruleFromDate || ruleToDate || ruleFromTimeType || ruleToTimeType ||
                 ruleDevice || ruleDeviceCmds ||
-                rulePiston || ruleActions || ruleGESmartLight || ruleMusicAction || ruleShadePostion ||
+                rulePiston || ruleActions || ruleMusicAction || ruleShadePostion ||
                 ruleSwitchesOn || ruleSetLevelTo || ruleSetColorTo || ruleSetColorTemperatureTo || ruleSwitchesOff ||
                 ruleNoMotion || ruleNoMotionEngaged || ruleDimTimer || ruleNoMotionAsleep))
             return null
@@ -2939,9 +3198,9 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
                     fromTimeType:ruleFromTimeType, fromTimeOffset:ruleFromTimeOffset, fromTime:ruleFromTime,
                     toTimeType:ruleToTimeType, toTimeOffset:ruleToTimeOffset, toTime:ruleToTime,
                     device:ruleDevice, commands:ruleDeviceCmds,
-                    piston:rulePiston, actions:ruleActions, geSmartLight:ruleGESmartLight, geSmartLightAction:ruleGESmartLightAction, musicAction:ruleMusicAction, shade:ruleShadePostion,
-                    switchesOn:ruleSwitchesOn, level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo, colorTemperature:ruleSetColorTemperatureTo,
-                    switchesOff:ruleSwitchesOff,
+                    piston:rulePiston, actions:ruleActions, musicAction:ruleMusicAction, shade:ruleShadePostion,
+                    switchesOn:ruleSwitchesOn, level:ruleSetLevelTo, color:ruleSetColorTo, hue:ruleSetHueTo,
+                    colorTemperature:ruleSetColorTemperatureTo, switchesOff:ruleSwitchesOff,
                     noMotion:ruleNoMotion, noMotionEngaged:ruleNoMotionEngaged, dimTimer:ruleDimTimer, noMotionAsleep:ruleNoMotionAsleep]
     }
 }
@@ -2983,7 +3242,7 @@ def	motionActiveEventHandler(evt)	{
             runIn(state.noMotionEngaged, roomVacant)
         }
 */
-        if (whichNoMotion == lastMotionActive)      refreshEngagedTimer(engaged);
+        if (whichNoMotion == lastMotionActive && state.noMotionEngaged)      refreshEngagedTimer(engaged);
         return
     }
 /*
@@ -3038,7 +3297,9 @@ def	motionInactiveEventHandler(evt)     {
 	def roomState = child?.currentValue(occupancy)
     if (roomState == engaged)     {
 //        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged(false,true,false,true,false))      {
-        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged(false,true,false,true,true))      {
+//                private isRoomEngaged(skipPresence = false, skipMusic = false, skipPower = false, skipSwitch = false, skipContact = false)      {
+//        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged && !isRoomEngaged(false,false,false,false,false))      {
+        if (whichNoMotion == lastMotionInactive && state.noMotionEngaged)      {
 //            updateChildTimer(state.noMotionEngaged)
 //            runIn(state.noMotionEngaged, roomVacant)
             refreshEngagedTimer(engaged)
@@ -3277,7 +3538,7 @@ def	buttonPushedVacantEventHandler(evt)     {
     else if (buttonToggleWithVacant && roomState == vacant)
         child.generateEvent(occupied)
 */
-    if (roomState != vacant)        child.generate(vacant)
+    if (roomState != vacant)        child.generateEvent(vacant)
 //    child.generateEvent(roomState != vacant ? vacant : checking)
 // added 18-01-30: if room is already vacant or another state dont do anything
 /*    else    {
@@ -3448,10 +3709,10 @@ private refreshOccupiedTimer(roomState = null)   {
 }
 
 private refreshEngagedTimer(roomState = null)   {
-    def child
+//    def child
     if (!roomState)     {
-        child = getChildDevice(getRoom())
-        roomState = child?.currentValue(occupancy)
+//        child = getChildDevice(getRoom())
+        roomState = getChildDevice(getRoom())?.currentValue(occupancy)
     }
     if (roomState == engaged && state.noMotionEngaged)      {
         updateChildTimer(state.noMotionEngaged)
@@ -3463,7 +3724,14 @@ def	contactOpenEventHandler(evt)	{
     ifDebug("contactOpenEventHandler", 'info')
     def cV = (contactSensor ? contactSensor.currentContact : '')
     if (contactSensorOutsideDoor)       {
-        if (contactSensor && musicDevice && announceDoor)   musicDevice.playTextAndResume(evt.device.displayName + ' closed.', announceVolume);
+//        if (contactSensor && musicDevice && announceDoor)   musicDevice.playTextAndResume(evt.device.displayName + ' closed.', announceVolume);
+        if (announceDoor)     {
+            if (announceDoorColor)      {
+                state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceDoorColor][1])
+                setupColorNotification()
+            }
+            if (announceDoorSpeaker)        speakIt(evt.device.displayName + ' closed.');
+        }
         if (announceContact && !cV.contains(open))          unschedule("contactStaysOpen");
     }
     else if (announceContact)        {
@@ -3534,7 +3802,14 @@ def	contactClosedEventHandler(evt)     {
     ifDebug("contactClosedEventHandler", 'info')
     def cV = contactSensor.currentContact
     if (contactSensorOutsideDoor)       {
-        if (contactSensor && musicDevice && announceDoor)   musicDevice.playTextAndResume(evt.device.displayName + ' opened.', announceVolume);
+//        if (contactSensor && musicDevice && announceDoor)   musicDevice.playTextAndResume(evt.device.displayName + ' opened.', announceVolume);
+        if (announceDoor)     {
+            if (announceDoorColor)      {
+                state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceDoorColor][1])
+                setupColorNotification()
+            }
+            if (announceDoorSpeaker)        speakIt(evt.device.displayName + ' opened.');
+        }
         if (announceContact)        {
             def aC = announceContact as Integer
             runIn(aC * 60, contactStaysOpen)
@@ -3612,7 +3887,14 @@ def contactStaysOpen()      {
         if (it.currentContact == open)
             cO = (cO.size() > 0 ? ', ' : '') + it.displayName
     }
-    musicDevice.playTextAndResume('Contacts open ' + cO + '.', announceVolume)
+//    musicDevice.playTextAndResume('Contacts open ' + cO + '.', announceVolume)
+    if (announceContact)     {
+        if (announceContactColor)       {
+            state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactColor][1])
+            setupColorNotification()
+        }
+        if (announceContactSpeaker)        speakIt('Contacts open ' + cO + '.');
+    }
     def aC = announceContact as Integer
     runIn(aC * 60, contactStaysOpen)
 }
@@ -3660,7 +3942,14 @@ def resetAsleep()     {
 def	contactsRTOpenEventHandler(evt)     {
     ifDebug("contactsRTOpenEventHandler", 'info')
     def child = getChildDevice(getRoom())
-    child.updateContactRTInd(contactSensorsRT.currentContact.contains(open) ? 0 : 1)
+    child.updateContactRTIndC(contactSensorsRT.currentContact.contains(open) ? 0 : 1)
+    if (announceContactRT)     {
+        if (announceContactRTColor)         {
+            state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1])
+            setupColorNotification()
+        }
+        if (announceContactRTSpeaker)        speakIt(evt.device.displayName + ' opened.');
+    }
     if (!checkPauseModesAndDoW())    return;
     processCoolHeat()
 }
@@ -3668,7 +3957,14 @@ def	contactsRTOpenEventHandler(evt)     {
 def	contactsRTClosedEventHandler(evt)     {
     ifDebug("contactsRTClosedEventHandler", 'info')
     def child = getChildDevice(getRoom())
-    child.updateContactRTInd(contactSensorsRT.currentContact.contains(open) ? 0 : 1)
+    child.updateContactRTIndC(contactSensorsRT.currentContact.contains(open) ? 0 : 1)
+    if (announceContactRT)     {
+        if (announceContactRTColor)     {
+            state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1])
+            setupColorNotification()
+        }
+        if (announceContactRTSpeaker)        speakIt(evt.device.displayName + ' closed.');
+    }
     if (!checkPauseModesAndDoW())    return;
     processCoolHeat()
 }
@@ -3687,7 +3983,7 @@ def musicPlayingEventHandler(evt)       {
     else if (hasOccupiedDevice() && roomState == vacant)
         child.generateEvent(motionSensors && motionSensors.currentMotion.contains(active) && whichNoMotion != lastMotionActive ? occupied : checking)
 //        child.generateEvent(checking)
-    else
+    else if (roomState == engaged)
         refreshEngagedTimer(engaged)
 }
 
@@ -3696,7 +3992,7 @@ def musicStoppedEventHandler(evt)       {
 //    ifDebug("evt.name: $evt.name | evt.value: $evt.value")
     def child = getChildDevice(getRoom())
     if (!checkPauseModesAndDoW())    return;
-    if (isRoomEngaged(false,true,false,false,false))    return;
+    if (isRoomEngaged(false,false,false,false,false))    return;
 	def roomState = child?.currentValue(occupancy)
     if (roomState == locked && lockedOverrides)     return;
     if (resetEngagedDirectly && roomState == engaged)
@@ -4003,13 +4299,19 @@ def processCoolHeat(roomState = null)       {
     if (roomFanSwitch)        {
         if  (turnOn && thisRule.fanOnTemp)        {
             def fanLowTemp      = (thisRule.fanOnTemp + 0f).round(1)
-            def fanMediumTemp   = (thisRule.fanOnTemp + thisRule.fanSpeedIncTemp + 0f).round(1)
+            def fanMediumTemp   = (thisRule.fanOnTemp + (thisRule.fanSpeedIncTemp * 1f)).round(1)
             def fanHighTemp     = (thisRule.fanOnTemp + (thisRule.fanSpeedIncTemp * 2f)).round(1)
 //            ifDebug("temperature: $temperature | fanOnTemp: $thisRule.fanOnTemp | fanLowTemp: $fanLowTemp | fanMediumTemp: $fanMediumTemp | fanHighTemp: $fanHighTemp")
-            if (temperature >= fanHighTemp)         { roomFanSwitch.on(); pauseIt(); roomFanSwitch.setLevel(fanHigh); }
-            else if (temperature >= fanMediumTemp)  { roomFanSwitch.on(); pauseIt(); roomFanSwitch.setLevel(fanMedium); }
-            else if (temperature >= fanLowTemp)     { roomFanSwitch.on(); pauseIt(); roomFanSwitch.setLevel(fanLow); }
-            else                                    roomFanSwitch.off();
+            def fL = roomFanSwitch.hasCommand("setLevel")
+            if (temperature >= fanLowTemp)      {
+                roomFanSwitch.on()
+                if (fL)     {
+                    pauseIt()
+                    roomFanSwitch.setLevel((temperature >= fanHighTemp ? fanHigh : (temperature >= fanMediumTemp ? fanMedium : fanLow)))
+                }
+            }
+            else
+                roomFanSwitch.off()
         }
         else
             roomFanSwitch.off()
@@ -4138,19 +4440,26 @@ private processCoolHeatRules(temperature)      {
         def currentMode = String.valueOf(location.currentMode)
         def nowTime	= now() + 1000
         def nowDate = new Date(nowTime)
-        def sunriseAndSunset = getSunriseAndSunset()
-        if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
-            ifDebug("Please set location for the hub for rules to be processed.", "error")
-            return
+        def sunriseTime, sunsetTime
+        if (!state.sunriseTime || !state.sunsetTime)        {
+            def sunriseAndSunset = getSunriseAndSunset()
+            if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+                ifDebug("Please set location for the hub for rules to be processed.", "error")
+                return
+            }
+            sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+            sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         }
-        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+        else        {
+            sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
+            sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
+        }
         def timedRulesOnly = false
         def sunriseTimeWithOff, sunsetTimeWithOff
         for (def i = 1; i < 11; i++)      {
             def ruleHasTime = false
             def ruleNo = String.valueOf(i)
-            thisRule = getNextRule(ruleNo, 't', true)
+            thisRule = getNextRule(ruleNo, 't', true, true)
 //            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.mode: $thisRule.mode | thisRule.state: $thisRule.state")
             if (thisRule.ruleNo == 'EOR')     break;
             i = thisRule.ruleNo as Integer
@@ -4204,13 +4513,13 @@ private processCoolHeatRules(temperature)      {
 //}
 
 private updateMaintainIndP(temp)   {
-    ifDebug("updateMaintainIndP", 'info')
+//    ifDebug("updateMaintainIndP", 'info')
     def child = getChildDevice(getRoom())
     if (child)  child.updateMaintainIndC(temp);
 }
 
 def updateThermostatIndP()   {
-    ifDebug("updateThermostatIndP", 'info')
+//    ifDebug("updateThermostatIndP", 'info')
     def thermo = 9
     def isHere = (personsPresence ? personsPresence.currentPresence.contains(present) : false)
     if ((useThermostat && roomThermostat && roomThermostat.currentThermostatOperatingState == 'cooling') ||
@@ -4239,6 +4548,12 @@ def updateFanIndP(evt)   {
         def cL = roomFanSwitch?.currentLevel
         child.updateFanIndC((!roomFanSwitch ? -1 : (roomFanSwitch.currentSwitch == 'off' ? 0 : (cL <= fanLow ? 1 : (cL <= fanMedium ? 2 : 3)))))
     }
+}
+
+def updateVentIndP(evt)   {
+//    ifDebug("updateVentIndP", 'info')
+    def child = getChildDevice(getRoom())
+    if (child)          child.updateVentIndC((!roomVents ? -1 : (roomVents.currentSwitch == 'off' ? 0 : roomVents.currentLevel)));
 }
 
 def luxEventHandler(evt)    {
@@ -4290,13 +4605,20 @@ def powerEventHandler(evt)    {
         (powerToTimeType && (powerToTimeType != timeTime() || powerToTime)))            {
         def nowTime	= now() + 1000
         def nowDate = new Date(nowTime)
-        def sunriseAndSunset = getSunriseAndSunset()
-        if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
-            ifDebug("Please set location for the hub for rules to be processed.", "error")
-            return
+        def sunriseTime, sunsetTime
+        if (!state.sunriseTime || !state.sunsetTime)        {
+            def sunriseAndSunset = getSunriseAndSunset()
+            if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+                ifDebug("Please set location for the hub for rules to be processed.", "error")
+                return
+            }
+            sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+            sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         }
-        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+        else        {
+            sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
+            sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
+        }
         def sunriseTimeWithOff, sunsetTimeWithOff
         if (powerFromTimeType == timeSunrise())
             sunriseTimeWithOff = (powerFromTimeOffset ? new Date(sunriseTime.getTime() + (powerFromTimeOffset * 60000L)) : sunriseTime)
@@ -4506,7 +4828,7 @@ def handleSwitches(data)	{
 //                processCoolHeat()
     }
     else if (newState == engaged)       {
-        if (state.noMotionEngaged && !isRoomEngaged(false,true,false,true,true))      {
+        if (state.noMotionEngaged)      {
 //            updateChildTimer(state.noMotionEngaged)
 //            runIn(state.noMotionEngaged, roomVacant)
             refreshEngagedTimer(engaged)
@@ -4592,13 +4914,20 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
         def roomState = (passedRoomState ?: child?.currentValue(occupancy))
         def nowTime	= now() + 1000
         def nowDate = new Date(nowTime)
-        def sunriseAndSunset = getSunriseAndSunset()
-        if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
-            ifDebug("Please set location for the hub for rules to be processed.", "error")
-            return
+        def sunriseTime, sunsetTime
+        if (!state.sunriseTime || !state.sunsetTime)        {
+            def sunriseAndSunset = getSunriseAndSunset()
+            if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+                ifDebug("Please set location for the hub for rules to be processed.", "error")
+                return
+            }
+            sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+            sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
         }
-        def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-        def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+        else        {
+            sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
+            sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
+        }
         def timedRulesOnly = false
         def sunriseTimeWithOff, sunsetTimeWithOff
         def i = 1
@@ -4606,7 +4935,7 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
 //        for (def rule in state.rules.sort{ it.key })    {
             def ruleHasTime = false
             def ruleNo = String.valueOf(i)
-            thisRule = getNextRule(ruleNo, null, true)
+            thisRule = getNextRule(ruleNo, 'e', true, true)
             if (thisRule.ruleNo == 'EOR')     break;
             i = thisRule.ruleNo as Integer
 //            if (!thisRule || thisRule.disabled)      continue;
@@ -4617,10 +4946,13 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
             if (thisRule.state && !thisRule.state.contains(roomState))      continue;
             if (thisRule.dayOfWeek && !(checkRunDay(thisRule.dayOfWeek)))   continue;
 //            ifDebug("ruleNo: $ruleNo | fromDate: $thisRule.fromDate | toDate: $thisRule.toDate")
+//            ifDebug("thisRule: $thisRule")
             if (thisRule.fromDate && thisRule.toDate)   {
-                def fDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", thisRule.fromDate, location.timeZone)
-                def tDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", thisRule.toDate, location.timeZone)
-//                ifDebug("ruleNo: $ruleNo | fromDate: $thisRule.fromDate | fDate: $fDate | toDate: $thisRule.toDate | tDate: $tDate | nowDate: $nowDate")
+//                def fDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", thisRule.fromDate, location.timeZone)
+//                def tDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", thisRule.toDate, location.timeZone)
+                def fDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
+                def tDate = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
+                ifDebug("ruleNo: $ruleNo | fromDate: $thisRule.fromDate | fDate: $fDate | toDate: $thisRule.toDate | tDate: $tDate | nowDate: $nowDate")
 //                if (nowDate < fDate || nowDate > tDate)    continue;
                 if (nowDate.before(fDate) || nowDate.after(tDate))    continue;
             }
@@ -4724,7 +5056,7 @@ private executeRule(thisRule, switchesOnly = false)   {
         runDeviceCmds(thisRule)
         runActions(thisRule)
         executePiston(thisRule)
-        setGESmartLightOperationalMode(thisRule)
+//        setGESmartLightOperationalMode(thisRule)
         musicAction(thisRule)
     }
     setShade(thisRule)
@@ -4861,11 +5193,10 @@ private holidayLightsTwinkle(thisRule)       {
 }
 
 private runDeviceCmds(thisRule)     {
-    if (thisRule.device && thisRule.commands)        {
+    if (thisRule.device && thisRule.commands)
         thisRule.commands.each       {
             thisRule.device."$it"(); pauseIt()
         }
-    }
 }
 
 private runActions(thisRule)    {
@@ -4876,6 +5207,7 @@ private executePiston(thisRule)    {
     if (thisRule.piston)  { webCoRE_execute(thisRule.piston); pauseIt() }
 }
 
+/*
 private setGESmartLightOperationalMode(thisRule)    {
     if (thisRule.geSmartLight)      {
         def itID = thisRule.geSmartLight.getId()
@@ -4886,8 +5218,12 @@ private setGESmartLightOperationalMode(thisRule)    {
             else if (thisRule.geSmartLightAction == '0' && state.geSmartLightHasVacancy[itID])  {
                 thisRule.geSmartLight.occupancy(); pauseIt()
             }
+            else if (thisRule.geSmartLightAction == '9' && state.geSmartLightHasManual[itID])  {
+                thisRule.geSmartLight.manual(); pauseIt()
+            }
     }
 }
+*/
 
 private musicAction(thisRule)       {
     if (musicDevice && thisRule.musicAction)        {
@@ -5240,7 +5576,7 @@ private whichSwitchesAreOn(returnAllSwitches = false)   {
     def switchesThatAreOnID = []
     for (def i = 1; i < 11; i++)      {
         def ruleNo = String.valueOf(i)
-        def thisRule = getNextRule(ruleNo, null)
+        def thisRule = getNextRule(ruleNo, 'e')
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
         thisRule.switchesOn.each        {
@@ -5401,6 +5737,7 @@ def uninstalled() {
 
 def childUninstalled()	{  ifDebug("uninstalled room ${app.label}")  }
 
+/*
 private returnHueAndSaturation(setColorTo)        {
     def rHAS = null
     if (setColorTo)     {
@@ -5423,10 +5760,12 @@ private returnHueAndSaturation(setColorTo)        {
     }
     return rHAS
 }
+*/
 
 private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()
-	def rgb = (colorsRGB[str] ?: colorsRGB['white'])
+	def rgb = (colorsRGB[str][0] ?: colorsRGB['white'][0])
+    ifDebug("convertRGBToHueSaturation: $str | $rgb")
     float r = rgb[0] / 255
     float g = rgb[1] / 255
     float b = rgb[2] / 255
@@ -5530,66 +5869,14 @@ private scheduleFromToTimes()       {
 */
 
 def scheduleFromToTimes(evt = null)       {
+    def sunriseAndSunset = getSunriseAndSunset()
+    if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+        ifDebug("Please set location for the hub for rules to be processed.", "error")
+        return
+    }
+    state.sunriseTime = new Date(sunriseAndSunset.sunrise.getTime()).format("yyyy-MM-dd'T'HH:mm:ssZ")
+    state.sunsetTime  = new Date(sunriseAndSunset.sunset.getTime()).format("yyyy-MM-dd'T'HH:mm:ssZ")
     if (!state.rules || !state.timeCheck)       return;
-//    ifDebug("scheduleFromToTimes", 'info')
-//    def sunriseFromSubscribed = false
-//    def sunriseToSubscribed = false
-//    def sunsetFromSubscribed = false
-//    def sunsetToSubscribed = false
-/*    for (def rule in state.rules.sort{ it.key })        {
-        def thisRule = rule.value
-        if (thisRule.disabled)      continue
-        if (!thisRule.fromTimeType || !thisRule.toTimeType)     continue
-        ifDebug("$thisRule")
-        if (thisRule.fromTimeType == timeSunrise() && !sunriseFromSubscribed)   {
-            subscribe(location, "sunrise", timeFromHandler)
-            sunriseFromSubscribed = true
-        }
-        else
-            if (thisRule.fromTimeType == timeSunset() && !sunsetFromSubscribed)   {
-                subscribe(location, "sunset", timeFromHandler)
-                sunsetFromSubscribed = true
-            }
-        if (thisRule.toTimeType == timeSunrise() && !sunriseToSubscribed)   {
-            subscribe(location, "sunrise", timeToHandler)
-            sunriseToSubscribed = true
-        }
-        else
-            if (thisRule.toTimeType == timeSunset() && !sunsetToSubscribed)   {
-                subscribe(location, "sunset", timeToHandler)
-                sunsetToSubscribed = true
-            }
-    }*/
-/*    def i = 1
-    for (; i < 11; i++)     {
-        def ruleNo = String.valueOf(i)
-        def thisRule = getNextRule(ruleNo, null, true)
-        if (thisRule.ruleNo == 'EOR')     break;
-        i = thisRule.ruleNo as Integer
-//        def thisRule = getRule(ruleNo)
-//        if (!thisRule || thisRule.disabled)      continue;
-        if (!thisRule.fromTimeType || !thisRule.toTimeType)     continue;
-        if (thisRule.fromTimeType == timeSunrise() && !sunriseFromSubscribed)   {
-            subscribe(location, "sunrise", timeFromHandler)
-            sunriseFromSubscribed = true
-        }
-        else    {
-            if (thisRule.fromTimeType == timeSunset() && !sunsetFromSubscribed)   {
-                subscribe(location, "sunset", timeFromHandler)
-                sunsetFromSubscribed = true
-            }
-        }
-        if (thisRule.toTimeType == timeSunrise() && !sunriseToSubscribed)   {
-            subscribe(location, "sunrise", timeToHandler)
-            sunriseToSubscribed = true
-        }
-        else    {
-            if (thisRule.toTimeType == timeSunset() && !sunsetToSubscribed)   {
-                subscribe(location, "sunset", timeToHandler)
-                sunsetToSubscribed = true
-            }
-        }
-    }*/
     scheduleFromTime()
     scheduleToTime()
 }
@@ -5599,24 +5886,31 @@ private scheduleFromTime()      {
     if (!state.rules || !state.timeCheck)       return;
     def nowTime	= now()
     def nowDate = new Date(nowTime)
-    def sunriseAndSunset = getSunriseAndSunset()
-    if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
-        ifDebug("Please set location for the hub for rules to be processed.", "error")
-        return
+    def sunriseTime, sunsetTime
+    if (!state.sunriseTime || !state.sunsetTime)        {
+        def sunriseAndSunset = getSunriseAndSunset()
+        if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+            ifDebug("Please set location for the hub for rules to be processed.", "error")
+            return
+        }
+        sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+        sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
     }
-    def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-    def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+    else        {
+//        ifDebug("using $state.sunriseTime")
+        sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
+//        ifDebug("using $state.sunsetTime")
+        sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
+    }
     def nextTimeType = null
     def nextTime = null
     def sunriseTimeWithOff, sunsetTimeWithOff
-    def i = 1
-    for (; i < 11; i++)     {
+    for (def i = 1; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getNextRule(ruleNo, null, true)
+        def thisRule = getNextRule(ruleNo, 'e', true, true)
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
         if (thisRule.fromDate && thisRule.toDate)       {
-//            ifDebug("scheduleFromTime: thisRule.fromDate: $thisRule.fromDate | thisRule.toDate: $thisRule.toDate")
             def fTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)
             def tTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)
 //            ifDebug("scheduleFromTime: nowDate: $nowDate | nextTime: $nextTime | fTime: $fTime | tTime: $tTime")
@@ -5646,7 +5940,7 @@ private scheduleFromTime()      {
         state.fTime = nextTime
         updateTimeFromToInd()
 //        if (nextTimeType == timeTime())     schedule(nextTime, timeFromHandler);
-        schedule(nextTime, timeFromHandler);
+        schedule(nextTime, timeFromHandler)
     }
 }
 
@@ -5655,20 +5949,28 @@ private scheduleToTime()      {
     if (!state.rules || !state.timeCheck)       return;
     def nowTime	= now()
     def nowDate = new Date(nowTime)
-    def sunriseAndSunset = getSunriseAndSunset()
-    if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
-        ifDebug("Please set location for the hub for rules to be processed.", "error")
-        return
+    def sunriseTime, sunsetTime
+    if (!state.sunriseTime || !state.sunsetTime)        {
+        def sunriseAndSunset = getSunriseAndSunset()
+        if (!sunriseAndSunset.sunrise || !sunriseAndSunset.sunset)      {
+            ifDebug("Please set location for the hub for rules to be processed.", "error")
+            return
+        }
+        sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
+        sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
     }
-    def sunriseTime = new Date(sunriseAndSunset.sunrise.getTime())
-    def sunsetTime = new Date(sunriseAndSunset.sunset.getTime())
+    else        {
+//        ifDebug("using $state.sunriseTime")
+        sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
+//        ifDebug("using $state.sunsetTime")
+        sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
+    }
     def nextTimeType = null
     def nextTime = null
     def sunriseTimeWithOff, sunsetTimeWithOff
-    def i = 1
-    for (; i < 11; i++)     {
+    for (def i = 1; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getNextRule(ruleNo, null, true)
+        def thisRule = getNextRule(ruleNo, 'e', true, true)
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
         if (thisRule.fromDate && thisRule.toDate)       {
@@ -5702,7 +6004,7 @@ private scheduleToTime()      {
         state.tTime = nextTime
         updateTimeFromToInd()
 //        if (nextTimeType == timeTime())     schedule(nextTime, timeToHandler);
-        schedule(nextTime, timeToHandler);
+        schedule(nextTime, timeToHandler)
     }
 }
 
@@ -5846,7 +6148,8 @@ private checkPauseModesAndDoW()  {
 }
 
 private checkRunDay(dayOfWeek = null)   {
-    def thisDay = (new Date(now())).getDay()
+    def thisDay = Calendar.DAY_OF_WEEK
+//    ifDebug("$thisday | $dayOfWeek | $state.dayOfWeek")
     return (dayOfWeek ? dayOfWeek : state.dayOfWeek).contains(thisDay)
 }
 
@@ -5861,6 +6164,106 @@ def windowShadeEventHandler(evt)		{
         else                            wSSInd = 'Closed'
     }
     child.updateWSSInd(wSSInd)
+}
+
+private speakIt(str)     {
+    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
+    def nowDate = new Date(now())
+    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
+    def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
+    if (intCurrentHH < startHH || (intCurrentHH > endHH || (intCurrentHH == endHH && intCurrentMM != 0)))       return;
+    def vol = speakerVolume
+    if (useVariableVolume)      {
+        int x = startHH + ((endHH - startHH) / 4)
+        int y = endHH - ((endHH - startHH) / 3)
+        if (intCurrentHH <= x || intCurrentHH >= y)     vol = (speakerVolume - (speakerVolume / 3)).toInteger()
+    }
+    if (speakerDevices)     {
+        def currentVolume = speakerDevices.currentLevel
+        def isMuteOn = speakerDevices.currentMute.contains("muted")
+        if (isMuteOn)     speakerDevices.unmute();
+        speakerDevices.playTextAndResume(str, vol);
+        if (currentVolume != vol)      speakerDevices.setLevel(currentVolume)
+        if (isMuteOn)     musicPlayers.mute();
+    }
+    if (speechDevices)      speechDevices.speak(str);
+	if (musicPlayers)     {
+        def currentVolume = musicPlayers.currentLevel
+        def isMuteOn = musicPlayers.currentMute.contains("muted")
+        if (isMuteOn)     musicPlayers.unmute();
+        musicPlayers.playTrackAndResume(str, vol)
+        if (currentVolume != vol)      musicPlayers.setLevel(currentVolume)
+        if (isMuteOn)     musicPlayers.mute();
+    }
+    def hT = getHubType()
+    if (hT == _SmartThings && listOfMQs)
+        sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
+//    }
+}
+
+def setupColorNotification()        {
+    if (announceInModes && !announceInModes.contains(location.currentMode.toString()))      return false;
+    def nowDate = new Date(now())
+    def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
+    def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
+    if (intCurrentHH < startHHColor || (intCurrentHH > endHHColor || (intCurrentHH == endHHColor && intCurrentMM != 0)))
+        return
+    if (!state.colorsRotating)       {
+        state.colorNotifyTimes = 9
+        state.colorSwitchSave = []
+        state.colorColorSave = []
+        state.colorColorTemperatureSave = []
+        state.colorColorTemperatureTrueSave = []
+        announceSwitches.each   {
+            state.colorSwitchSave << it.currentSwitch
+            state.colorColorSave << [hue: it.currentHue, saturation: it.currentSaturation, level: it.currentLevel]
+            def evts = it.events(max: 250)
+            def foundValue = false
+            def keepSearching = true
+            evts.each       {
+                if (!foundValue && keepSearching)
+                    if (it.value == 'setColorTemperature')     {
+                        foundValue = true
+                        state.colorColorTemperatureTrueSave << true
+                    }
+                    else if (['hue', 'saturation'].contains(it.name))
+                        keepSearching = false
+            }
+            if (!foundValue)        state.colorColorTemperatureTrueSave << false
+            state.colorColorTemperatureSave << it.currentColorTemperature
+        }
+        notifyWithColor()
+    }
+    else
+        runIn(10, setupColorNotification)
+}
+
+def notifyWithColor()      {
+    ifDebug("notifyWithColor", 'info')
+    if ((state.colorNotifyTimes % 2f).trunc(0) == 1)    {
+        announceSwitches.on(); pauseIt()
+        announceSwitches.setColor(state.colorNotificationColor); pauseIt()
+//        announceSwitches.setLevel(99)
+//        announceSwitches.setHue(state.colorNotificationColor.hue)
+//        announceSwitches.setSaturation(state.colorNotificationColor.saturation)
+    }
+    else
+        announceSwitches.off(); pauseIt()
+    state.colorNotifyTimes = state.colorNotifyTimes - 1
+//    if (state.colorNotifyTimes >= 0)      runIn(state.colorNotifyTimes % 2f).trunc(0) + 1, notifyWithColor)
+    if (state.colorNotifyTimes >= 0)
+        runIn(1, notifyWithColor)
+    else        {
+        def i = 0
+        announceSwitches.each       {
+            ifDebug("$it | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
+            (state.colorColorTemperatureTrueSave[(i)] == true ? it.setColorTemperature(state.colorColorTemperatureSave[(i)]) :
+                                                                it.setColor(state.colorColorSave[(i)])); pauseIt(true)
+            (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
+//            (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
+            i = i + 1
+        }
+    }
 }
 
 private timeSunrise()   {  return '1'  }
@@ -5892,7 +6295,7 @@ private getAllSwitches()    {
     def i = 1
     for (; i < 11; i++)     {
         def ruleNo = String.valueOf(i)
-        def thisRule = getNextRule(ruleNo, null)
+        def thisRule = getNextRule(ruleNo, 'e')
         if (thisRule.ruleNo == 'EOR')     break;
         i = thisRule.ruleNo as Integer
         thisRule.switchesOn.each        {
@@ -6119,56 +6522,82 @@ public  webCoRE_handler(evt)    {
 //------------------------------------------------------------------------------------------------------------------------//
 
 @Field final Map    colorsRGB = [
-        aliceblue: [240, 248, 255],             antiquewhite: [250, 235, 215],          aqua: [0, 255, 255],
-        aquamarine: [127, 255, 212],            azure: [240, 255, 255],                 beige: [245, 245, 220],
-        bisque: [255, 228, 196],                black: [0, 0, 0],                       blanchedalmond: [255, 235, 205],
-        blue: [0, 0, 255],                      blueviolet: [138, 43, 226],             brown: [165, 42, 42],
-        burlywood: [222, 184, 135],             cadetblue: [95, 158, 160],              chartreuse: [127, 255, 0],
-        chocolate: [210, 105, 30],              coral: [255, 127, 80],                  cornflowerblue: [100, 149, 237],
-        cornsilk: [255, 248, 220],              crimson: [220, 20, 60],                 cyan: [0, 255, 255],
-        darkblue: [0, 0, 139],                  darkcyan: [0, 139, 139],                darkgoldenrod: [184, 134, 11],
-        darkgray: [169, 169, 169],              darkgreen: [0, 100, 0],                 darkgrey: [169, 169, 169],
-        darkkhaki: [189, 183, 107],             darkmagenta: [139, 0, 139],             darkolivegreen: [85, 107, 47],
-        darkorange: [255, 140, 0],              darkorchid: [153, 50, 204],             darkred: [139, 0, 0],
-        darksalmon: [233, 150, 122],            darkseagreen: [143, 188, 143],          darkslateblue: [72, 61, 139],
-        darkslategray: [47, 79, 79],            darkslategrey: [47, 79, 79],            darkturquoise: [0, 206, 209],
-        darkviolet: [148, 0, 211],              deeppink: [255, 20, 147],               deepskyblue: [0, 191, 255],
-        dimgray: [105, 105, 105],               dimgrey: [105, 105, 105],               dodgerblue: [30, 144, 255],
-        firebrick: [178, 34, 34],               floralwhite: [255, 250, 240],           forestgreen: [34, 139, 34],
-        fuchsia: [255, 0, 255],                 gainsboro: [220, 220, 220],             ghostwhite: [248, 248, 255],
-        gold: [255, 215, 0],                    goldenrod: [218, 165, 32],              gray: [128, 128, 128],
-        green: [0, 128, 0],                     greenyellow: [173, 255, 47],            grey: [128, 128, 128],
-        honeydew: [240, 255, 240],              hotpink: [255, 105, 180],               indianred: [205, 92, 92],
-        indigo: [75, 0, 130],                   ivory: [255, 255, 240],                 khaki: [240, 230, 140],
-        lavender: [230, 230, 250],              lavenderblush: [255, 240, 245],         lawngreen: [124, 252, 0],
-        lemonchiffon: [255, 250, 205],          lightblue: [173, 216, 230],             lightcoral: [240, 128, 128],
-        lightcyan: [224, 255, 255],             lightgoldenrodyellow: [250, 250, 210],  lightgray: [211, 211, 211],
-        lightgreen: [144, 238, 144],            lightgrey: [211, 211, 211],             lightpink: [255, 182, 193],
-        lightsalmon: [255, 160, 122],           lightseagreen: [32, 178, 170],          lightskyblue: [135, 206, 250],
-        lightslategray: [119, 136, 153],        lightslategrey: [119, 136, 153],        lightsteelblue: [176, 196, 222],
-        lightyellow: [255, 255, 224],           lime: [0, 255, 0],                      limegreen: [50, 205, 50],
-        linen: [250, 240, 230],                 magenta: [255, 0, 255],                 maroon: [128, 0, 0],
-        mediumaquamarine: [102, 205, 170],      mediumblue: [0, 0, 205],                mediumorchid: [186, 85, 211],
-        mediumpurple: [147, 112, 219],          mediumseagreen: [60, 179, 113],         mediumslateblue: [123, 104, 238],
-        mediumspringgreen: [0, 250, 154],       mediumturquoise: [72, 209, 204],        mediumvioletred: [199, 21, 133],
-        midnightblue: [25, 25, 112],            mintcream: [245, 255, 250],             mistyrose: [255, 228, 225],
-        moccasin: [255, 228, 181],              navajowhite: [255, 222, 173],           navy: [0, 0, 128],
-        oldlace: [253, 245, 230],               olive: [128, 128, 0],                   olivedrab: [107, 142, 35],
-        orange: [255, 165, 0],                  orangered: [255, 69, 0],                orchid: [218, 112, 214],
-        palegoldenrod: [238, 232, 170],         palegreen: [152, 251, 152],             paleturquoise: [175, 238, 238],
-        palevioletred: [219, 112, 147],         papayawhip: [255, 239, 213],            peachpuff: [255, 218, 185],
-        peru: [205, 133, 63],                   pink: [255, 192, 203],                  plum: [221, 160, 221],
-        powderblue: [176, 224, 230],            purple: [128, 0, 128],                  rebeccapurple: [102, 51, 153],
-        red: [255, 0, 0],                       rosybrown: [188, 143, 143],             royalblue: [65, 105, 225],
-        saddlebrown: [139, 69, 19],             salmon: [250, 128, 114],                sandybrown: [244, 164, 96],
-        seagreen: [46, 139, 87],                seashell: [255, 245, 238],              sienna: [160, 82, 45],
-        silver: [192, 192, 192],                skyblue: [135, 206, 235],               slateblue: [106, 90, 205],
-        slategray: [112, 128, 144],             slategrey: [112, 128, 144],             snow: [255, 250, 250],
-        springgreen: [0, 255, 127],             steelblue: [70, 130, 180],              tan: [210, 180, 140],
-        teal: [0, 128, 128],                    thistle: [216, 191, 216],               tomato: [255, 99, 71],
-        turquoise: [64, 224, 208],              violet: [238, 130, 238],                wheat: [245, 222, 179],
-        white: [255, 255, 255],                 whitesmoke: [245, 245, 245],            yellow: [255, 255, 0],
-        yellowgreen: [154, 205, 50]
+    aliceblue: [[240, 248, 255], 'Alice Blue'],             antiquewhite: [[250, 235, 215], 'Antique White'],
+    aqua: [[0, 255, 255], 'Aqua'],                          aquamarine: [[127, 255, 212], 'Aquamarine'],
+    azure: [[240, 255, 255], 'Azure'],                      beige: [[245, 245, 220], 'Beige'],
+    bisque: [[255, 228, 196], 'Bisque'],                    black: [[0, 0, 0], 'Black'],
+    blanchedalmond: [[255, 235, 205], 'Blanched Almond'],   blue: [[0, 0, 255], 'Blue'],
+    blueviolet: [[138, 43, 226], 'Blue Violet'],            brown: [[165, 42, 42], 'Brown'],
+    burlywood: [[222, 184, 135], 'Burly Wood'],             cadetblue: [[95, 158, 160], 'Cadet Blue'],
+    chartreuse: [[127, 255, 0], 'Chartreuse'],              chocolate: [[210, 105, 30], 'Chocolate'],
+    coral: [[255, 127, 80], 'Coral'],                       cornflowerblue: [[100, 149, 237], 'Corn Flower Blue'],
+    cornsilk: [[255, 248, 220], 'Corn Silk'],               crimson: [[220, 20, 60], 'Crimson'],
+    cyan: [[0, 255, 255], 'Cyan'],                          darkblue: [[0, 0, 139], 'Dark Blue'],
+    darkcyan: [[0, 139, 139], 'Dark Cyan'],                 darkgoldenrod: [[184, 134, 11], 'Dark Golden Rod'],
+    darkgray: [[169, 169, 169], 'Dark Gray'],               darkgreen: [[0, 100, 0], 'Dark Green'],
+    darkgrey: [[169, 169, 169], 'Dark Grey'],               darkkhaki: [[189, 183, 107], 'Dark Khaki'],
+    darkmagenta: [[139, 0, 139],  'Dark Magenta'],          darkolivegreen: [[85, 107, 47], 'Dark Olive Green'],
+    darkorange: [[255, 140, 0], 'Dark Orange'],             darkorchid: [[153, 50, 204], 'Dark Orchid'],
+    darkred: [[139, 0, 0], 'Dark Red'],                     darksalmon: [[233, 150, 122], 'Dark Salmon'],
+    darkseagreen: [[143, 188, 143], 'Dark Sea Green'],      darkslateblue: [[72, 61, 139], 'Dark Slate Blue'],
+    darkslategray: [[47, 79, 79], 'Dark Slate Gray'],       darkslategrey: [[47, 79, 79], 'Dark Slate Grey'],
+    darkturquoise: [[0, 206, 209], 'Dark Turquoise'],       darkviolet: [[148, 0, 211], 'Dark Violet'],
+    deeppink: [[255, 20, 147], 'Deep Pink'],                deepskyblue: [[0, 191, 255], 'Deep Sky Blue'],
+    dimgray: [[105, 105, 105], 'Dim Gray'],                 dimgrey: [[105, 105, 105], 'Dim Grey'],
+    dodgerblue: [[30, 144, 255], 'Dodger Blue'],            firebrick: [[178, 34, 34], 'Fire Brick'],
+    floralwhite: [[255, 250, 240], 'Floral White'],         forestgreen: [[34, 139, 34], 'Forest Green'],
+    fuchsia: [[255, 0, 255], 'Fuchsia'],                    gainsboro: [[220, 220, 220], 'Gainsboro'],
+    ghostwhite: [[248, 248, 255], 'Ghost White'],           gold: [[255, 215, 0], 'Gold'],
+    goldenrod: [[218, 165, 32], 'Golden Rod'],              gray: [[128, 128, 128], 'Gray'],
+    green: [[0, 128, 0], 'Green'],                          greenyellow: [[173, 255, 47], 'Green Yellow'],
+    grey: [[128, 128, 128], 'Grey'],                        honeydew: [[240, 255, 240], 'Honey Dew'],
+    hotpink: [[255, 105, 180], 'Hot Pink'],                 indianred: [[205, 92, 92], 'Indian Red'],
+    indigo: [[75, 0, 130], 'Indigo'],                       ivory: [[255, 255, 240], 'Ivory'],
+    khaki: [[240, 230, 140], 'Khaki'],                      lavender: [[230, 230, 250], 'Lavender'],
+    lavenderblush: [[255, 240, 245], 'Lavender Blush'],     lawngreen: [[124, 252, 0], 'Lawn Green'],
+    lemonchiffon: [[255, 250, 205], 'Lemon Chiffon'],       lightblue: [[173, 216, 230], 'Light Blue'],
+    lightcoral: [[240, 128, 128], 'Light Coral'],           lightcyan: [[224, 255, 255], 'Light Cyan'],
+    lightgoldenrodyellow: [[250, 250, 210], 'Light Golden Rod Yellow'],
+    lightgray: [[211, 211, 211], 'Light Gray'],             lightgreen: [[144, 238, 144], 'Light Green'],
+    lightgrey: [[211, 211, 211], 'Light Grey'],             lightpink: [[255, 182, 193], 'Light Pink'],
+    lightsalmon: [[255, 160, 122], 'Light Salmon'],         lightseagreen: [[32, 178, 170], 'Light Sea Green'],
+    lightskyblue: [[135, 206, 250], 'Light Sky Blue'],      lightslategray: [[119, 136, 153], 'Light Slate Gray'],
+    lightslategrey: [[119, 136, 153], 'Light Slate Grey'],  lightsteelblue: [[176, 196, 222], 'Ligth Steel Blue'],
+    lightyellow: [[255, 255, 224], 'Light Yellow'],         lime: [[0, 255, 0], 'Lime'],
+    limegreen: [[50, 205, 50], 'Lime Green'],               linen: [[250, 240, 230], 'Linen'],
+    magenta: [[255, 0, 255], 'Magenta'],                    maroon: [[128, 0, 0], 'Maroon'],
+    mediumaquamarine: [[102, 205, 170], 'Medium Aquamarine'],
+    mediumblue: [[0, 0, 205], 'Medium Blue'],               mediumorchid: [[186, 85, 211], 'Medium Orchid'],
+    mediumpurple: [[147, 112, 219], 'Medium Purple'],       mediumseagreen: [[60, 179, 113], 'Medium Sea Green'],
+    mediumslateblue: [[123, 104, 238], 'Medium Slate Blue'],
+    mediumspringgreen: [[0, 250, 154], 'Medium Spring Green'],
+    mediumturquoise: [[72, 209, 204], 'Medium Turquoise'],  mediumvioletred: [[199, 21, 133], 'Medium Violet Red'],
+    midnightblue: [[25, 25, 112], 'Medium Blue'],           mintcream: [[245, 255, 250], 'Mint Cream'],
+    mistyrose: [[255, 228, 225], 'Misty Rose'],             moccasin: [[255, 228, 181], 'Moccasin'],
+    navajowhite: [[255, 222, 173], 'Navajo White'],         navy: [[0, 0, 128], 'Navy'],
+    oldlace: [[253, 245, 230], 'Old Lace'],                 olive: [[128, 128, 0], 'Olive'],
+    olivedrab: [[107, 142, 35], 'Olive Drab'],              orange: [[255, 165, 0], 'Orange'],
+    orangered: [[255, 69, 0], 'Orange Red'],                orchid: [[218, 112, 214], 'Orchid'],
+    palegoldenrod: [[238, 232, 170], 'Pale Golden Rod'],    palegreen: [[152, 251, 152], 'Pale Green'],
+    paleturquoise: [[175, 238, 238], 'Pale Turquoise'],     palevioletred: [[219, 112, 147], 'Pale Violet Red'],
+    papayawhip: [[255, 239, 213], 'Papaya Whip'],           peachpuff: [[255, 218, 185], 'Peach Cuff'],
+    peru: [[205, 133, 63], 'Peru'],                         pink: [[255, 192, 203], 'Pink'],
+    plum: [[221, 160, 221], 'Plum'],                        powderblue: [[176, 224, 230], 'Powder Blue'],
+    purple: [[128, 0, 128], 'Purple'],                      rebeccapurple: [[102, 51, 153], 'Rebecca Purple'],
+    red: [[255, 0, 0], 'Red'],                              rosybrown: [[188, 143, 143], 'Rosy Brown'],
+    royalblue: [[65, 105, 225], 'Royal Blue'],              saddlebrown: [[139, 69, 19], 'Saddle Brown'],
+    salmon: [[250, 128, 114], 'Salmon'],                    sandybrown: [[244, 164, 96], 'Sandy Brown'],
+    seagreen: [[46, 139, 87], 'Sea Green'],                 seashell: [[255, 245, 238], 'Sea Shell'],
+    sienna: [[160, 82, 45], 'Sienna'],                      silver: [[192, 192, 192], 'Silver'],
+    skyblue: [[135, 206, 235], 'Sky Blue'],                 slateblue: [[106, 90, 205], 'Slate Blue'],
+    slategray: [[112, 128, 144], 'Slate Gray'],             slategrey: [[112, 128, 144], 'Slate Grey'],
+    snow: [[255, 250, 250], 'Snow'],                        springgreen: [[0, 255, 127], 'Spring Green'],
+    steelblue: [[70, 130, 180], 'Steel Blue'],              tan: [[210, 180, 140], 'Tan'],
+    teal: [[0, 128, 128], 'Teal'],                          thistle: [[216, 191, 216], 'Thistle'],
+    tomato: [[255, 99, 71], 'Tomato'],                      turquoise: [[64, 224, 208], 'Turquoise'],
+    violet: [[238, 130, 238], 'Violet'],                    wheat: [[245, 222, 179], 'Wheat'],
+    white: [[255, 255, 255], 'White'],                      whitesmoke: [[245, 245, 245], 'White Smoke'],
+    yellow: [[255, 255, 0], 'Yellow'],                      yellowgreen: [[154, 205, 50], 'Yellow Green']
 ]
 
 @Field final List    allSettingsVar = [
@@ -6299,8 +6728,8 @@ public  webCoRE_handler(evt)    {
                         ["contactSensorsRT", "Contacts closed:", null, true, "and", "maintainRoomTemp", "personsPresence"],
                         ["outTempSensor", "Outdoor Temperature:", null, true],
                         ["autoAdjustWithOutdoor", "Adjust with outdoor:", null, false, "and", "outTempSensor"],
-                        ["roomFanSwitch", "Fan switch:", null, true],
                         ["roomVents", "Room vents:", null, true, "and", "useThermostat"],
+                        ["roomFanSwitch", "Fan switch:", null, true, "and", "tempSensors"],
 
                         ["holiday light settings:"],
                         [["holi", "Holiday lights:"], "varHoli"],
@@ -6313,6 +6742,29 @@ public  webCoRE_handler(evt)    {
                         ["adjRoomsMotion", "Motion check:", null, false, "and", "adjRooms"],
                         ["adjRoomsPathway", "Pathway lighting:", null, false, "and", "adjRooms"],
 
+                        ["announcement settings:"],
+                        ["speakerDevices", "Speakers:", null, true],
+                        ["speechDevices", "Speech devices:", null, true],
+                        ["musicPlayers", "Media players:", null, true],
+                        ["listOfMQs", "Ask Alexa queues:", null, true],
+                        ["speakerVolume", "Volume:", null, false, "or", "speakerDevices", "speechDevices", "musicPlayers", "listOfMQs"],
+                        ["useVariableVolume", "Variable volume:", null, false, "or", "speakerDevices", "speechDevices", "musicPlayers", "listOfMQs"],
+                        ["startHH", "From hour:", null, false, "or", "speakerDevices", "speechDevices", "musicPlayers", "listOfMQs"],
+                        ["endHH", "To hour:", null, false, "or", "speakerDevices", "speechDevices", "musicPlayers", "listOfMQs"],
+                        ["announceSwitches", "Speakers:", null, true],
+                        ["startHHColor", "From hour:", null, false, "or", "announceSwitches"],
+                        ["endHHColor", "To hour:", null, false, "or", "announceSwitches"],
+                        ["announceDoor", "Announce door:", null, false],
+                        ["announceDoorSpeaker", "With speaker:", null, false, "or", "announceDoor"],
+                        ["announceDoorColor", "With color:", null, false, "or", "announceDoor"],
+                        ["announceContact", "Announce door stays:", null, false],
+                        ["announceContactSpeaker", "With speaker:", null, false, "or", "announceContact"],
+                        ["announceContactColor", "With color:", null, false, "or", "announceContact"],
+                        ["announceContactRT", "Announce window:", null, false],
+                        ["announceContactRTSpeaker", "With speaker:", null, false, "or", "announceContactRT"],
+                        ["announceContactRTColor", "With color:", null, false, "or", "announceContactRT"],
+                        ["announceInModes", "In modes:", null, true, "or",  "or", "speakerDevices", "speechDevices", "musicPlayers", "listOfMQs", "announceSwitches"],
+
                         ["general settings:"],
                         ["awayModes", "Away modes:", null, true],
                         ["pauseModes", "Pause modes:", null, true],
@@ -6320,9 +6772,9 @@ public  webCoRE_handler(evt)    {
                         ["useCelsius", "Use celsius:", null, false],
                         ["allSwitchesOff", "All switches off:", null, false],
                         ["onlyOnStateChange", "Execute on state:", null, false],
-                        ["announceVolume", "Announce volume:", "%", true, "and", "musicDevice"],
-                        ["announceContact", "Contact open:", null, true, "and", "contactSensor", "musicDevice"],
-                        ["announceDoor", "Door open:", null, true, "and", "contactSensor", "contactSensorOutsideDoor", "musicDevice"],
+//                        ["announceVolume", "Announce volume:", "%", true, "and", "musicDevice"],
+//                        ["announceContact", "Contact open:", null, true, "and", "contactSensor", "musicDevice"],
+//                        ["announceDoor", "Door open:", null, true, "and", "contactSensor", "contactSensorOutsideDoor", "musicDevice"],
                         ["roomDeviceSwitchOn", "Which state:", null, false],
                         ["iconURL", "Icon URL:", null, false]]
 
@@ -6343,6 +6795,7 @@ public  webCoRE_handler(evt)    {
 @Field final String _RUimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsRules.png'
 @Field final String _ARimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAdjacent5.png'
 @Field final String _GEimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png'
+@Field final String _ANimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAnnouncement.png'
 @Field final String _VIimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsViewAll.png'
 @Field final String _GHimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png'
 @Field final String _gitREADME = 'https://github.com/adey/bangali/blob/master/README.md'

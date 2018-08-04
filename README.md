@@ -10,7 +10,7 @@
 
 * <h5>Rooms settings:</h5>
 
-  * Set room occupancy state with:
+  * Set room occupancy state for each room, using any or all of the following devices:
     * Presence sensors.
     * Motion sensors.
     * Contact sensors.
@@ -27,7 +27,7 @@
       * Humidity range
       * Date filter
       * Time trigger
-    * For temperature rules only:
+    * For temperature rules additionally:
       * Temperature
   * Rules allow you to:
     * For execution rules:
@@ -35,11 +35,11 @@
         * Auto adjust level and color temperature when turning on lights.
         * Set light color when turning on.
         * Setup recurring schedules for holiday light show including annually recurring holidays.
-        * On Hubitat, send any command to any device.
-        * Run pistons.
-        * Run routines.
-        * Start and stop music players.
-        * Set window shade position.
+      * On Hubitat, send any command to any device.
+      * Run pistons.
+      * Run routines.
+      * Start and stop music players.
+      * Set window shade position.
     * For temperature rules:
       * Maintain room temperature with thermostat or in-room AC and heaters.
       * Turn fan on/off and manage fan speed with room temperature.
@@ -72,14 +72,14 @@
 <p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
 <p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
 
-<p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or creating a few pistons. I have been there and done that myself. While those work to a degree, it does not enable the kind of comprehensive automation that should be possible for devices in a room based on sensor inputs. This smartapp makes that possible.</p>
+<p>What these rules enable is many common tasks around rooms which most users go through automating at some point. Usually through setting up a few rules or using a few pistons. I have been there and done that myself. While those work to a degree it requires creating a set of rules and/or pistons to enable contextual automation per "room". As you incorporate more and more automation using rules and/or pistons these often become a maintenance challenge while still not enabling the kind of comprehensive automation that should be possible for typical devices in a room. The goal of this app is to make that possible by evaluating all sensor input from various devices in the room and enabling rules that act on these sensor values in the context of various typical automation needs in a "room".</p>
 
-<p>If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring periodic human intervention. In short - your automation should work for you and not the other way around. <i>But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about.</i> 🙂</p>
-
-<p><i>You can continue reading here for the summarized version or read the more detailed and always the latest version on Github which also describes the individual settings:</i></p>
-<p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
+<p>If there is one principle that these apps are built on, it is - that your home automation should work in the background in a repeatable and predictable manner without requiring repeated human intervention. In short, your automation should work for you and not the other way around. <i>But even more importantly perhaps, this app gets you the kind of WAF for your home automation that you have always dreamed about.</i> 🙂</p>
 
 <p>Additionally, these room occupancy devices also have attributes, capabilities and commands which are useable in webCoRE or other smartapps like Smart Lighting in ST or Rule Machine in Hubitat. There is a range of other automations that webCoRE makes possible that could not otherwise be done without writing a custom smartapp for it. I use webCoRE for that and am I big fan of Adrian. So checkout webCoRE as well if you don't already use it.</p>
+
+<p><i>One last time, please consider continuing reading the rest of this readme on Github because that always has the most updated version:</i></p>
+<p><a href="https://github.com/adey/bangali/blob/master/README.md">Rooms Manager and Rooms Occupancy readme on Github</a></p>
 
 <h4>How does this app work?</h4>
 
@@ -979,6 +979,126 @@
         </table>
     </ul>
     <p>&nbsp;</p>
+    <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsAnnouncement.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
+    <h5>Announcement Settings</h5>
+    <p>Announcement settings for rooms with support for both speakers and color announcements.</p>
+    <ul>
+            <ul>
+                <li style="list-style-type:square">
+                    <h5>Spoken announcement settings:</h5>
+                    <p>Specify speaker devices and timings to use for spoken announcement.</p>
+                </li>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Speakers</td>
+                        <td style="width:85%">Select speaker for spoken announcements</td>
+                    </tr>
+                    <tr>
+                        <td>Speech</td>
+                        <td>Select speech device for spoken announcements</td>
+                    </tr>
+                    <tr>
+                        <td>Media player</td>
+                        <td>Select media player for spoken announcements</td>
+                    </tr>
+                    <tr>
+                        <td>Volume</td>
+                        <td>Volume to use for spoken announcements</td>
+                    </tr>
+                    <tr>
+                        <td>Variable volume</td>
+                        <td>Use variable volume for spoken announcements</td>
+                    </tr>
+                </table>
+                <p>Spoken announcement during hours:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">From hour</td>
+                        <td style="width:85%">Announcements are made from this hour</td>
+                    </tr>
+                    <tr>
+                        <td>To hour</td>
+                        <td>Announcements are made to this hour</td>
+                    </tr>
+                </table>
+                <li style="list-style-type:square">
+                    <h5>Color announcement settings:</h5>
+                    <p>Specify color bulbs and timings to use for color announcement.</p>
+                </li>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Switches</td>
+                        <td style="width:85%">Color bulbs to use for color announcements</td>
+                    </tr>
+                </table>
+                <p>Color announcement during hours:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">From hour</td>
+                        <td style="width:85%">Announcements are made from this hour</td>
+                    </tr>
+                    <tr>
+                        <td>To hour</td>
+                        <td>Announcements are made to this hour</td>
+                    </tr>
+                </table>
+            </ul>
+            <p>Announcement modes:</p>
+            <table class="wikitable" style="width:875px">
+                <tr>
+                    <td style="width:15%">Modes</td>
+                    <td style="width:85%">Announcements are only made in these modes</td>
+                </tr>
+            </table>
+            <ul>
+                <li style="list-style-type:square">
+                    <h5>Contact announcement settings:</h5>
+                    <p>Settings for door and window spoken and color announcements.</p>
+                </li>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Announce door</td>
+                        <td style="width:85%">Announce when door opens or closes</td>
+                    </tr>
+                    <tr>
+                        <td>Speaker</td>
+                        <td>Announce with speaker</td>
+                    </tr>
+                    <tr>
+                        <td>Color</td>
+                        <td>Select color for announcement</td>
+                    </tr>
+                    <tr>
+                        <td>Announce stays open</td>
+                        <td>Announce when door stays open every so many minutes</td>
+                    </tr>
+                    <tr>
+                        <td>Speaker</td>
+                        <td>Announce with speaker</td>
+                    </tr>
+                    <tr>
+                        <td>Color</td>
+                        <td>Select color for announcement</td>
+                    </tr>
+                </table>
+                <p>Window announcement:</p>
+                <table class="wikitable" style="width:875px">
+                    <tr>
+                        <td style="width:15%">Announce window</td>
+                        <td style="width:85%">Announce window opens or closes</td>
+                    </tr>
+                    <tr>
+                        <td>Speaker</td>
+                        <td>Announce with speaker</td>
+                    </tr>
+                    <tr>
+                        <td>Color</td>
+                        <td>Select color for announcement</td>
+                    </tr>
+                </table>
+            </ul>
+    </ul>
+    <p>&nbsp;</p>
     <img src="https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsSettings.png" width="125" style="float:left; width:80px; height:50px; padding-right: 30px;">
     <h5>Mode and Other Settings</h5>
     <p>Miscellaneous settings that don't fit any where else, like in which modes should all automation be disabled or what icon to use for the room in the rooms manager and a few other settings.</p>
@@ -1128,6 +1248,36 @@
         Any of those lights when turned on will be turned off after that specified number of seconds.  
     </ul>
 </p>
+<p>3. Want to turn on/off switches on a certain day of the year?
+    <ul>
+        Setup a room with the following Engaged settings:  
+        <ul>
+            <table class="wikitable" style="width:100%">
+                <tr>
+                    <td style="width:90%">Set all of the switches you will turn on as engaged switches.</td>
+                </tr>
+            </table>
+        </ul>
+        Then add rules with the following settings:
+        <ul>
+            <table class="wikitable" style="width:100%">
+                <tr>
+                    <td style="width:90%">Name of the rule.</td>
+                </tr>
+                <tr>
+                    <td>From date and to date. (make sure hide advanced settings is false on the main settings page)</td>
+                </tr>
+                <tr>
+                    <td>Switches to turn on.</td>
+                </tr>
+                <tr>
+                    <td>Switches to turn off.</td>
+                </tr>
+            </table>
+        </ul>
+        When the rules date condition is met on and switches specified in the rule will be turned on and off respectively.
+    </ul>
+</p>
 
 <p>&nbsp;</p>
 
@@ -1145,7 +1295,7 @@
     </table>
 </div>
 
-<b>Finally here is a screenshot of the rooms child settings page which captures all the settings groups available for each room:</b>
+<b>Finally here is a screenshot of the rooms child settings page which captures all the settings groups available for each room. On both SmartThings and Hubitat this looks quite similar except that one is thru the app interface and the other is html.</b>
 <div id="screenshot-table">
     <table>
         <tr>

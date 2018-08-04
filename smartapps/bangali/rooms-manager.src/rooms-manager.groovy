@@ -1,6 +1,7 @@
 /***********************************************************************************************************************
 *
 *  A SmartThings smartapp to create/view rooms created with rooms occupancy DTH.
+*
 *  Copyright (C) 2017 bangali
 *
 *  License:
@@ -20,10 +21,35 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.55.0"  }
+public static String version()      {  return "v0.60.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.60.0
+*
+*   DONE:   8/1/2018
+*	1) BREAKING CHANGE: added color options in rooms to support the same colors as supported in rooms manager already.
+*       you will need to update any color settings for rules after this update.
+*	2) added option to select between pushable, holdable and double tap buttons on Hubitat.
+*	3) added support for multiple types of speaker devices for rooms child so those are available for announcements.
+*	4) added support for light bulbs to support announcement in each via color.
+*	5) added support for some announcements for doors and windows in rooms.
+*	6) optimized code for processing adjacent rooms when updated from rooms settings.
+*	7) collapsed option for sending command to any device instead of being able to support only the operational mode
+*		for ge siwtches on SmartThings. on Hubitat this supports sending any commands to any device from rules. on
+*		Smartthings, since ST does not supporting any device from input, it currently supprts any commands to any
+*		device that is of type switch.
+*	8) added more details for temperature rules when shown in view all settings.
+*	9) added option to support fans that only support on/off but not level settings.
+*	10) changed how time scheduling is handled to work around how infrequent Smartthings issue with sunrise and sunset.
+*	11) added support for variable volums to announcements.
+*	12) swatted a bug here and a bug there.
+*   13) BREAKING CHANGE: added multiple different occupancy icon sizes for use with Hubitat dashboard.
+*       you will need to update any dashaboards using occupancyIcon to use one of the new icons of different sizes.
+*	14) added image URL for occupancy icon for use for when Hubitat supports state attributes for image URL in dashboard.
+*	15) add a few more tiles for SmartThings for missing attributes like outside temperature, vents and couple of others.
+*	16) updated readme for github.
 *
 *  Version: 0.55.0
 *
@@ -607,6 +633,8 @@ import groovy.transform.Field
 
 @Field final String _ImgSize = '36'
 
+@Field final List   _healthCheck = [1, 2, 3, 6, 12, 24]
+
 definition (
     name: "rooms manager",
     namespace: "bangali",
@@ -668,10 +696,10 @@ def pageSpeakerSettings()   {
     def hT = getHubType()
     def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
 //    if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
-    def colorsList = []
-    colorsRGB.each  { k, v ->
-        colorsList << ["$k":"${v[1]}"]
-    }
+    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
+//    colorsRGB.each  { k, v ->
+//        colorsList << ["$k":"${v[1]}"]
+//    }
 //    ifDebug("$colorsList")
     def nameString = []
     def colorString = []
@@ -741,10 +769,10 @@ def pagePersonNameSettings()           {
 
 def pagePersonColorSettings()           {
 //    ifDebug("pagePersonColorSettings")
-    def colorsList = []
-    colorsRGB.each  { k, v ->
-        colorsList << ["$k":"${v[1]}"]
-    }
+    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
+//    colorsRGB.each  { k, v ->
+//        colorsList << ["$k":"${v[1]}"]
+//    }
     dynamicPage(name: "pagePersonColorSettings", title: "Choose notification color:", install: false, uninstall: false)     {
         presenceSensors.each        {
             def itID = it.getId()
@@ -777,10 +805,14 @@ def pageAnnouncementSpeakerTimeSettings()      {
             input "musicPlayers", "capability.musicPlayer", title: "Which media players?", required: false, multiple: true, submitOnChange: true
             if (ht == _SmartThings)
                 input "listOfMQs", "enum", title: "Select Ask Alexa Message Queues", options: state.askAlexaMQ, multiple: true, required: false
-            if (playerDevice)
+            if (playerDevice)       {
                 input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
-            else
-                paragraph "Speaker volume?\nselect any speaker to set."
+                input "useVariableVolume", "bool", title: "Use variable volume?", required: true, multiple: false, defaultValue: false
+            }
+            else        {
+                paragraph "Speaker volume?\nselect any speaker to set"
+                paragraph "Use variable volume?"
+            }
         }
         section("Spoken announcement during hours:")       {
             if (playerDevice)        {
@@ -842,6 +874,10 @@ def pageArrivalDepartureSettings()      {
                 href "pagePersonNameSettings", title: "Names for presence sensor(s)", description: "$nameString"
             else
                 paragraph "Names for presence sensor(s)\nselect presence sensor(s) to set."
+            if (presenceSensors && speakerAnnounceColor)
+                href "pagePersonColorSettings", title: "Color(s) for presence sensor(s)", description: "$colorString"
+            else
+                paragraph "Color(s) for presence sensor(s)\nselect announce with color to set."
         }
 		section("")        {
             if (playerDevice && speakerAnnounce)    {
@@ -857,12 +893,6 @@ def pageArrivalDepartureSettings()      {
                 paragraph "Left home announcement?"
                 paragraph "Left home announcement closer?"
             }
-        }
-        section("")   {
-            if (speakerAnnounceColor)
-                href "pagePersonColorSettings", title: "Color(s) for presence sensor(s)", description: "$colorString"
-            else
-                paragraph "Color(s) for presence sensor(s)\nselect announce with color to set."
         }
         section("")      {
             if (speakerAnnounce || speakerAnnounceColor)    {
@@ -883,10 +913,10 @@ def pageArrivalDepartureSettings()      {
 }
 
 def pageSunAnnouncementSettings()      {
-    def colorsList = []
-    colorsRGB.each  { k, v ->
-        colorsList << ["$k":"${v[1]}"]
-    }
+    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
+//    colorsRGB.each  { k, v ->
+//        colorsList << ["$k":"${v[1]}"]
+//    }
     def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
     dynamicPage(name: "pageSunAnnouncementSettings", title: "", install: false, uninstall: false)     {
         section("")     {
@@ -907,10 +937,10 @@ def pageSunAnnouncementSettings()      {
 }
 
 def pageBatteryAnnouncementSettings()      {
-    def colorsList = []
-    colorsRGB.each  { k, v ->
-        colorsList << ["$k":"${v[1]}"]
-    }
+    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
+//    colorsRGB.each  { k, v ->
+//        colorsList << ["$k":"${v[1]}"]
+//    }
     def hT = getHubType()
     def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
     dynamicPage(name: "pageBatteryAnnouncementSettings", title: "", install: false, uninstall: false)     {
@@ -936,10 +966,10 @@ def pageBatteryAnnouncementSettings()      {
 }
 
 def pageDeviceHealthSettings()      {
-    def colorsList = []
-    colorsRGB.each  { k, v ->
-        colorsList << ["$k":"${v[1]}"]
-    }
+    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
+//    colorsRGB.each  { k, v ->
+//        colorsList << ["$k":"${v[1]}"]
+//    }
     def hT = getHubType()
     def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
     dynamicPage(name: "pageDeviceHealthSettings", title: "", install: false, uninstall: false)     {
@@ -953,7 +983,7 @@ def pageDeviceHealthSettings()      {
         }
         section("")      {
             if (checkHealth && playerDevice)
-                input "healthEvery", "enum", title: "Announce very how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
+                input "healthEvery", "enum", title: "Announce every how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
             else
                 paragraph "Every how many hours?\nselect check health to set."
         }
@@ -999,14 +1029,14 @@ def updated()		{
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (checkHealth)        {
         state.healthHours = 0
-        state.noCheckDevices = []
-        ifDebug("state.noCheckDevices: $state.noCheckDevices")
-        healthNoCheckDevices.each       {
-            ifDebug("state.noCheckDevices: $state.noCheckDevices")
-            ifDebug("state.noCheckDevices: $it")
-            state.noCheckDevices << it.id
-        }
-        ifDebug("state.noCheckDevices: $state.noCheckDevices")
+        state.noCheckDevices = healthNoCheckDevices.collect { it.id }
+//        ifDebug("state.noCheckDevices: $state.noCheckDevices")
+//        healthNoCheckDevices.each       {
+//            ifDebug("state.noCheckDevices: $state.noCheckDevices")
+//            ifDebug("state.noCheckDevices: $it")
+//            state.noCheckDevices << it.id
+//        }
+//        ifDebug("state.noCheckDevices: $state.noCheckDevices")
         runEvery1Hour(checkDeviceHealth)
         runIn(1, checkDeviceHealth)
     }
@@ -1021,6 +1051,7 @@ def updated()		{
 	}
     if (announceSwitches && ['1', '3'].contains(sunAnnounce))       subscribe(location, "sunrise", sunriseEventHandler);
     if (announceSwitches && ['2', '3'].contains(sunAnnounce))       subscribe(location, "sunset", sunsetEventHandler);
+    githubUpdated(true)
 }
 
 def initialize()	{
@@ -1185,34 +1216,6 @@ def	presencePresentEventHandler(evt)     {  whoCameHome(evt.device)  }
 
 def	presenceNotPresentEventHandler(evt)     {  whoCameHome(evt.device, true)  }
 
-/*
-def contactClosedEventHandler(evt = null)     {
-    if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
-    def str = (evt ? state.whoCameHome.personsIn : state.whoCameHome.personsOut)
-    def i = str.size()
-    def j = 1
-    def rand = new Random()
-    def k = (state.welcomeHome1 ? Math.abs(rand.nextInt() % state.welcomeHome1.size()) : 0) + ''
-    def k2 = (state.welcomeHomeCloser ? Math.abs(rand.nextInt() % state.welcomeHomeCloser.size()) : 0) + ''
-    def l = (state.leftHome1 ? Math.abs(rand.nextInt() % state.leftHome1.size()) : 0) + ''
-    def l2 = (state.leftHomeCloser ? Math.abs(rand.nextInt() % state.leftHomeCloser.size()) : 0) + ''
-//    ifDebug("k: $k ${state.welcomeHome1[(k)]} | l: $l ${state.leftHome1[(l)]}")
-    def persons = (evt ? state.welcomeHome1[(k)] : state.leftHome1[(l)]) + ' '
-    str.each      {
-        persons = persons + (j != 1 ? (j == i ? ' and ' : '/ ') : '') + it
-        j = j + 1
-    }
-    persons = persons + ' ' + (evt ? state.welcomeHome2[(k)] : state.leftHome2[(l)]) +
-                        ' ' + (evt ? (welcomeHomeCloser ? state.welcomeHomeCloser[(k2)] : '') :
-                                     (leftHomeCloser ? state.leftHomeCloser[(l2)] : '')) + '.'
-//    ifDebug("k: $k ${state.welcomeHome2[(k)]} | l: $l ${state.leftHome2[(l)]}")
-    ifDebug("message: $persons")
-    speakIt(str, persons)
-    if (evt)    state.whoCameHome.personsIn = [];
-    else        state.whoCameHome.personsOut = [];
-}
-*/
-
 def contactClosedEventHandler(evt = null)     {
     if ((evt && !state.whoCameHome.personsIn) || (!evt && !state.whoCameHome.personsOut))     return;
     def rand = new Random()
@@ -1257,32 +1260,41 @@ def contactClosedEventHandler(evt = null)     {
 }
 
 private speakIt(str)     {
+    ifDebug("speakIt", 'info')
     if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
-    if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
-        if (speakerDevices)     {
-            def currentVolume = speakerDevices.currentLevel
-            def isMuteOn = speakerDevices.currentMute.contains("muted")
-            if (isMuteOn)     speakerDevices.unmute();
-            speakerDevices.playTextAndResume(str, speakerVolume);
-            if (currentVolume != speakerVolume)      speakerDevices.setLevel(currentVolume)
-            if (isMuteOn)     musicPlayers.mute();
-        }
-        if (speechDevices)      speechDevices.speak(str);
-		if (musicPlayers)     {
-            def currentVolume = musicPlayers.currentLevel
-            def isMuteOn = musicPlayers.currentMute.contains("muted")
-            if (isMuteOn)     musicPlayers.unmute();
-            musicPlayers.playTrackAndResume(str, speakerVolume)
-            if (currentVolume != speakerVolume)      musicPlayers.setLevel(currentVolume)
-            if (isMuteOn)     musicPlayers.mute();
-        }
-        def hT = getHubType()
-        if (hT == _SmartThings && listOfMQs)
-            sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
+    ifDebug("$intCurrentHH | $intCurrentMM | $startHH | $endHH")
+    if (intCurrentHH < startHH || (intCurrentHH > endHH || (intCurrentHH == endHH && intCurrentMM != 0)))       return;
+//    if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))      {
+    def vol = speakerVolume
+    if (useVariableVolume)      {
+        int x = startHH + ((endHH - startHH) / 4)
+        int y = endHH - ((endHH - startHH) / 3)
+        if (intCurrentHH <= x || intCurrentHH >= y)     vol = (speakerVolume - (speakerVolume / 3)).toInteger()
     }
+    if (speakerDevices)     {
+        def currentVolume = speakerDevices.currentLevel
+        def isMuteOn = speakerDevices.currentMute.contains("muted")
+        if (isMuteOn)     speakerDevices.unmute();
+        speakerDevices.playTextAndResume(str, vol);
+        if (currentVolume != vol)      speakerDevices.setLevel(currentVolume)
+        if (isMuteOn)     musicPlayers.mute();
+    }
+    if (speechDevices)      speechDevices.speak(str);
+	if (musicPlayers)     {
+        def currentVolume = musicPlayers.currentLevel
+        def isMuteOn = musicPlayers.currentMute.contains("muted")
+        if (isMuteOn)     musicPlayers.unmute();
+        musicPlayers.playTrackAndResume(str, vol)
+        if (currentVolume != vol)      musicPlayers.setLevel(currentVolume)
+        if (isMuteOn)     musicPlayers.mute();
+    }
+    def hT = getHubType()
+    if (hT == _SmartThings && listOfMQs)
+        sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
+//    }
 }
 
 private setupColorRotation()        {
@@ -1384,7 +1396,8 @@ def getARoomName(childID)    {
 }
 
 def handleAdjRooms()    {
-    ifDebug("handleAdjRooms", 'info')
+    ifDebug("handleAdjRooms >>>>>", 'info')
+    def time = now()
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
     def skipAdjRoomsMotionCheck = true
     def adjRoomDetailsMap = [:]
@@ -1416,10 +1429,11 @@ def handleAdjRooms()    {
                         }
                 }
             }
-        ifDebug("rooms manager: updating room $c.label with adjacent motion sensors: $adjMotionSensors", 'info')
+        ifDebug("rooms manager: updating room $c.label with adjacent motion sensors: $adjMotionSensors | ${now() - time} ms", 'info')
 //        ifDebug("$adjMotionSensors")
         c.updateRoom(adjMotionSensors)
     }
+    ifDebug("handleAdjRooms <<<<<", 'info')
     return true
 }
 
@@ -1438,20 +1452,11 @@ def getLastStateDate(childID)      {
 
 def processChildSwitches()      {
     def time = now()
-/*    childApps.each	{ child ->
-        def modeAndDoW = child.checkRoomModesAndDoW()
-//        ifDebug("processChildSwitches: modeAndDoW: $modeAndDoW | child: $child.label")
-        if (modeAndDoW)     {
-            child.switchesOnOrOff(true)
-            if (hT == _SmartThings)     pause(10);
-        }
-    }
-*/
-//    def quarterHour = (((time % 3600000f) / 60000f).trunc(0) % 15) // quarter hour = 0
+    def hT = getHubType()
     childApps.each  { child ->
         ifDebug("processChildSwitches: $child.label", 'info')
         if (child.checkAndTurnOnOffSwitchesC())
-            if (getHubType() == _SmartThings)     pause(10);
+            if (hT == _SmartThings)     pause(10);
     }
     ifDebug("${now() - time} ms")
 }
@@ -1469,6 +1474,18 @@ def batteryCheck()      {
             }
         }
     }
+    settings.each   {
+        it.value.each       {
+            if (isADevice(it))      {
+                def itID = it.id
+                if (!allBatteriesID.contains(itID))       {
+                    allBatteries << it
+                    allBatteriesID << itID
+                }
+            }
+        }
+    }
+
     def bat
     def batteryNames = ''
     def batteryLow = false
@@ -1510,7 +1527,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def setupColorNotification()        {
-    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
+    if (announceInModes && !announceInModes.contains(location.currentMode.toString()))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -1600,15 +1617,44 @@ def tellTime()      {
     }
 }
 
+def githubUpdated(storeCommitTimestamp = false)     {
+	def url = "https://api.github.com/repos/adey/bangali/branches/master"
+	def result = null
+    def speak
+
+/*
+	try    {
+		httpGet(uri: url)     { response ->
+			result = response
+		}
+        result.data.each     {
+            ifDebug("$it")
+        }
+		def latestCommitTime = result.data.commit.commit.author.date
+        if (storeCommitTimestamp)       {
+            state.githubUpdate = latestCommitTime
+        }
+        else if (latestCommitTime != state."last${branch}Update")       {
+            state.githubUpdate = latestCommitTime
+            speak = "code updated"
+        }
+	}
+	catch (e)      {
+		log.warn e
+	}
+*/
+}
+
 def checkDeviceHealth()     {
+    ifDebug("checkDeviceHealth", 'info')
     def time = now()
     def cDT = new Date(time - (eventHours.toInteger() * 3600000l))
     ifDebug("$cDT")
     def hT = getHubType()
     def tD = []
-    ifDebug("state.noCheckDevices: $state.noCheckDevices")
+//    ifDebug("state.noCheckDevices: $state.noCheckDevices")
     def tDID = state.noCheckDevices
-    ifDebug("tDID: $tDID")
+//    ifDebug("tDID: $tDID")
     def itID
     def str = ''
     childApps.each      { child ->
@@ -1630,18 +1676,8 @@ def checkDeviceHealth()     {
             tDID << itID
         }
     }
+
     def dHC = ''
-
-/*
-    if (hT == _Hubitat)
-        tD.each     { dev ->
-            def x = dev.currentStates
-            x.each      {
-                ifDebug("$dev $it")
-            }
-        }
-*/
-
     tD.each     {
 //        ifDebug("${now() - time} ms")
         def deviceEventFound = false
@@ -1649,11 +1685,6 @@ def checkDeviceHealth()     {
             def lastEvents
             for (def x = 1; x < 3; x++)     {
                 def noOfEvents = Math.pow(5, x).toInteger()
-//                if (hT == _SmartThings)
-//                    lastEvents = it.events(max: noOfEvents).findAll    { it.eventSource == 'DEVICE' && it.date.after(cDT) }
-//                else
-//                    lastEvents = it.events(max: noOfEvents).findAll    { it.source == 'DEVICE' && it.date.after(cDT) }
-
                 lastEvents = it.events(max: noOfEvents).findAll    { it.eventSource == 'DEVICE' && it.date.after(cDT) }
                 if (lastEvents)     {
                     deviceEventFound = true
@@ -1671,73 +1702,22 @@ def checkDeviceHealth()     {
             }
         }
         if (!deviceEventFound)      dHC = dHC + (dHC ? ', ' : '') + it.displayName;
-
-/*
-        def deviceEventFound = false
-        for (def x = 1; x < 3; x++)     {
-            def noOfEvents = Math.pow(5, x).toInteger()
-            def lastEvents = it.events(max: noOfEvents)
-            if (lastEvents)     {
-                for (def i = lastEvents.size() - 1; i > 0; i--)       {
-                    if ((hT == _SmartThings && lastEvents[(i)].eventSource == 'DEVICE') || (hT == _Hubitat && lastEvents[(i)].source == 'DEVICE'))      {
-                        if (lastEvents[(i)].date.after(cDT))        {
-                            deviceEventFound = true
-                            break;
-                        }
-                    }
-                }
-            }
-            if (deviceEventFound)       break;
-        }
-        if (!deviceEventFound)      dHC = dHC + (dHC ? ', ' : '') + it.displayName;
-*/
-
-/*
-        def deviceEventFound = false
-        for (def x = 1; x < 3; x++)     {
-            def noOfEvents = Math.pow(5, x).toInteger()
-            def lastEvents = it.events(max: noOfEvents)
-            if (lastEvents)     {
-                lastEvents.sort     { it.date }
-                for (def i = lastEvents.size() - 1; i > 0; i--)       {
-                    if ((hT == _SmartThings && lastEvents[(i)].eventSource == 'DEVICE') || (hT == _Hubitat && lastEvents[(i)].source == 'DEVICE'))      {
-                        deviceEventFound = true
-                        if (lastEvents[(i)].date.after(cDT))    break;
-                        dHC = dHC + (dHC ? ', ' : '') + lastEvents[(i)].displayName
-                        break;
-                    }
-                }
-            }
-            if (deviceEventFound)       break;
-        }
-        if (!deviceEventFound)      dHC = dHC + (dHC ? ', ' : '') + it.displayName;
-*/
-
-/*
-        def first = true
-        lastEvents.each      {
-            if (first && ((hT == _SmartThings && it.eventSource == 'DEVICE') || (hT == _Hubitat && it.source == 'DEVICE')))        {
-                if (it.date.before(cDT))
-                    dHC = dHC + (dHC ? ', ' : '') + it.displayName
-//                    ifDebug("$it.displayName | $it.eventSource | $it.date")
-                first = false
-            }
-        }
-*/
     }
+
     state.lastDeviceHealthUpdate = (dHC ? "$dHC devices have not checked in last $eventHours hours." : "device health is ok.")
     if (announceSwitches && ((!dHC && healthOkColor) || (dHC && healthWarnColor)))      {
         def color = convertRGBToHueSaturation(colorsRGB[(dHC ?  healthWarnColor : healthOkColor)][1])
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (healthEvery != 0)        {
-        if (state.healthHours == 0 && dHC && (speakerDevices || speechDevices || musicPlayers))
+    if (_healthCheck.contains(healthEvery.toInteger()))    {
+        ifDebug("_healthCheck: $_healthCheck | healthEvery: $healthEvery | state.healthHours: $state.healthHours")
+        if (state.healthHours == 0 && dHC)
             speakIt(state.lastDeviceHealthUpdate)
         state.healthHours = (state.healthHours == 0 ? healthEvery as Integer : state.healthHours - 1)
     }
-    ifDebug("healthEvery: $healthEvery | $state.lastDeviceHealthUpdate")
-    ifDebug("${now() - time} ms")
+//    ifDebug("healthEvery: $healthEvery | $state.lastDeviceHealthUpdate")
+//    ifDebug("${now() - time} ms")
 }
 
 def allDevices()       {
