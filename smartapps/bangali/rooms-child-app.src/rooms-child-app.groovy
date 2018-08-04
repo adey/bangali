@@ -946,8 +946,8 @@ private pageOtherDevicesSettings()       {
         }
         section("ROOM BUTTON:", hideable: false)      {
             if (hT == _Hubitat)
-                input "roomButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-            input "roomButton", "capability.${(hT == _SmartThings ? 'button' : roomButtonAction)}", title: "Button to rotate states?", required: false, multiple: false, submitOnChange: true
+                input "roomButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "roomButton", "capability.${(hT == _SmartThings ? 'button' : roomButtonType)}", title: "Button to rotate states?", required: false, multiple: false, submitOnChange: true
             if (roomButton)     {
                 input "buttonForRoom", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: roomButtonOptions
                 input "roomButtonStates", "enum", title: "Rotate thru which states?", required: true, multiple: true, options: [engaged, occupied, asleep, locked, vacant]
@@ -1001,8 +1001,8 @@ private pageOccupiedSettings()      {
     dynamicPage(name: "pageOccupiedSettings", title: "Occupied Settings", install: false, uninstall: false)     {
         section("Button for OCCUPIED state:", hideable: false)		{
             if (hT == _Hubitat)
-                input "occupiedButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-            input "occupiedButton", "capability.${(hT == _SmartThings ? 'button' : occupiedButtonAction)}", title: "Button to set Occupied?", required: false, multiple: false, submitOnChange: true
+                input "occupiedButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "occupiedButton", "capability.${(hT == _SmartThings ? 'button' : occupiedButtonType)}", title: "Button to set Occupied?", required: false, multiple: false, submitOnChange: true
             if (occupiedButton)       {
                 input "buttonIsOccupied", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: occupiedButtonOptions
                 input "buttonOnlySetsOccupied", "bool", title: "Button only sets Occupied?", description: "if false will toggle occupied and vacant", required: false, multiple: false, defaultValue: false
@@ -1060,8 +1060,8 @@ private pageEngagedSettings()       {
             else
                 paragraph "When room is busy?\nselect motion sensor(s) above to set."
             if (hT == _Hubitat)
-                input "engagedButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-            input "engagedButton", "capability.${(hT == _SmartThings ? 'button' : engagedButtonAction)}", title: "Button to set Engaged?", required: false, multiple: false, submitOnChange: true
+                input "engagedButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "engagedButton", "capability.${(hT == _SmartThings ? 'button' : engagedButtonType)}", title: "Button to set Engaged?", required: false, multiple: false, submitOnChange: true
             if (engagedButton)      {
                 input "buttonIs", "enum", title: "Button number?", required: true, multiple: false, defaultValue: null, options: engagedButtonOptions
                 input "buttonOnlySetsEngaged", "bool", title: "Button only sets Engaged?", description: "if false will toggle engaged and vacant", required: false, multiple: false, defaultValue: false
@@ -1173,8 +1173,8 @@ private pageVacantSettings()      {
 	dynamicPage(name: "pageVacantSettings", title: "Vacant Settings", install: false, uninstall: false)     {
         section("Button for VACANT state:", hideable: false)		{
             if (hT == _Hubitat)
-                input "vacantButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-            input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : vacantButtonAction)}", title: "Button to set Vacant?", required: false, multiple: false, submitOnChange: true
+                input "vacantButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "vacantButton", "capability.${(hT == _SmartThings ? 'button' : vacantButtonType)}", title: "Button to set Vacant?", required: false, multiple: false, submitOnChange: true
             if (vacantButton)       {
                 input "buttonIsVacant", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: vacantButtonOptions
 //                input "buttonToggleWithVacant", "bool", title: "If room state is VACANT toggle to OCCUPIED state?", required: true, multiple: false, defaultValue: false, options: vacantButtonOptions
@@ -1831,8 +1831,8 @@ private pageAsleepSettings() {
         section("ASLEEP state settings:", hideable: false)		{
 	    	input "asleepSensor", "capability.sleepSensor", title: "Sleep sensor to set room to ASLEEP?", required: false, multiple: false
             if (hT == _Hubitat)
-                input "asleepButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-            input "asleepButton", "capability.${(hT == _SmartThings ? 'button' : asleepButtonAction)}", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
+                input "asleepButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+            input "asleepButton", "capability.${(hT == _SmartThings ? 'button' : asleepButtonType)}", title: "Button to toggle ASLEEP state?", required: false, multiple: false, submitOnChange: true
             if (asleepButton)       {
                 input "buttonIsAsleep", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: asleepButtonOptions
                 input "buttonOnlySetsAsleep", "bool", title: "Button only sets Asleep?", description: "if false will toggle asleep and vacant", required: false, multiple: false, defaultValue: false
@@ -1884,8 +1884,8 @@ private pageAsleepSettings() {
                 input "nightTurnOn", "enum", title: "Turn on night lights when?", required: true, multiple: true,
                                         options: [[1:"Motion in ASLEEP state"],[2:"State changes to ASLEEP"],[3:"State changes away from ASLEEP"]]
                 if (hT == _Hubitat)
-                    input "nightButtonAction", "enum", title: "Button action?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
-                input "nightButton", "capability.${(hT == _SmartThings ? 'button' : nightButtonAction)}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
+                    input "nightButtonType", "enum", title: "Button type?", required: true, multiple: false, defaultValue: pushAButton, submitOnChange: true, options: [["$pushAButton":'Push button'],["$holdAButton":'Hold button'],["$doubleTapAButton":'Double tap button']]
+                input "nightButton", "capability.${(hT == _SmartThings ? 'button' : nightButtonType)}", title: "Button to toggle night lights?", required: false, multiple: false, submitOnChange: true
                 if (nightButton)        {
                     input "nightButtonIs", "enum", title: "Button Number?", required: true, multiple: false, defaultValue: null, options: nightButtonOptions
                     input "nightButtonAction", "enum", title: "Button Action?", required: true, multiple: false, defaultValue: null,
@@ -2215,8 +2215,13 @@ private pageGeneralSettings()       {
         section("Turn off all switches on no rule match?", hideable: false)		{
             input "allSwitchesOff", "bool", title: "Turn OFF?", required: false, multiple: false, defaultValue: true
         }
-        section("Process execution rule(s) only on state change?", hideable: false)		{
-            input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
+        if (!hideAdvanced)      {
+            section("Process execution rule(s) only on state change?", hideable: false)		{
+                input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
+            }
+//            section("States overrides and will not switch away from?", hideable: false)		{
+//                input "roomButtonStates", "enum", title: "State override priority?", required: true, multiple: true, options: [locked, asleep, engaged, occupied]
+//            }
         }
 /*
         section("Announcement volume?", hideable: false)		{
@@ -2579,12 +2584,12 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
         if (hT == _SmartThings)
             subscribe(roomButton, "button", roomButtonPushedEventHandler)
         else
-            subscribe(roomButton, "${(roomButtonAction == holdAButton ? 'held' : (roomButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonForRoom", roomButtonPushedEventHandler)
+            subscribe(roomButton, "${(roomButtonType == holdAButton ? 'held' : (roomButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonForRoom", roomButtonPushedEventHandler)
     if (occupiedButton)
         if (hT == _SmartThings)
             subscribe(occupiedButton, "button", buttonPushedOccupiedEventHandler)
         else
-            subscribe(occupiedButton, "${(occupiedButtonAction == holdAButton ? 'held' : (occupiedButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsOccupied", buttonPushedOccupiedEventHandler)
+            subscribe(occupiedButton, "${(occupiedButtonType == holdAButton ? 'held' : (occupiedButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsOccupied", buttonPushedOccupiedEventHandler)
     if (occSwitches) {
     	subscribe(occSwitches, "switch.on", occupiedSwitchOnEventHandler)
     	subscribe(occSwitches, "switch.off", occupiedSwitchOffEventHandler)
@@ -2623,7 +2628,7 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
         if (hT == _SmartThings)
             subscribe(engagedButton, "button", buttonPushedEventHandler)
         else
-            subscribe(engagedButton, "${(engagedButtonAction == holdAButton ? 'held' : (engagedButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIs", buttonPushedEventHandler)
+            subscribe(engagedButton, "${(engagedButtonType == holdAButton ? 'held' : (engagedButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIs", buttonPushedEventHandler)
     if (personsPresence)     {
     	subscribe(personsPresence, "presence.present", presencePresentEventHandler)
         subscribe(personsPresence, "presence.not present", presenceNotPresentEventHandler)
@@ -2663,7 +2668,7 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
         if (hT == _SmartThings)
             subscribe(vacantButton, "button", buttonPushedVacantEventHandler)
         else
-            subscribe(vacantButton, "${(vacantButtonAction == holdAButton ? 'held' : (vacantButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsVacant", buttonPushedVacantEventHandler)
+            subscribe(vacantButton, "${(vacantButtonType == holdAButton ? 'held' : (vacantButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsVacant", buttonPushedVacantEventHandler)
     if (vacantSwitches)   subscribe(vacantSwitches, "switch.off", vacantSwitchOffEventHandler);
 
     ifDebug("updateRoom 3", 'info')
@@ -2687,7 +2692,7 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
         if (hT == _SmartThings)
             subscribe(asleepButton, "button", buttonPushedAsleepEventHandler)
         else
-            subscribe(asleepButton, "${(asleepButtonAction == holdAButton ? 'held' : (asleepButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsAsleep", buttonPushedAsleepEventHandler)
+            subscribe(asleepButton, "${(asleepButtonType == holdAButton ? 'held' : (asleepButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$buttonIsAsleep", buttonPushedAsleepEventHandler)
     if (asleepSwitch)      {
     	subscribe(asleepSwitch, "switch.on", asleepSwitchOnEventHandler)
     	subscribe(asleepSwitch, "switch.off", asleepSwitchOffEventHandler)
@@ -2697,7 +2702,7 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
         if (hT == _SmartThings)
             subscribe(nightButton, "button", nightButtonPushedEventHandler)
         else
-            subscribe(nightButton, "${(nightButtonAction == holdAButton ? 'held' : (nightButtonAction == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$nightButtonIs", nightButtonPushedEventHandler)
+            subscribe(nightButton, "${(nightButtonType == holdAButton ? 'held' : (nightButtonType == doubleTapAButton ? 'doubleTapped' : 'pushed'))}.$nightButtonIs", nightButtonPushedEventHandler)
     state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep : null)
     nightSwitches.each      {
         if (it.hasCommand("setLevel"))    state.switchesHasLevel << [(it.getId()):true];
