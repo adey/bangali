@@ -2218,6 +2218,7 @@ private pageGeneralSettings()       {
         section("Process execution rule(s) only on state change?", hideable: false)		{
             input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, multiple: false, defaultValue: false
         }
+/*
         section("Announcement volume?", hideable: false)		{
             if (musicDevice)
                 input "announceVolume", "number", title: "Announcement volume?", required: false, multiple: false, defaultValue: 50, range: "1..100"
@@ -2232,6 +2233,7 @@ private pageGeneralSettings()       {
             else
                 paragraph "Announce when door open or closed?\ncan only be enabled when contact sensor is on outside door and music device is selected."
         }
+*/
         if (!hideAdvanced)      {
             section("When room device switch capability turned on programatically (rooms_device.on()) set room to?\n(note: when room device switch is tuned off room state is set to VACANT.)", hideable: false)	{
                 input "roomDeviceSwitchOn", "enum", title: "Which state?", required: false, multiple: false, defaultValue: ['occupied'], options: ['occupied', 'engaged', 'locked', 'asleep']
