@@ -961,6 +961,12 @@ def pageBatteryAnnouncementSettings()      {
                 paragraph "Battery all OK warning color?\nselect battery time to set."
                 paragraph "Battery low warning color?\nselect battery time to set."
             }
+            if (batteryTime)        {
+                input "batteryNoCheckDevices", "capability.sensor", title: "Do not check these devices?", required: false, multiple: true
+            }
+            else        {
+                paragraph "Do not check these devices?\nselect announce battery status to set."
+            }
         }
     }
 }
@@ -1029,7 +1035,7 @@ def updated()		{
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (checkHealth)        {
         state.healthHours = 0
-        state.noCheckDevices = healthNoCheckDevices.collect { it.id }
+        state.noHealthCheckDevices = healthNoCheckDevices.collect { it.id }
 //        ifDebug("state.noCheckDevices: $state.noCheckDevices")
 //        healthNoCheckDevices.each       {
 //            ifDebug("state.noCheckDevices: $state.noCheckDevices")
@@ -1040,7 +1046,10 @@ def updated()		{
         runEvery1Hour(checkDeviceHealth)
         runIn(1, checkDeviceHealth)
     }
-    if (batteryTime)        schedule(batteryTime, batteryCheck)
+    if (batteryTime)        {
+        state.noBatteryCheckDevices = batteryNoCheckDevices.collect { it.id }
+        schedule(batteryTime, batteryCheck)
+    }
     if (ht == _SmartThings)     subscribe(location, "askAlexaMQ", askAlexaMQHandler)
     ifDebug("there are ${childApps.size()} rooms.", 'info')
 	childApps.each	{ child ->
@@ -1462,8 +1471,9 @@ def processChildSwitches()      {
 }
 
 def batteryCheck()      {
+    ifDebug("batteryCheck", 'info')
     def allBatteries = []
-    def allBatteriesID = []
+    def allBatteriesID = (state.noBatteryCheckDevices ?: [])
     childApps.each  { child ->
         def batteries = child.batteryDevices()
         batteries.each      {
@@ -1490,10 +1500,12 @@ def batteryCheck()      {
     def batteryNames = ''
     def batteryLow = false
     allBatteries.each      {
-        bat = it.currentValue("battery")
-        if (bat < batteryLevel)         {
-            batteryLow = true
-            batteryNames = batteryNames + (it.displayName ?: it.name) + ', '
+        if (it.hasAttribute("battery"))     {
+            bat = it.currentValue("battery")
+            if (bat < batteryLevel)         {
+                batteryLow = true
+                batteryNames = batteryNames + (it.displayName ?: it.name) + ":${(bat ?: 0)}, "
+            }
         }
     }
     if (announceSwitches && ((!batteryLow && batteryOkColor) || (batteryLow && batteryLowColor)))        {
@@ -1501,11 +1513,10 @@ def batteryCheck()      {
         state.colorNotificationColor = color
         setupColorNotification()
     }
-    if (speakerDevices || speechDevices || musicPlayers)        {
-        state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
-                                                       "no device battery below $batteryLevel percent.")
+    state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." :
+                                                   "no device battery below $batteryLevel percent.")
+    if (speakerDevices || speechDevices || musicPlayers)
         speakIt(state.lastBatteryUpdate)
-    }
 }
 
 def sunriseEventHandler(evt = null)       {
@@ -1653,7 +1664,7 @@ def checkDeviceHealth()     {
     def hT = getHubType()
     def tD = []
 //    ifDebug("state.noCheckDevices: $state.noCheckDevices")
-    def tDID = state.noCheckDevices
+    def tDID = (state.noHealthCheckDevices ?: [])
 //    ifDebug("tDID: $tDID")
     def itID
     def str = ''

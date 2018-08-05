@@ -874,6 +874,10 @@ private pageOnePager()      {
 	dynamicPage(name: "pageOnePager", title: "One Pager", install: false, uninstall: false)     {
         section("Motion sensor for OCCUPIED state:", hideable: false)        {
             input "motionSensors", "capability.motionSensor", title: "Which motion sensor(s)?", required: true, multiple: true, submitOnChange: true
+            if (motionSensors)
+                input "whichNoMotion", "enum", title: "Use which motion event for timeout?", required: true, multiple: false, defaultValue: 2, submitOnChange: true, options: [[1:"Last Motion Active"],[2:"Last Motion Inactive"]]
+            else
+                paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
         }
         section("Timeout configuration for OCCUPIED state:", hideable:fase) {
 //            if (motionSensors)
