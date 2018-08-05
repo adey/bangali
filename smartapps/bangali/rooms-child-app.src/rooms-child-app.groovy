@@ -1026,6 +1026,10 @@ private pageOccupiedSettings()      {
 	}
 }
 
+private getOccupiedSettingsStateDevices()        {
+    return [occSwitches]
+}
+
 private pageEngagedSettings()       {
     def buttonNames = genericButtons
     def engagedButtonOptions = [:]
@@ -1079,11 +1083,11 @@ private pageEngagedSettings()       {
                 paragraph "Presence sensor actions?\nselect presence sensor(s) to set"
                 paragraph "Keep room engaged when presence sensor present?\nselect presence sensor(s) to set"
             }
+            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
             if (musicDevice)
                 input "musicEngaged", "bool", title: "Set room to engaged when music starts playing?", required: false, multiple: false, defaultValue: false
             else
                 paragraph "Set room to engaged when music is playing?\nselect music device in speaker settings to set."
-            input "engagedSwitch", "capability.switch", title: "Switch turns ON?", required: false, multiple: true
             if (powerDevice)    {
                 if (!powerValueAsleep && !powerValueLocked)      {
                     input "powerValueEngaged", "number", title: "Power value to set room to ENGAGED state?", required: false, multiple: false, defaultValue: null, range: "0..99999", submitOnChange: true
@@ -1124,6 +1128,10 @@ private pageEngagedSettings()       {
             input "resetEngagedDirectly", "bool", title: "When resetting room from 'ENGAGED' directly move to 'VACANT' state?", required: false, multiple: false, defaultValue: false
         }
 	}
+}
+
+private getEngagedSettingsStateDevices()        {
+    return [engagedSwitch, musicDevice, [powerDevice, powerValueEngaged]]
 }
 
 private pageCheckingSettings()      {
@@ -1920,6 +1928,10 @@ private pageAsleepSettings() {
 	}
 }
 
+private getAsleepSettingsStateDevices()        {
+    return [asleepSwitch, [powerDevice, powerValueAsleep]]
+}
+
 private pageLockedSettings()      {
     def powerFromTimeHHmm = (powerFromTime ? format24hrTime(timeToday(powerFromTime, location.timeZone)) : '')
     def powerToTimeHHmm = (powerToTime ? format24hrTime(timeToday(powerToTime, location.timeZone)) : '')
@@ -1960,6 +1972,10 @@ private pageLockedSettings()      {
             input "unLocked", "number", title: "Timeout LOCKED after how many hours?", required: false, multiple: false, defaultValue: null, range: "1..99"
         }
 	}
+}
+
+private getLockedSettingsStateDevices()        {
+    return [lockedSwitch, [powerDevice, powerValueLocked]]
 }
 
 private pagePowerTime()   {
@@ -4488,7 +4504,7 @@ private processCoolHeatRules(temperature)      {
                 def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
                 if (fTime > tTime)
                     use (TimeCategory)   {
-                        fTime = fTime - 1.day
+                        tTime = tTime + 1.day
                     }
 //                ifDebug("ruleNo: $ruleNo | fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
                 if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
@@ -4639,7 +4655,7 @@ def powerEventHandler(evt)    {
         def tTime = ( powerToTimeType == timeSunrise() ? sunriseTimeWithOff : ( powerToTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(powerToTime, location.timeZone)))
         if (fTime > tTime)
             use (TimeCategory)   {
-                fTime = fTime - 1.day
+                tTime = tTime + 1.day
             }
 //                ifDebug("fTime: $fTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
         if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    timeOK = false;
@@ -4984,12 +5000,13 @@ private processRules(passedRoomState = null, switchesOnly = false)     {
                     sunriseTimeWithOff = (thisRule.toTimeOffset ? new Date(sunriseTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunriseTime)
                 else if (thisRule.toTimeType == timeSunset())
                     sunsetTimeWithOff = (thisRule.toTimeOffset ? new Date(sunsetTime.getTime() + (thisRule.toTimeOffset * 60000L)) : sunsetTime)
+//                ifDebug("toTimeType: $thisRule.toTimeType | sunriseTimeWithOff: $sunriseTimeWithOff | sunsetTimeWithOff: $sunsetTimeWithOff | toTime: $thisRule.toTime | timeToday: ${timeToday(thisRule.toTime, location.timeZone)}")
                 def tTime = ( thisRule.toTimeType == timeSunrise() ? sunriseTimeWithOff : ( thisRule.toTimeType == timeSunset() ? sunsetTimeWithOff : timeToday(thisRule.toTime, location.timeZone)))
                 if (fTime > tTime)
                     use (TimeCategory)   {
-                        fTime = fTime - 1.day
+                        tTime = tTime + 1.day
                     }
-//                ifDebug("ruleNo: $ruleNo | fromTime: $thisRule.fromTime | fTime: $fTime | toTime: $thisRule.toTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
+                ifDebug("ruleNo: $ruleNo | fromTime: $thisRule.fromTime | fTime: $fTime | toTime: $thisRule.toTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}")
                 if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))    continue;
                 if (!timedRulesOnly)    {
                     turnOn = []

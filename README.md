@@ -1157,22 +1157,14 @@
 </ul>
 
 <p>&nbsp;</p>
-<p><i>For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps.</i></p>
+<p><i>For a github install from repo in ST use : owner: adey / name: bangali / branch: master. Install and publish the rooms occupancy DTH then install and publish the rooms manager and rooms child app smartapps. <b>So 1 device driver and 2 smartapps ALL need to be saved and published before using the smartapp.</b></i></p>
 
 <p>For a manual install here are the links, in order of DTHs and smartapps you should save and publish.</p>
 
 <p><b>rooms occupancy DTH:</b></p>
 <a href="https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy">https://raw.githubusercontent.com/adey/bangali/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy</a>
 
-<h5>when saving the driver it will generate an error on the first of each of these two lines:</h5>
-
-<p>capability "Button"</p>
-<p>//capability "PushableButton" // hubitat changed Button to PushableButton 2018-04-20</p>
-
-<p>capability "Lock Only"</p>
-<p>//capability "Lock" // hubitat does not support Lock Only 2018-04-07</p>
-
-<i>Comment out the Button and Lock Only line and uncomment the PushableButton and Lock line, explanation in inline comment above.</i>
+<h5>When saving the driver in Hubitat please see the comments in the capabilities section where you will need to comment a few lines and uncomment a few others. This is not necessary to do on SmartThings.</h5>
 
 <p><b>rooms manager smartapp:</b></p>
 <a href="https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy">https://raw.githubusercontent.com/adey/bangali/master/smartapps/bangali/rooms-manager.src/rooms-manager.groovy</a>
