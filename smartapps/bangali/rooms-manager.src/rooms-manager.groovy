@@ -21,10 +21,25 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.60.0"  }
+public static String version()      {  return "v0.65.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.65.0
+*
+*   DONE:   8/13/2018
+*	1) fixed temperature colors on DTH for ST
+*	2) added option to select which room motion sensors trigger occupancy from VACABT state.
+*	3) added option to trigger busy check with repeated motion to the existing checks for state change trigger.
+*	4) added option to override OCCUPIED state trigger devices when in ENGAGED state.
+*	5) on HE added support for deleting rules.
+*	6) added option to override OCCUPIED and ENGAGED state trigger devices when in ASLEEP state.
+*	7) added option to override OCCUPIED, ENGAGED and ASLEEP state trigger devices when in LOCKED state.
+*	8) fixed a bug on power time type selection when limiting power trigger during certain hours.
+*	9) started work on save and restore settings. currently only allows viewing settings to save.
+*	10) fixed bug for only on state change where mode and lux change would still trigger rules evaluation.
+*	11) added github update notification via sms.
 *
 *  Version: 0.60.0
 *
@@ -686,6 +701,7 @@ def mainPage()  {
 @Field final String _HealthImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerHealth.png'
 @Field final String _ProcessImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerProcess.png'
 @Field final String _GHimage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomOccupancySettings.png'
+@Field final String _GitUpdateImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerGithubText.png'
 @Field final String _gitREADME = 'https://github.com/adey/bangali/blob/master/README.md'
 
 def pageSpeakerSettings()   {
@@ -739,6 +755,9 @@ def pageSpeakerSettings()   {
         }
         section("")       {
             href "pageDeviceHealthSettings", title: "${addImage(_HealthImage)}Device health settings", description: (checkHealth ? "Tap to change existing settings" : "Tap to configure"), image: _HealthImage
+        }
+        section("Text message when code is updated on Github?")       {
+            input "phoneNumber", "phone", title: "${addImage(_GitUpdateImage)}To which phone number?", required: false, image: _GitUpdateImage
         }
         section("Process execution rule(s) only on state change? (global setting overrides setting at room level)", hideable: false)		{
             input "onlyOnStateChange", "bool", title: "${addImage(_ProcessImage)}Only on state change?", required: false, multiple: false, defaultValue: false, image: _ProcessImage
@@ -1061,6 +1080,7 @@ def updated()		{
     if (announceSwitches && ['1', '3'].contains(sunAnnounce))       subscribe(location, "sunrise", sunriseEventHandler);
     if (announceSwitches && ['2', '3'].contains(sunAnnounce))       subscribe(location, "sunset", sunsetEventHandler);
     githubUpdated(true)
+    schedule("0 0 19 1/1 * ? *", githubUpdated)
 }
 
 def initialize()	{
@@ -1085,7 +1105,17 @@ def askAlexaMQHandler(evt) {
       }
 }
 
-def unsubscribeChild(childID)   {  unsubscribe(getChildRoomDeviceObject(childID))  }
+def unsubscribeChildRoomDevice(appChildDevice)   {
+    ifDebug("unsubcribe: room: ${appChildDevice.label} id: ${appChildDevice.id}", 'info')
+//    def childRoomDevice = getChildRoomDeviceObject(childID)
+//    unsubscribe(childRoomDevice)
+    if (getHubType() == _Hubitat)
+        ifDebug("Hubitat does not yet support unsubscribing to a single device so removing a room requires a manual step.\n\
+                 From Hubitat portal please go to devices and find the corresponding rooms occupancy device and remove it.\n\
+                 Once the device is removed, from rooms manager app remove the room to complete uninstallation of the room.")
+    else
+        unsubscribe(appChildDevice)
+}
 
 def roomStateHistory(evt)        {
 //    log.debug "rooms manager handler: event: $evt | data: $evt.data | date: $evt.date | description: $evt.description | descriptionText: $evt.descriptionText | device: $evt.device | displayName: $evt.displayName | deviceId: $evt.deviceId | id: $evt.id | hubId: $evt.hubId | isoDate: $evt.isoDate | location: $evt.location | locationId: $evt.locationId | name: $evt.name | source: $evt.source | unit: $evt.unit | value: $evt.value | isDigital: ${evt.isDigital()} | isPhysical: ${evt.isPhysical()} |"
@@ -1467,11 +1497,12 @@ def processChildSwitches()      {
         if (child.checkAndTurnOnOffSwitchesC())
             if (hT == _SmartThings)     pause(10);
     }
-    ifDebug("${now() - time} ms")
+    ifDebug("process child switches: ${now() - time} ms")
 }
 
 def batteryCheck()      {
     ifDebug("batteryCheck", 'info')
+    def time = now()
     def allBatteries = []
     def allBatteriesID = (state.noBatteryCheckDevices ?: [])
     childApps.each  { child ->
@@ -1517,6 +1548,7 @@ def batteryCheck()      {
                                                    "no device battery below $batteryLevel percent.")
     if (speakerDevices || speechDevices || musicPlayers)
         speakIt(state.lastBatteryUpdate)
+    ifDebug("check battery: ${now() - time} ms")
 }
 
 def sunriseEventHandler(evt = null)       {
@@ -1629,38 +1661,38 @@ def tellTime()      {
 }
 
 def githubUpdated(storeCommitTimestamp = false)     {
-	def url = "https://api.github.com/repos/adey/bangali/branches/master"
+//	def url = "https://api.github.com/repos/adey/bangali/branches/master"
+    def params = [uri: "https://api.github.com/repos/adey/bangali/commits${(state.githubUpdate ? '?since=' + state.githubUpdate : '')}"]
 	def result = null
-    def speak
-
-/*
+    def githubText = false
 	try    {
-		httpGet(uri: url)     { response ->
-			result = response
+		httpGet(params)     { response ->
+            if (response.status == 200)     result = response;
 		}
-        result.data.each     {
-            ifDebug("$it")
-        }
-		def latestCommitTime = result.data.commit.commit.author.date
-        if (storeCommitTimestamp)       {
-            state.githubUpdate = latestCommitTime
-        }
-        else if (latestCommitTime != state."last${branch}Update")       {
-            state.githubUpdate = latestCommitTime
-            speak = "code updated"
+        if (result)     {
+    		def latestCommitDate = result.data.commit.committer.date.max()
+//            ifDebug("last github update: $latestCommitDate")
+            if (latestCommitDate)
+                if (storeCommitTimestamp && !state.githubUpdate)
+                    state.githubUpdate = latestCommitDate
+                else if (latestCommitDate != state.githubUpdate)       {
+                    state.githubUpdate = latestCommitDate
+                    githubText = true
+                }
         }
 	}
-	catch (e)      {
-		log.warn e
-	}
-*/
+	catch (e)  { log.warn e }
+    if (githubText)      {
+        ifDebug("Rooms Manager: Code has been updated on Github. Thank you.", 'trace')
+        if (phoneNumber)    sendSms(phoneNumber, "Rooms Manager: Code has been updated on Github. Thank you.");
+    }
 }
 
 def checkDeviceHealth()     {
     ifDebug("checkDeviceHealth", 'info')
     def time = now()
     def cDT = new Date(time - (eventHours.toInteger() * 3600000l))
-    ifDebug("$cDT")
+//    ifDebug("$cDT")
     def hT = getHubType()
     def tD = []
 //    ifDebug("state.noCheckDevices: $state.noCheckDevices")
@@ -1728,7 +1760,7 @@ def checkDeviceHealth()     {
         state.healthHours = (state.healthHours == 0 ? healthEvery as Integer : state.healthHours - 1)
     }
 //    ifDebug("healthEvery: $healthEvery | $state.lastDeviceHealthUpdate")
-//    ifDebug("${now() - time} ms")
+    ifDebug("check device health: ${now() - time} ms")
 }
 
 def allDevices()       {
@@ -1755,7 +1787,7 @@ private isADevice(thisThing)      {
 }
 
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" 'rooms manager: ' + msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" ' rooms manager: ' + msg  }
 
 private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()

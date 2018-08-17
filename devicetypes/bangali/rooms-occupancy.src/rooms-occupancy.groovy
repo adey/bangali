@@ -25,10 +25,25 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.60.0"  }
+public static String version()      {  return "v0.65.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.65.0
+*
+*   DONE:   8/13/2018
+*	1) fixed temperature colors on DTH for ST
+*	2) added option to select which room motion sensors trigger occupancy from VACABT state.
+*	3) added option to trigger busy check with repeated motion to the existing checks for state change trigger.
+*	4) added option to override OCCUPIED state trigger devices when in ENGAGED state.
+*	5) on HE added support for deleting rules.
+*	6) added option to override OCCUPIED and ENGAGED state trigger devices when in ASLEEP state.
+*	7) added option to override OCCUPIED, ENGAGED and ASLEEP state trigger devices when in LOCKED state.
+*	8) fixed a bug on power time type selection when limiting power trigger during certain hours.
+*	9) started work on save and restore settings. currently only allows viewing settings to save.
+*	10) fixed bug for only on state change where mode and lux change would still trigger rules evaluation.
+*	11) added github update notification via sms.
 *
 *  Version: 0.60.0
 *
@@ -107,7 +122,6 @@ private static boolean isDebug()    {  return true  }
 *   1) cleaned up the settings page for rooms manager.
 *   2) updated rooms device settings to deal with ST change of json parser which broke settings.
 *   3) for rooms device events added a little more descriptive text.
-// TODO make time range display actual time range not just the time type.
 *   4) overhauled the view all settings page which had fallen behind.
 *   5) added link to help text on github in app.
 *   6) added setting for how fast room changes to VACANT if currently ASLEEP and room contact sensor is left open.
@@ -808,7 +822,7 @@ metadata {
                 														[value: 97, color: "#BC2323"]])
 		}
 		valueTile("maintainInd", "device.maintainInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
-			state("temperature", label:'${currentValue}', backgroundColor:"#ffffff")
+			state("temperature", label:'${currentValue}', unit:'', backgroundColors: [
 /*                														// Celsius Color Range
                 														[[value:  0, color: "#153591"],
                 														[value:  7, color: "#1E9CBB"],
@@ -816,15 +830,15 @@ metadata {
                 														[value: 23, color: "#44B621"],
                 														[value: 29, color: "#F1D801"],
                 														[value: 33, color: "#D04E00"],
-                														[value: 36, color: "#BC2323"],
+                														[value: 36, color: "#BC2323"],*/
                 														// Fahrenheit Color Range
-                														[[value: 32, color: "#153591"],
+                														[value: 32, color: "#153591"],
                 														[value: 45, color: "#1E9CBB"],
                 														[value: 59, color: "#90D2A7"],
                 														[value: 73, color: "#44B621"],
                 														[value: 84, color: "#F1D801"],
                 														[value: 91, color: "#D04E00"],
-                														[value: 97, color: "#BC2323"]])*/
+                														[value: 97, color: "#BC2323"]])
 		}
 		valueTile("outTempInd", "device.outTempInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("temperature", label:'${currentValue}', unit:'', backgroundColors: [
@@ -846,9 +860,9 @@ metadata {
                 														[value: 97, color: "#BC2323"]])
 		}
 		standardTile("ventInd", "device.ventInd", width: 1, height: 1, canChangeIcon: true) {
-			state("none", label:'${name}', icon:"st.vents.vent", backgroundColor:"#ffffff")
+			state("none", label:'none', icon:"st.vents.vent", backgroundColor:"#ffffff")
+			state("closed", label:'closed', icon:"st.vents.vent-closed", backgroundColor:"#00A0DC")
 			state("open", label:'${currentValue}', icon:"st.vents.vent-open", backgroundColor:"#e86d13")
-			state("closed", label:'${name}', icon:"st.vents.vent-closed", backgroundColor:"#00A0DC")
 		}
 		standardTile("thermostatInd", "device.thermostatInd", width:1, height:1, canChangeIcon: true)	{
 			state("none", label:'${currentValue}', backgroundColor:"#ffffff")
@@ -1408,17 +1422,19 @@ def updateOutTempIndC(temp)		{
 }
 
 def updateVentIndC(vent)		{
+	ifDebug("updateVentIndC: $vent")
 	def vL, dD
 	switch(vent)	{
 		case -1:	vL = 'none';		dD = "indicate no vents";		break
 		case 0:		vL = 'closed';		dD = "indicate vents closed";	break
-		default:	vL = 'open';		dD = "indicate vent open";	break
+		default:	vL = 'open';		dD = "indicate vent open";		break
 	}
-	sendEvent(name: 'ventInd', value: (vL == 'open' ? formatNumber(vent) : vL), descriptionText: dD, isStateChange: true, displayed: false)
+//	sendEvent(name: 'ventInd', value: (vL == 'open' ? formatNumber(vent) : vL), descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'ventInd', value: vL, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
 def updateMaintainIndC(temp)		{
-	def tS = '°' + (location.temperatureScale ?: 'F')
+	def tS = (location.temperatureScale ?: 'F')
 	sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText:
 				(temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"), isStateChange: true, displayed: false)
 }
@@ -1677,4 +1693,4 @@ private formatduration(long value, boolean friendly = false, granularity = 's', 
 }
 */
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" "$device.displayName device " + msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" " $device.displayName device: " + msg  }

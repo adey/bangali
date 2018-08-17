@@ -64,6 +64,7 @@
     * Time every quarter, half or on the hour.
     * Sunrise and sunset.
   * Announcements support speakers and / or lights.
+  * Github updated notification.
 
 <h3 style="padding-top: 5px">Occupancy states, settings and other details:</h3>
 
@@ -1267,7 +1268,7 @@
                 </tr>
             </table>
         </ul>
-        When the rules date condition is met on and switches specified in the rule will be turned on and off respectively.
+        When the rules date condition is met, switches specified in the rule will be turned on and off respectively.
     </ul>
 </p>
 
