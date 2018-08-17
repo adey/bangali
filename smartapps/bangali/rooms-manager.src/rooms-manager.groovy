@@ -30,7 +30,7 @@ private static boolean isDebug()    {  return true  }
 *
 *   DONE:   8/13/2018
 *	1) fixed temperature colors on DTH for ST
-*	2) added option to select which room motion sensors trigger occupancy from VACABT state.
+*	2) added option to select which room motion sensors triggers occupancy from VACANT state.
 *	3) added option to trigger busy check with repeated motion to the existing checks for state change trigger.
 *	4) added option to override OCCUPIED state trigger devices when in ENGAGED state.
 *	5) on HE added support for deleting rules.
