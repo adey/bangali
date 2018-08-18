@@ -41,7 +41,7 @@ private static boolean isDebug()    {  return true  }
 *	6) added option to override OCCUPIED and ENGAGED state trigger devices when in ASLEEP state.
 *	7) added option to override OCCUPIED, ENGAGED and ASLEEP state trigger devices when in LOCKED state.
 *	8) fixed a bug on power time type selection when limiting power trigger during certain hours.
-*	9) started work on save and restore settings. currently only allows viewing settings to save.
+*	9) on HE started work on save and restore settings. currently only allows viewing settings to save.
 *	10) fixed bug for only on state change where mode and lux change would still trigger rules evaluation.
 *	11) added github update notification via sms.
 *
