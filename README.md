@@ -135,6 +135,14 @@
             <td>Motion event to use for timeout. Choose the motion active event to start the timeout if your motion sensor does not generate a motion inactive event following the motion active event rather stays continuously active with no inactive event in between.</td>
         </tr>
         <tr>
+            <td>Room Buttons</td>
+            <td>Select up to 5 buttons all of which will allow toggling through selected states.</td>
+        </tr>
+        <tr>
+            <td>Selected states</td>
+            <td>Select states room buttons above will toggle through.</td>
+        </tr>
+        <tr>
             <td>Presence sensor(s)</td>
             <td>Presence sensor to associate with the room. Helps control certain room actions based on presence state</td>
         </tr>
@@ -1126,7 +1134,11 @@
                 <td>Icon to use for this room in Rooms Manager.</td>
             </tr>
             <tr>
-                <td>Turn off</td>
+                <td>Dim lights off</td>
+                <td>When turning off lights this dims them to off over specified number of seconds instead of turning them off directly.</td>
+            </tr>
+            <tr>
+                <td>Turn all off</td>
                 <td>This turns off all switches when no rules match so you don't need to create a rule for Vacant state to turn off lights.</td>
             </tr>
             <tr>

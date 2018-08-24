@@ -25,10 +25,25 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.65.0"  }
+public static String version()      {  return "v0.70.0"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.70.0
+*
+*   DONE:   8/18/2018
+*	1) removed the `lock` capability which i had included for use on HE since HE does not support 'lock only' capability.
+*	2) fixed send event for switch and button in rooms occupany device.
+*	3) added support for multiple button devices in room button device.
+*	4) added dimming lights to off over configurable number of seconds.
+*   5) added sms settings with time window for when sms should be sent.
+*	6) added selectable time for github update sms notification.
+*   7) added sms support for low battery notification.
+*   8) renamed device health check to device connectivity check so folks dont confuse it with ST device health check.
+*	9) added option to not speak sunrise and sunset announcement and only do color notification.
+*	10) added option in battery check to add battery devices that are not otherwise used in rooms to battery check.
+*	11) on HE added support for notify my echo for spoken messages from the room but not rooms manager yet.
 *
 *  Version: 0.65.0
 *
@@ -662,9 +677,8 @@ metadata {
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
-// for hubitat comment the next line and uncomment the one after that is currently commented
+// for hubitat comment the next line since this capability is not supported
 		capability "Lock Only"
-//		capability "Lock"		// hubitat does not support `Lock Only` 2018-04-07
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
 // for hubitat uncomment the next few lines
 //		attribute "occupancyIconS", "String"
@@ -1176,19 +1190,29 @@ def on()	{
 		case 'asleep':		asleep();		break
 		default:							break
 	}
+	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", isStateChange: true, displayed: true)
 }
 
-def	off()		{  vacant()  }
+def	off()		{
+	vacant()
+	sendEvent(name: "switch", value: "off", descriptionText: "$device.displayName is off", isStateChange: true, displayed: true)
+}
 
-def push(button)		{
-	ifDebug("$button")
-	switch(button)		{
+def push(buton)		{
+	ifDebug("$buton")
+	def hT = getHubType()
+	switch(buton)		{
 		case 1:		occupied();		break
 		case 3:		vacant();		break
 		case 4:		locked();		break
 		case 8:		asleep();		break
 		case 9:		engaged();		break
-		default:					break
+		default:
+			if (hT != _Hubitat)
+				sendEvent(name: "button", value: "pushed", data: [buttonNumber: "$buton"], descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
+			else
+				sendEvent(name: "pushableButton", value: buton, descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
+			break
 	}
 }
 
@@ -1228,7 +1252,7 @@ private	stateUpdate(newState)		{
 	resetTile(newState)
 }
 
-private updateOccupancy(occupancy = null) 	{
+def updateOccupancy(occupancy = null) 	{
 	occupancy = occupancy?.toLowerCase()
 	def hT = getHubType()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
