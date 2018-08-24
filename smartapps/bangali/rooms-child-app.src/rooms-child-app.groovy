@@ -2945,7 +2945,7 @@ def updateRoom(adjMotionSensors, fromThis = false)     {
     if (ht == _SmartThings)     subscribe(location, "askAlexaMQ", askAlexaMQHandler)
     else        {
         state.askAlexaMQ = []
-        app.updateSetting("echoAccessCode", [type: "text", value: "${encrypt(settings['echoAccessCode'])}"]);
+        if (echoAccessCode)     app.updateSetting("echoAccessCode", [type: "text", value: "${encrypt(settings['echoAccessCode'])}"]);
     }
 /*
     def child = getChildDevice(getRoom())
