@@ -38,10 +38,17 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.70.0"  }
+public static String version()      {  return "v0.70.1"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.70.1
+*
+*   DONE:   8/25/2018
+*	1) fixed mode filtering in rooms manager announcements.
+*	2) added 5 and 10 seconds option to dim over settings in rooms child.
+*   3) added repeat option to github updated message.
 *
 *  Version: 0.70.0
 *
@@ -2415,7 +2422,7 @@ def pageGeneralSettings()       {
             input "allSwitchesOff", "bool", title: "Turn OFF?", required: false, multiple: false, defaultValue: true
         }
         section("When switching off lights dim to off?", hideable: false)		{
-            input "dimOver", "enum", title: "Dim over seconds?", description: "requires device driver support", required: false, multiple: false, defaultValue: null, options: [[null:"No dimming"],[15:"15 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"60 seconds"],[90:"90 seconds"]]
+            input "dimOver", "enum", title: "Dim over seconds?", description: "requires device driver support", required: false, multiple: false, defaultValue: null, options: [[null:"No dimming"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"60 seconds"],[90:"90 seconds"]]
         }
         if (!hideAdvanced)      {
             section("Process execution rules only on state change?", hideable: false)		{

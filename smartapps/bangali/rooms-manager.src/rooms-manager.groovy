@@ -21,10 +21,17 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.70.0"  }
+public static String version()      {  return "v0.70.1"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.70.1
+*
+*   DONE:   8/25/2018
+*	1) fixed mode filtering in rooms manager announcements.
+*	2) added 5 and 10 seconds option to dim over settings in rooms child.
+*   3) added repeat option to github updated message.
 *
 *  Version: 0.70.0
 *
@@ -1095,10 +1102,14 @@ def pageDeviceConnectivitySettings()      {
 def pageGithubSettings()      {
     dynamicPage(name: "pageGithubSettings", title: "GITHUB UPDATE NOTIFICATION", install: false, uninstall: false)     {
         section()       {
-            if (phoneNumber)
-                input "gitTime", "time", title: "At what time of day?", required: false, multiple: false, submitOnChange: true
-            else
-                paragraph "At what time of day?\nselect phone number to set"
+            if (phoneNumber)        {
+                input "gitTime", "time", title: "At time of day?", required: false, submitOnChange: true
+                input "gitRepeat", "bool", title: "Repeat GITHUB updated notification?", required: (gitTime ? true : false)
+            }
+            else        {
+                paragraph "At time of day?\nselect phone number to set"
+                paragraph "Repeat GITHUB updated notification?"
+            }
         }
     }
 }
@@ -1368,7 +1379,7 @@ def contactClosedEventHandler(evt = null)     {
 
 private speakIt(str)     {
     ifDebug("speakIt", 'info')
-    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
+    if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))      return false;
     def hT = getHubType()
     if (!(speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs)))     return;
     def nowDate = new Date(now())
@@ -1406,7 +1417,7 @@ private speakIt(str)     {
 }
 
 private setupColorRotation()        {
-    if (announceInModes && !announceInModes.contains(location.currentMode))      return false;
+    if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))      return false;
     state.colorsRotateSeconds = state.colorsToRotate.size() * 30
     if (!state.colorsRotating)       {
         state.colorsRotating = true
@@ -1657,7 +1668,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 }
 
 def setupColorNotification()        {
-    if (announceInModes && !announceInModes.contains(location.currentMode.toString()))      return false;
+    if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))      return false;
     def nowDate = new Date(now())
     def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
     def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -1741,30 +1752,39 @@ def tellTime()      {
 }
 
 def githubUpdated(storeCommitTimestamp = false)     {
+    ifDebug('githubUpdated', 'info')
 //	def url = "https://api.github.com/repos/adey/bangali/branches/master"
     def params = [uri: "https://api.github.com/repos/adey/bangali/commits${(state.githubUpdate ? '?since=' + state.githubUpdate : '')}"]
 	def result = null
     def githubText = false
+    def latestCommitDate
 	try    {
 		httpGet(params)     { response ->
             if (response.status == 200)     result = response;
 		}
         if (result)     {
-    		def latestCommitDate = result.data.commit.committer.date.max()
+            latestCommitDate = result.data.commit.committer.date.max()
 //            ifDebug("last github update: $latestCommitDate")
-            if (latestCommitDate)
-                if (storeCommitTimestamp && !state.githubUpdate)
-                    state.githubUpdate = latestCommitDate
-                else if (latestCommitDate != state.githubUpdate)       {
-                    state.githubUpdate = latestCommitDate
-                    githubText = true
+            if (latestCommitDate)       {
+                if (storeCommitTimestamp)        {
+                    if (!state.githubUpdate || !state.version || state.version != version())        {
+                        state.githubUpdate = latestCommitDate
+                        state.version = version()
+                    }
                 }
+                else if (state.githubUpdate != latestCommitDate || state.version != version())
+                    githubText = true
+            }
         }
-	}
-	catch (e)  { log.warn e }
+	}   catch (e)  { log.warn e }
     if (githubText)      {
-        ifDebug("Rooms Manager: Code has been updated on Github. Thank you.", 'trace')
-        if (phoneNumber)    roomsSMS("Rooms Manager: Code has been updated on Github. Thank you.");
+        def str = "Rooms Manager: Code has been updated on Github. Thank you."
+        ifDebug(str, 'trace')
+        if (phoneNumber)    roomsSMS(str);
+        if (!gitRepeat)     {
+            state.githubUpdate = latestCommitDate
+            state.version = version()
+        }
     }
 }
 
