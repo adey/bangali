@@ -21,10 +21,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.70.1"  }
+public static String version()      {  return "v0.70.2"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.70.2
+*
+*   DONE:   8/26/2018
+*	1) small fixes.
 *
 *  Version: 0.70.1
 *
@@ -896,7 +901,7 @@ def pageModeSettings()      {
     dynamicPage(name: "pageModeSettings", title: "ANNOUNCE MODE SETTINGS", install: false, uninstall: false)     {
         section()       {
             if (playerDevice)
-                input "speakModes", "bool", title: "Announce mode changes with speaker?", required: false, multiple: true
+                input "speakModes", "bool", title: "Announce mode changes with speaker?", required: false, defaultValue: false
             else
                 paragraph "Announce mode changes with speaker?\nselect speaker to set"
             if (announceSwitches)
@@ -1157,7 +1162,7 @@ def updated()		{
 	}
     if (announceSwitches && ['1', '3'].contains(sunAnnounce))       subscribe(location, "sunrise", sunriseEventHandler);
     if (announceSwitches && ['2', '3'].contains(sunAnnounce))       subscribe(location, "sunset", sunsetEventHandler);
-    if (!state.githubUpdate)        githubUpdated(true);
+    githubUpdated(true);
     if (gitTime)        schedule(gitTime, githubUpdated);
     subscribe(location, "mode", modeEventHandler)
 }
@@ -1653,7 +1658,7 @@ def sunriseEventHandler(evt = null)       {
     ifDebug("sunriseEventHandler", 'info')
     state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunriseColor][1]))
     setupColorNotification()
-    if (speakSun)       speakIt(' Sun rise, time is ' + format24format24hrTime() + ' hours. ')
+    if (speakSun)       speakIt(' Sun rise, time is ' + format24hrTime() + ' hours. ')
 }
 
 def sunsetEventHandler(evt = null)       {
@@ -1753,7 +1758,6 @@ def tellTime()      {
 
 def githubUpdated(storeCommitTimestamp = false)     {
     ifDebug('githubUpdated', 'info')
-//	def url = "https://api.github.com/repos/adey/bangali/branches/master"
     def params = [uri: "https://api.github.com/repos/adey/bangali/commits${(state.githubUpdate ? '?since=' + state.githubUpdate : '')}"]
 	def result = null
     def githubText = false
