@@ -25,10 +25,36 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.70.0"  }
+public static String version()      {  return "v0.72.5"  }
 private static boolean isDebug()    {  return true  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.72.5
+*
+*   DONE:   8/30/2018
+*	1) added humidity indicator to device occupancy DTH.
+*	2) moved couple more room devices input settings to room devices page.
+*	3) changed humidity from integer to decimal. humidity rules coming in next version.
+*	4) coded and commented room restore settings since HE does not support updating settings input by user.
+*	5) all room devices with multiple devices now use average values for illuminance, temperature etc.
+*	6) changed some formatting for rooms manager settings on HE.
+*	7) added support for critical device connectivity failure notification with SMS.
+*	8) process temperature changes at a minimum interval of 30 seconds.
+*   9) fixed a bug where new rooms were not being updated when using adjacent rooms.
+*	10) cleaned up a bug here and there and optimized
+*
+*  Version: 0.70.2
+*
+*   DONE:   8/26/2018
+*	1) small fixes.
+*
+*  Version: 0.70.1
+*
+*   DONE:   8/25/2018
+*	1) fixed mode filtering in rooms manager announcements.
+*	2) added 5 and 10 seconds option to dim over settings in rooms child.
+*   3) added repeat option to github updated message.
 *
 *  Version: 0.70.0
 *
@@ -784,6 +810,9 @@ metadata {
 		valueTile("luxInd", "device.luxInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("lux", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
+		valueTile("humidityInd", "device.humidityInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
+			state("humidity", label:'${currentValue}', backgroundColor:"#ffffff")
+		}
 		standardTile("contactInd", "device.contactInd", width: 1, height: 1, canChangeIcon: true) {
 			state("closed", label:'${name}', icon:"st.contact.contact.closed", backgroundColor:"#00A0DC")
 			state("open", label:'${name}', icon:"st.contact.contact.open", backgroundColor:"#e86d13")
@@ -1084,11 +1113,12 @@ metadata {
 		valueTile("temperatureL", "device.temperatureL", width: 1, height: 1, decoration: "flat")		{ state "temperatureL", label:'room\ntemp' }
 		valueTile("thermostatL", "device.thermostatL", width: 1, height: 1, decoration: "flat")			{ state "thermostatL", label:'heat /\ncool' }
 		valueTile("maintainL", "device.maintainL", width: 1, height: 1, decoration: "flat")				{ state "maintainL", label:'maintain\ntemp' }
-		valueTile("outTempL", "device.outTempeL", width: 1, height: 1, decoration: "flat")				{ state "temperatureL", label:'outside\ntemp' }
-		valueTile("ventL", "device.ventL", width: 1, height: 1, decoration: "flat")			{ state "thermostatL", label:'vent\nlevel' }
+		valueTile("outTempL", "device.outTempeL", width: 1, height: 1, decoration: "flat")				{ state "outTempL", label:'outside\ntemp' }
+		valueTile("ventL", "device.ventL", width: 1, height: 1, decoration: "flat")						{ state "ventL", label:'vent\nlevel' }
 		valueTile("fanL", "device.fanL", width: 1, height: 1, decoration: "flat")						{ state "fanL", label:'fan\nspeed' }
 		valueTile("roomWindowsL", "device.roomWindowsL", width: 1, height: 1, decoration: "flat")		{ state "roomWindowsL", label:'room\nwindow' }
 		valueTile("thermoOverrideL", "device.thermoOverrideL", width: 1, height: 1, decoration: "flat")	{ state "thermoOverrideL", label:'thermo\noverride' }
+		valueTile("humidityL", "device.humidityL", width: 1, height: 1, decoration: "flat")				{ state "humidityL", label:'humidity' }
 		valueTile("reservedL", "device.reservedL", width: 2, height: 1, decoration: "flat")				{ state "reservedL", label:'reserved' }
 		valueTile("rulesL", "device.rulesL", width: 1, height: 1, decoration: "flat")					{ state "rulesL", label:'# of\nrules' }
 		valueTile("lastRuleL", "device.lastRuleL", width: 1, height: 1, decoration: "flat")				{ state "lastRuleL", label:'last\nrules' }
@@ -1111,7 +1141,7 @@ metadata {
 					"powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
 					"temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
 					"outTempL", "outTempInd", "ventL", "ventInd", "fanL", "fanInd",
-					"roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "reservedL",
+					"roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "humidityL", "humidityInd",
 					"rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
 
 //		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
@@ -1352,6 +1382,9 @@ def updateLuxInd(lux)		{
 	sendEvent(name: 'luxInd', value: (lux == -1 ? '--' : (lux <= 100 ? lux : formatNumber(lux))), descriptionText: (lux == -1 ? "indicate no lux sensor" : "indicate lux value"), isStateChange: true, displayed: false)
 }
 
+def updateHumidityInd(humidity)		{
+	sendEvent(name: 'humidityInd', value: (humidity == -1 ? '--' : humidity.toString() + '%'), descriptionText: (humidity == -1 ? "indicate no humidity sensor" : "indicate humidity value"), isStateChange: true, displayed: false)
+}
 def updateContactInd(contactClosed)		{
 	def vV = 'none'
 	def dD = "indicate no contact sensor"
