@@ -6204,9 +6204,9 @@ private checkPauseModesAndDoW()  {
 }
 
 private checkRunDay(dayOfWeek = null)   {
-    def thisDay = (new Date(now())).getDay()
+    def thisDay = (new Date(now())).getDay() + 1
 //    ifDebug("$thisday | $dayOfWeek | $state.dayOfWeek")
-    return (dayOfWeek ? dayOfWeek : state.dayOfWeek).contains(thisDay)
+    return (dayOfWeek ?: state.dayOfWeek).contains(thisDay)
 }
 
 def windowShadeEventHandler(evt)		{
