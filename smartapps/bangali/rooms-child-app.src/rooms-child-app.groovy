@@ -5224,9 +5224,9 @@ private humidityTimer()     {
         }
     }
     else        {
-        state.offIn = false
-        state.forceOffIn = false
-        state.offAt = false
+        state.humidity.offIn = false
+        state.humidity.forceOffIn = false
+        state.humidity.offAt = false
         turnOffHumiSwitches()
     }
 }
@@ -5247,17 +5247,17 @@ def humidityTimer2()     {
 //        }
     }
     else        {
-        state.offIn = false
-        state.offAt = false
+        state.humidity.offIn = false
+        state.humidity.offAt = false
     }
-    state.forceOffIn = false
+    state.humidity.forceOffIn = false
 }
 
 def humidityTimer3()     {
     ifDebug("humidityTimer3", 'info')
-//    state.offIn = false
-//    state.forceOffIn = false
-    state.offAt = false
+//    state.humidity..offIn = false
+//    state.humidity..forceOffIn = false
+    state.humidity.offAt = false
     turnOffHumiSwitches()
 }
 
