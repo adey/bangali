@@ -16,19 +16,30 @@
 *  You should have received a copy of the GNU General Public License along with this program.
 *  If not, see <http://www.gnu.org/licenses/>.
 *
-*  Attribution:
-*	formatDuration(...) code by ady624 for webCoRE. adpated by me to work here. original code can be found at:
-*		https://github.com/ady624/webCoRE/blob/master/smartapps/ady624/webcore-piston.src/webcore-piston.groovy
-*
 *  Name: Rooms Occupancy
 *  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.72.5"  }
-private static boolean isDebug()    {  return true  }
+public static String version()      {  return "v0.80.0"  }
+private static boolean isDebug()    {  return false  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.80.0
+*
+*   DONE:   8/07/2018
+*	1) turned off logging by defaults for both the apps and the driver.
+*   2) added option in the child app to turn on debug selectively for individual instances of rooms.
+*   3) changed recurring processing of child switches on hubitat to every 5 mins which is now same as smartthingd.
+*   4) removed pauses from child switch processing which cut down the processing time by 25% - 75%.
+*   5) added a driver for hubitat which is a copy of the smartthings DTH with only the parts supported by hubitat.
+*   6) removed all calls to update tiles in hubitat.
+*   7) removed tiles and event publishing from the driver in hubitat.
+*   8) changed how adjacent rooms processing on smartthings is handled on save to avoud timeouts. not an issue on hubitat.
+*   9) added ALPHA version of humidity settings and rules.
+*   10) added delayed off for room vents.
+*   11) small fixes here and there.
 *
 *  Version: 0.72.5
 *
@@ -706,7 +717,7 @@ metadata {
 // for hubitat comment the next line since this capability is not supported
 		capability "Lock Only"
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
-// for hubitat uncomment the next few lines
+// for hubitat uncomment the next few lines ONLY if you want to use the icons on dashboard
 //		attribute "occupancyIconS", "String"
 //		attribute "occupancyIconM", "String"
 //		attribute "occupancyIconL", "String"
@@ -756,6 +767,10 @@ metadata {
 		}
 	}
 
+	//
+	// REMOVE THE FOLLOWING FOR HUBITAT		<<<<<
+	//
+
 	tiles(scale: 2)		{
 // old style display
 /*    	multiAttributeTile(name: "occupancy", width: 2, height: 2, canChangeBackground: true)		{
@@ -792,16 +807,12 @@ metadata {
 		valueTile("status", "device.status", inactiveLabel: false, width: 4, height: 1, decoration: "flat", wordWrap: false)	{
 			state "status", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
 		}
-//		valueTile("statusFiller", "device.statusFiller", inactiveLabel: false, width: 1, height: 1, decoration: "flat", wordWrap: false)	{
-//			state "statusFiller", label:'${currentValue}', backgroundColor:"#ffffff", defaultState: false
-//		}
 		valueTile("timer", "device.timer", inactiveLabel: false, width: 1, height: 1, decoration: "flat")	{
 			state "timer", label:'${currentValue}', action: "turnOnAndOffSwitches", backgroundColor:"#ffffff"
 		}
 		valueTile("timeInd", "device.timeInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("timeFT", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
-//
 		standardTile("motionInd", "device.motionInd", width: 1, height: 1, canChangeIcon: true) {
 			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
@@ -998,15 +1009,11 @@ metadata {
 		valueTile("aWattsInd", "device.aWattsInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat")	{
 			state("aWatts", label:'${currentValue}', backgroundColor:"#ffffff")
 		}
-//		valueTile("aRoomInd", "device.aRoomInd", width: 1, height: 1, canChangeIcon: true, decoration: "flat", wordWrap: true)	{
-//			state("rooms", label:'${currentValue}', backgroundColor:"#ffffff")
-//		}
 		standardTile("aMotionInd", "device.aMotionInd", width: 1, height: 1, canChangeIcon: true) {
 			state("none", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("inactive", label:'${name}', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff")
 			state("active", label:'${name}', icon:"st.motion.motion.active", backgroundColor:"#00A0DC")
 		}
-
 		valueTile("deviceList1", "device.deviceList1", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state "deviceList1", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
@@ -1043,7 +1050,6 @@ metadata {
 		valueTile("deviceList12", "device.deviceList12", inactiveLabel: false, width: 3, height: 1, decoration: "flat", wordWrap: true) {
 			state "deviceList12", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
-
 		standardTile("engaged", "device.engaged", width: 2, height: 2, canChangeIcon: true) {
 			state "engaged", label:"Engaged", icon: "st.locks.lock.unlocked", action: "engaged", backgroundColor:"#ffffff", nextState:"toEngaged"
 			state "toEngaged", label:"Updating", icon: "st.locks.lock.unlocked", backgroundColor:"#ff6666"
@@ -1052,10 +1058,6 @@ metadata {
 			state "vacant", label:"Vacant", icon: "st.Home.home18", action: "vacant", backgroundColor:"#ffffff", nextState:"toVacant"
 			state "toVacant", label:"Updating", icon: "st.Home.home18", backgroundColor:"#32b399"
 		}
-/*		standardTile("checking", "device.checking", width: 2, height: 2, canChangeIcon: true) {
-			state "checking", label:"Checking", icon: "st.Health & Wellness.health9", action: "checking", backgroundColor:"#ffffff", nextState:"toChecking"
-			state "toChecking", label:"Updating", icon: "st.Health & Wellness.health9", backgroundColor:"#616969"
-		}*/
 		standardTile("occupied", "device.occupied", width: 2, height: 2, canChangeIcon: true) {
 			state "occupied", label:"Occupied", icon: "st.Health & Wellness.health12", action: "occupied", backgroundColor:"#ffffff", nextState:"toOccupied"
             state "toOccupied", label:"Updating", icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
@@ -1080,7 +1082,6 @@ metadata {
 			state "kaput", label:"Kaput", icon: "st.Outdoor.outdoor18", action: "kaput", backgroundColor:"#ffffff", nextState:"toKaput"
 			state "toKaput", label:"Updating", icon: "st.Outdoor.outdoor18", backgroundColor:"#95623d"
 		}
-
 		valueTile("blankL", "device.blankL", width: 1, height: 1, decoration: "flat")					{ state "blankL", label:'\n' }
 		valueTile("timerL", "device.timerL", width: 1, height: 1, decoration: "flat")					{ state "timerL", label:'timer' }
 		valueTile("roomMotionL", "device.roomMotionL", width: 1, height: 1, decoration: "flat")			{ state "roomMotionL", label:'room\nmotion' }
@@ -1154,11 +1155,12 @@ metadata {
 		// details (["occupancy", "engaged", "vacant", "status"])
 
 	}
+
+	// REMOVE TILL HERE FOR HUBITAT		<<<<<
+
 }
 
 def parse(String description)	{  ifDebug("parse: $description")  }
-
-// def installed()		{  initialize();	vacant()  }
 
 def installed()		{  initialize()  }
 
@@ -1367,6 +1369,54 @@ private	resetTile(occupancy)	{
 def generateEvent(newState = null)		{
 	if (newState)		stateUpdate(newState);
 }
+
+def turnSwitchesAllOn()		{
+	if (parent)		{
+		parent.turnSwitchesAllOnOrOff(true)
+        updateSwitchInd(1)
+	}
+}
+
+def turnSwitchesAllOff()		{
+	if (parent)		{
+		parent.turnSwitchesAllOnOrOff(false)
+		updateSwitchInd(0)
+	}
+}
+
+def turnNightSwitchesAllOn()	{
+ 	ifDebug("turnNightSwitchesAllOn")
+	if (parent)	{
+		parent.dimNightLights()
+		updateNSwitchInd(1)
+	}
+}
+
+def turnNightSwitchesAllOff()	{
+	ifDebug("turnNightSwitchesAllOff")
+	if (parent)		{
+		parent.nightSwitchesOff()
+		updateNSwitchInd(0)
+	}
+}
+
+def	turnOnAndOffSwitches()	{
+	updateTimer(-1)
+	if (parent)		parent.switchesOnOrOff();
+}
+
+def updateTimer(timer = 0)		{
+	if (timer == -1)	timer = state.timer;
+	else				state.timer = timer;
+	sendEvent(name: "timer", value: (timer ?: '--'), isStateChange: true, displayed: false)
+	sendEvent(name: "countdown", value: timer, descriptionText: "countdown timer: $timer", isStateChange: true, displayed: true)
+}
+
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $device.displayName device: " + msg  }
+
+//
+// REMOVE THE FOLLOWING FOR HUBITAT		<<<<<
+//
 
 def updateMotionInd(motionOn)		{
 	def vV = 'none'
@@ -1649,105 +1699,4 @@ private formatNumber(number)	{
 	return (n > 0 ? String.format("%,d", n) : '')
 }
 
-def turnSwitchesAllOn()		{
-	if (parent)		{
-		parent.turnSwitchesAllOnOrOff(true)
-        updateSwitchInd(1)
-	}
-}
-
-def turnSwitchesAllOff()		{
-	if (parent)		{
-		parent.turnSwitchesAllOnOrOff(false)
-		updateSwitchInd(0)
-	}
-}
-
-def turnNightSwitchesAllOn()	{
- 	ifDebug("turnNightSwitchesAllOn")
-	if (parent)	{
-		parent.dimNightLights()
-		updateNSwitchInd(1)
-	}
-}
-
-def turnNightSwitchesAllOff()	{
-	ifDebug("turnNightSwitchesAllOff")
-	if (parent)		{
-		parent.nightSwitchesOff()
-		updateNSwitchInd(0)
-	}
-}
-
-def	turnOnAndOffSwitches()	{
-	updateTimer(-1)
-	if (parent)		parent.switchesOnOrOff();
-}
-
-def updateTimer(timer = 0)		{
-	if (timer == -1)	timer = state.timer;
-	else				state.timer = timer;
-	sendEvent(name: "timer", value: (timer ?: '--'), isStateChange: true, displayed: false)
-	sendEvent(name: "countdown", value: timer, descriptionText: "countdown timer: $timer", isStateChange: true, displayed: true)
-}
-
-/*
-not using yet but have plans to ...
-
-private formatduration(long value, boolean friendly = false, granularity = 's', boolean showAdverbs = false)		{
-	int sign = (value >= 0) ? 1 : -1
-    if (sign < 0) value = -value
-	int ms = value % 1000
-    value = Math.floor((value - ms) / 1000)
-	int s = value % 60
-    value = Math.floor((value - s) / 60)
-	int m = value % 60
-    value = Math.floor((value - m) / 60)
-	int h = value % 24
-    value = Math.floor((value - h) / 24)
-	int d = value
-
-    def parts = 0
-    def partName = ''
-    switch (granularity) {
-    	case 'd': parts = 1; partName = 'day'; break;
-    	case 'h': parts = 2; partName = 'hour'; break;
-    	case 'm': parts = 3; partName = 'minute'; break;
-    	case 'ms': parts = 5; partName = 'millisecond'; break;
-    	default: parts = 4; partName = 'second'; break;
-    }
-
-    parts = friendly ? parts : (parts < 3 ? 3 : parts)
-    def result = ''
-    if (friendly) {
-    	List p = []
-        if (d) p.push("$d day" + (d > 1 ? 's' : ''))
-        if ((parts > 1) && h) p.push("$h hour" + (h > 1 ? 's' : ''))
-        if ((parts > 2) && m) p.push("$m minute" + (m > 1 ? 's' : ''))
-        if ((parts > 3) && s) p.push("$s second" + (s > 1 ? 's' : ''))
-        if ((parts > 4) && ms) p.push("$ms millisecond" + (ms > 1 ? 's' : ''))
-        switch (p.size()) {
-        	case 0:
-            	result = showAdverbs ? 'now' : '0 ' + partName + 's'
-                break
-            case 1:
-            	result = p[0]
-                break
-			default:
-            	result = '';
-                int sz = p.size()
-                for (int i=0; i < sz; i++) {
-                	result += (i ? (sz > 2 ? ', ' : ' ') : '') + (i == sz - 1 ? 'and ' : '') + p[i]
-                }
-                result = (showAdverbs && (sign > 0) ? 'in ' : '') + result + (showAdverbs && (sign < 0) ? ' ago' : '')
-            	break
-		}
-    }
-	else
-    	result = (sign < 0 ? '-' : '') + (d > 0 ? sprintf("%dd ", d) : '') + sprintf("%02d:%02d", h, m) + (parts > 3 ? sprintf(":%02d", s) : '') + (parts > 4 ? sprintf(".%03d", ms) : '')
-
-    return result
-}
-*/
-
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" " $device.displayName device: " + msg  }
+// REMOVE TILL HERE FOR HUBITAT		<<<<<

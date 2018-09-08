@@ -21,10 +21,25 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.72.5"  }
-private static boolean isDebug()    {  return true  }
+public static String version()      {  return "v0.80.0"  }
+private static boolean isDebug()    {  return false  }
 
 /***********************************************************************************************************************
+*
+*  Version: 0.80.0
+*
+*   DONE:   8/07/2018
+*	1) turned off logging by defaults for both the apps and the driver.
+*   2) added option in the child app to turn on debug selectively for individual instances of rooms.
+*   3) changed recurring processing of child switches on hubitat to every 5 mins which is now same as smartthingd.
+*   4) removed pauses from child switch processing which cut down the processing time by 25% - 75%.
+*   5) added a driver for hubitat which is a copy of the smartthings DTH with only the parts supported by hubitat.
+*   6) removed all calls to update tiles in hubitat.
+*   7) removed tiles and event publishing from the driver in hubitat.
+*   8) changed how adjacent rooms processing on smartthings is handled on save to avoud timeouts. not an issue on hubitat.
+*   9) added ALPHA version of humidity settings and rules.
+*   10) added delayed off for room vents.
+*   11) small fixes here and there.
 *
 *  Version: 0.72.5
 *
@@ -1215,9 +1230,9 @@ def updated()		{
         if (settings["presenceColorString"])    app.removeSetting("presenceColorString")
     }
     announceSetup()
-    if (!onlyOnStateChange)
-        if (hT == _SmartThings)       runEvery5Minutes(processChildSwitches)
-        else                          schedule("33 0/1 * * * ?", processChildSwitches)
+    if (!onlyOnStateChange)     runEvery5Minutes(processChildSwitches);
+//        if (hT == _SmartThings)       runEvery5Minutes(processChildSwitches)
+//        else                          schedule("33 0/3 * * * ?", processChildSwitches)
     schedule("0 0/15 * 1/1 * ? *", tellTime)
     if (batteryTime)        {
         state.noBatteryCheckDevices = batteryNoCheckDevices.collect { it.id }
@@ -1608,39 +1623,50 @@ def handleAdjRooms()    {
     ifDebug("handleAdjRooms >>>>>", 'info')
     def time = now()
 //  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-    def skipAdjRoomsMotionCheck = true
+
+//    def skipAdjRoomsMotionCheck = true
     def adjRoomDetailsMap = [:]
     childApps.each	{ c ->
         def adjRooms = c.getAdjRoomsSetting()
         adjRoomDetailsMap << [(c.id):(adjRooms)]
-        if (adjRooms)       skipAdjRoomsMotionCheck = false;
+//        if (adjRooms)       skipAdjRoomsMotionCheck = false;
     }
-    if (skipAdjRoomsMotionCheck)        return false;
+//    if (skipAdjRoomsMotionCheck)        return false;
+
+//    ifDebug("adjRoomDetailsMap: $adjRoomDetailsMap")
+
     childApps.each	{ c ->
+
 //        def adjRoomDetails = childAll.getAdjRoomDetails()
 //        ifDebug("processing $child.label")
         def childID = c.id
         def adjRooms = adjRoomDetailsMap[childID]
         def adjMotionSensors = []
-        def adjMotionSensorsIds = []
-        if (adjRooms)
-            childApps.each	{ child ->
-                if (childID != child.id && adjRooms.contains(child.id))      {
-//                    ifDebug("checking $child.label")
-                    def mS = child.getAdjMotionSensors()
-                    if (mS)
-                        mS.each      {
-                            def motionSensorId = it.getId()
-                            if (!adjMotionSensorsIds.contains(motionSensorId))   {
-                                adjMotionSensors << it
-                                adjMotionSensorsIds << motionSensorId
-                            }
+        if (adjRooms)   {
+            def adjMotionSensorsIds = []
+            childApps.each	{ c2 ->
+                def cid = c2.id
+//                ifDebug("childID: $childID | cid: $cid | adjRooms: $adjRooms | ${adjRooms.contains(cid)} | ${adjRooms.grep{it.toString() == cid.toString()}}")
+//                if (childID != cid && adjRooms.contains(cid))      {
+                if (childID != cid && adjRooms.grep{it.toString() == cid.toString()})      {
+//                    ifDebug("checking $c2.label")
+                    def mS = c2.getAdjMotionSensors()
+//                    ifDebug("got $mS")
+//                    if (mS)
+                    mS.each      {
+                        def motionSensorId = it.getId()
+                        if (!adjMotionSensorsIds.contains(motionSensorId))   {
+                            adjMotionSensors << it
+                            adjMotionSensorsIds << motionSensorId
                         }
+                    }
                 }
             }
+        }
         ifDebug("rooms manager: updating room $c.label with adjacent motion sensors: $adjMotionSensors | ${now() - time} ms", 'info')
 //        ifDebug("$adjMotionSensors")
-        c.updateRoom(adjMotionSensors)
+//        c.updateRoom(adjMotionSensors)
+        c.updateRoomAdjMS(adjMotionSensors)
     }
     ifDebug("handleAdjRooms <<<<<", 'info')
     return true
@@ -1664,8 +1690,9 @@ def processChildSwitches()      {
     def hT = getHubType()
     childApps.each  { child ->
         ifDebug("processChildSwitches: $child.label", 'info')
-        if (child.checkAndTurnOnOffSwitchesC())
-            if (hT == _SmartThings)     pause(10);
+        child.checkAndTurnOnOffSwitchesC()
+//        if (child.checkAndTurnOnOffSwitchesC())
+//            if (hT == _SmartThings)     pause(10);
     }
     ifDebug("process child switches: ${now() - time} ms")
 }
@@ -1991,7 +2018,7 @@ private isADevice(thisThing)      {
 }
 
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level))  log."${level ?: 'debug'}" ' rooms manager: ' + msg  }
+private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $app.label: " + msg  }
 
 private convertRGBToHueSaturation(setColorTo)      {
     def str = setColorTo.replaceAll("\\s","").toLowerCase()
