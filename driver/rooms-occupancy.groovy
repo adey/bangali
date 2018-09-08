@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *
-*  A SmartThings device handler to allow handling rooms as devices which have states for occupancy.
+*  A Hubitat driver to allow handling rooms as devices which have states for occupancy.
 *
 *  Copyright (C) 2017 bangali
 *
@@ -17,7 +17,7 @@
 *  If not, see <http://www.gnu.org/licenses/>.
 *
 *  Name: Rooms Occupancy
-*  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
+*  Source: https://github.com/adey/bangali/blob/master/driver/rooms-occupancy.groovy
 *
 ***********************************************************************************************************************/
 

@@ -3499,7 +3499,7 @@ def updateSwitchAttributesToStateAndSubscribe()    {
             }
         }
     }
-    if (switchesOn)       {
+    if (hT != _Hubitat && switchesOn)       {
         subscribe(switchesOn, "switch.on", switchOnEventHandler)
         subscribe(switchesOn, "switch.off", switchOffEventHandler)
     }
