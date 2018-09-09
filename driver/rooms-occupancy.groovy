@@ -303,14 +303,14 @@ def generateEvent(newState = null)		{
 def turnSwitchesAllOn()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(true)
-        updateSwitchInd(1)
+        	if (getHubType() != _Hubitat)	updateSwitchInd(1);
 	}
 }
 
 def turnSwitchesAllOff()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(false)
-		updateSwitchInd(0)
+		if (getHubType() != _Hubitat)	updateSwitchInd(0);
 	}
 }
 
@@ -318,7 +318,7 @@ def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		updateNSwitchInd(1)
+		if (getHubType() != _Hubitat)	updateNSwitchInd(1);
 	}
 }
 
@@ -326,7 +326,7 @@ def turnNightSwitchesAllOff()	{
 	ifDebug("turnNightSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
-		updateNSwitchInd(0)
+		if (getHubType() != _Hubitat)	updateNSwitchInd(0);
 	}
 }
 
