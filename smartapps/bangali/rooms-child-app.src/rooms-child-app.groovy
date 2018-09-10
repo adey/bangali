@@ -2958,12 +2958,12 @@ def updateRoom()     {
     	subscribe(motionSensors, "motion.active", motionActiveEventHandler)
     	subscribe(motionSensors, "motion.inactive", motionInactiveEventHandler)
 	}
-    if (adjMotionSensors && (adjRoomsMotion || adjRoomsPathway))   {
-        def adjMS = []
-        adjMotionSensors.each   { adjMS << it.id }
-        subscribe(adjMS, "motion.active", adjMotionActiveEventHandler)
-        subscribe(adjMS, "motion.inactive", adjMotionInactiveEventHandler)
-    }
+//    if (adjMotionSensors && (adjRoomsMotion || adjRoomsPathway))   {
+//        def adjMS = []
+//        adjMotionSensors.each   { adjMS << it.id }
+//        subscribe(adjMS, "motion.active", adjMotionActiveEventHandler)
+//        subscribe(adjMS, "motion.inactive", adjMotionInactiveEventHandler)
+//    }
 //    if (roomButton)
     for (def i = 0; i <= maxButtons; i++)        {
         if ((hT == _SmartThings || settings["roomButtonType$i"]) && settings["roomButton$i"] && settings["roomButtonNumber$i"])
