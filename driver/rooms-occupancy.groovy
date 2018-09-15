@@ -219,7 +219,7 @@ def updateOccupancy(oldOcc, newOcc) 	{
 		ifDebug("Missing or invalid parameter room occupancy: $newOcc")
 		return
 	}
-	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", isStateChange: true, displayed: true, data: oldOcc)
+	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", isStateChange: true, displayed: true)
 	if (hT == _Hubitat())		{
 		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${newOcc?.capitalize()}State.png"
 		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $newOcc icon small", isStateChange: true, displayed: true)
