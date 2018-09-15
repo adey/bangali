@@ -315,7 +315,7 @@ def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		if (getHubType() != _Hubitat())	updateNSwitchInd(1)
+		if (getHubType() != _Hubitat())	updateNSwitchInd(1);
 	}
 }
 
