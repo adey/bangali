@@ -11,3 +11,8 @@ devicetypes/bangali/api-response.txt
 driver/api-response.txt
 app/collectSensorReadings.groovy
 NOTES
+app/anotherRoomEngaged.groovy
+app/md5DigestFromSettings.groovy
+app/saveAndRestoreSettings.groovy
+app/scheduleFromAndToTime.groovy
+app/buildHumidityMap.groovy

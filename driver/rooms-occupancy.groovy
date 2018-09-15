@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *
-*  A Hubitat driver to allow handling rooms as devices which have states for occupancy.
+*  A SmartThings device handler to allow handling rooms as devices which have states for occupancy.
 *
 *  Copyright (C) 2017 bangali
 *
@@ -17,23 +17,21 @@
 *  If not, see <http://www.gnu.org/licenses/>.
 *
 *  Name: Rooms Occupancy
-*  Source: https://github.com/adey/bangali/blob/master/driver/rooms-occupancy.groovy
+*  Source: https://github.com/adey/bangali/blob/master/devicetypes/bangali/rooms-occupancy.src/rooms-occupancy.groovy
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v0.80.0"  }
-private static boolean isDebug()    {  return false  }
+public static String version()		{  return "v0.85.0"  }
+private static boolean isDebug()	{  return false  }
 
-import groovy.transform.Field
-
-@Field final String _SmartThings = 'ST'
-@Field final String _Hubitat     = 'HU'
+final String _SmartThings()	{ return 'ST' }
+final String _Hubitat()		{ return 'HU' }
 
 metadata {
 	definition (
-    	name: "rooms occupancy",
-        namespace: "bangali",
-        author: "bangali")		{
+		name: "rooms occupancy",
+		namespace: "bangali",
+		author: "bangali")		{
 		capability "Actuator"
 		capability "PushableButton"		// hubitat changed `Button` to `PushableButton`  2018-04-20
 		capability "Sensor"
@@ -54,9 +52,9 @@ metadata {
 		attribute "alarmSound", "String"
 		attribute "countdown", "String"
 		command "occupied"
-        command "checking"
+		command "checking"
 		command "vacant"
-        command "locked"
+		command "locked"
 		command "reserved"
 		command "kaput"
 		command "donotdisturb"
@@ -69,7 +67,6 @@ metadata {
 		command "turnNightSwitchesAllOn"
 		command "turnNightSwitchesAllOff"
 		command "alarmOffAction"
-		command "updateOccupancy", ["string"]
 	}
 
 	simulator	{
@@ -105,31 +102,31 @@ def	initialize()	{
 	sendEvent(name: "countdown", value: '0s', descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
 }
 
-def getHubType()        {
-    if (!state.hubId)   state.hubId = location.hubs[0].id.toString()
-    if (state.hubId.length() > 5)   return _SmartThings;
-    else                            return _Hubitat;
+def getHubType()	{
+	if (!state.hubId)	state.hubId = location.hubs[0].id.toString()
+	if (state.hubId.length() > 5)	return _SmartThings();
+	else							return _Hubitat();
 }
 
 def setupAlarmC()	{
 	if (parent)		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek);
-	if (alarmDayOfWeek != 'ADW0')      {
-        state.alarmDayOfWeek = []
-        switch(alarmDayOfWeek)       {
-            case 'ADW1':	state.alarmDayOfWeek << 'Mon';		break
+	if (alarmDayOfWeek != 'ADW0')	{
+		state.alarmDayOfWeek = []
+		switch(alarmDayOfWeek)	{
+			case 'ADW1':	state.alarmDayOfWeek << 'Mon';		break
 			case 'ADW2':	state.alarmDayOfWeek << 'Tue';		break
 			case 'ADW3':	state.alarmDayOfWeek << 'Wed';		break
 			case 'ADW4':	state.alarmDayOfWeek << 'Thu';		break
 			case 'ADW5':	state.alarmDayOfWeek << 'Fri';		break
 			case 'ADW6':	state.alarmDayOfWeek << 'Sat';		break
 			case 'ADW7':	state.alarmDayOfWeek << 'Sun';		break
-            case 'ADW8':   	['Mon','Tue','Wed','Thu','Fri'].each		{ state.alarmDayOfWeek << it };    break
-            case 'ADW9':   	['Sat','Sun'].each							{ state.alarmDayOfWeek << it };    break
-            default:  		state.alarmDayOfWeek = null;		break
-        }
-    }
-    else
-        state.alarmDayOfWeek = ''
+			case 'ADW8':   	state.alarmDayOfWeek = state.alarmDayOfWeek + ['Mon','Tue','Wed','Thu','Fri'];	break
+			case 'ADW9':   	state.alarmDayOfWeek = state.alarmDayOfWeek + ['Sat','Sun'];					break
+			default:  		state.alarmDayOfWeek = null;		break
+		}
+	}
+	else
+		state.alarmDayOfWeek = ''
 	if (alarmSound)
 		state.alarmSound = ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer]
 	else
@@ -170,7 +167,7 @@ def push(buton)		{
 		case 8:		asleep();		break
 		case 9:		engaged();		break
 		default:
-			if (hT != _Hubitat)
+			if (hT != _Hubitat())
 				sendEvent(name: "button", value: "pushed", data: [buttonNumber: "$buton"], descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
 			else
 				sendEvent(name: "pushableButton", value: buton, descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
@@ -182,58 +179,58 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-def occupied()	{	stateUpdate('occupied')		}
+def occupied(handleSwitches = true)			{ stateUpdate('occupied', handleSwitches) }
 
-def checking()	{	stateUpdate('checking')		}
+def checking(handleSwitches = true)		{ stateUpdate('checking', handleSwitches) }
 
-def vacant()	{	stateUpdate('vacant')		}
+def vacant(handleSwitches = true)			{ stateUpdate('vacant', handleSwitches) }
 
-def donotdisturb()	{	stateUpdate('donotdisturb')		}
+def donotdisturb(handleSwitches = true)	{ stateUpdate('donotdisturb', handleSwitches) }
 
-def reserved()	{	stateUpdate('reserved')		}
+def reserved(handleSwitches = true)		{ stateUpdate('reserved', handleSwitches) }
 
-def asleep()	{	stateUpdate('asleep')		}
+def asleep(handleSwitches = true)			{ stateUpdate('asleep', handleSwitches) }
 
-def locked()	{	stateUpdate('locked')		}
+def locked(handleSwitches = true)			{ stateUpdate('locked', handleSwitches) }
 
-def engaged()	{	stateUpdate('engaged')		}
+def engaged(handleSwitches = true)			{ stateUpdate('engaged', handleSwitches) }
 
-def kaput()		{	stateUpdate('kaput')		}
+def kaput(handleSwitches = true)			{ stateUpdate('kaput', handleSwitches) }
 
-private	stateUpdate(newState)		{
+private	stateUpdate(newState, handleSwitches = true)		{
 //	def oldState = device.currentValue('occupancy')
-	def oldState = state.oldState
-	state.oldState = newState
-	if (oldState != newState)	{
-		updateOccupancy(newState)
-        if (parent)		{
-			parent.runInHandleSwitches(oldState, newState);
+//	def oldState = state.oldState
+	if (state.oldState != newState)	{
+		updateOccupancy(state.oldState, newState)
+        if (handleSwitches && parent)		{
+			parent.handleSwitches(oldState, newState)
 //			runIn(0, parent.runInHandleSwitches, data: [oldState: oldState, newState: newState])
 		}
+		state.oldState = newState
 	}
 	resetTile(newState)
 }
 
-def updateOccupancy(occupancy = null) 	{
-	occupancy = occupancy?.toLowerCase()
+def updateOccupancy(oldOcc, newOcc) 	{
+	newOcc = newOcc?.toLowerCase()
 	def hT = getHubType()
 	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
-	if (!occupancy || !(buttonMap.containsKey(occupancy))) {
-    	ifDebug("Missing or invalid parameter room occupancy: $occupancy")
-        return
-    }
-	sendEvent(name: "occupancy", value: occupancy, descriptionText: "$device.displayName changed to $occupancy", isStateChange: true, displayed: true)
-	if (hT == _Hubitat)		{
-		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${occupancy?.capitalize()}State.png"
-		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $occupancy icon small", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$device.displayName $occupancy icon medium", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$device.displayName $occupancy icon large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$device.displayName $occupancy icon extra large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$device.displayName $occupancy icon extra extra large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$device.displayName $occupancy icon URL", isStateChange: true, displayed: true)
+	if (!newOcc || !(buttonMap.containsKey(newOcc)))	{
+		ifDebug("Missing or invalid parameter room occupancy: $newOcc")
+		return
 	}
-    def button = buttonMap[occupancy]
-	if (hT == _SmartThings)
+	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", isStateChange: true, displayed: true, data: oldOcc)
+	if (hT == _Hubitat())		{
+		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${newOcc?.capitalize()}State.png"
+		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $newOcc icon small", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$device.displayName $newOcc icon medium", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$device.displayName $newOcc icon large", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$device.displayName $newOcc icon extra large", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$device.displayName $newOcc icon extra extra large", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$device.displayName $newOcc icon URL", isStateChange: true, displayed: true)
+	}
+	def button = buttonMap[newOcc]
+	if (hT == _SmartThings())
 		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 	else
 		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
@@ -293,24 +290,24 @@ def deviceList(devicesMap)		{
 }
 
 private	resetTile(occupancy)	{
-    sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", isStateChange: true, displayed: false)
+	sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", isStateChange: true, displayed: false)
 }
 
-def generateEvent(newState = null)		{
-	if (newState)		stateUpdate(newState);
-}
+//def generateEvent(newState = null)		{
+//	if (newState)		stateUpdate(newState);
+//}
 
 def turnSwitchesAllOn()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(true)
-        updateSwitchInd(1)
+		if (getHubType() != _Hubitat())	updateSwitchInd(1)
 	}
 }
 
 def turnSwitchesAllOff()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(false)
-		updateSwitchInd(0)
+		if (getHubType() != _Hubitat())	updateSwitchInd(0);
 	}
 }
 
@@ -318,7 +315,7 @@ def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		updateNSwitchInd(1)
+		if (getHubType() != _Hubitat())	updateNSwitchInd(1)
 	}
 }
 
@@ -326,7 +323,7 @@ def turnNightSwitchesAllOff()	{
 	ifDebug("turnNightSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
-		updateNSwitchInd(0)
+		if (getHubType() != _Hubitat())	updateNSwitchInd(0)
 	}
 }
 
@@ -342,4 +339,4 @@ def updateTimer(timer = 0)		{
 	sendEvent(name: "countdown", value: timer, descriptionText: "countdown timer: $timer", isStateChange: true, displayed: true)
 }
 
-private ifDebug(msg = null, level = null)     {  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $device.displayName device: " + msg  }
+private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))	log."${level ?: 'debug'}" " $device.displayName device: " + msg  }
