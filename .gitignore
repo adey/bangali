@@ -16,3 +16,5 @@ app/md5DigestFromSettings.groovy
 app/saveAndRestoreSettings.groovy
 app/scheduleFromAndToTime.groovy
 app/buildHumidityMap.groovy
+app/colorsRGB.groovy
+app/processChildSwitches.groovy

@@ -1,3 +1,22 @@
+Version: 0.90.0
+
+DONE:   8/20/2018
+1) more optimizations for speed:
+	- optimized how events are processed.
+	- moved interval processing of room switches to individual rooms instead of from rooms manager.
+	- moved timer/countdown handling to the device driver from the rooms child app.
+	- for battery and device connectivity monitoring devices are now specified only in rooms manager and not collected from individual rooms.
+	- optimized how scheduling is handled and how many timers are used.
+	- reduced code size further to ~263K.
+	- various other code optimizations.
+	- **REQUIRES SAVING ROOMS MANAGER SETTINGS AFTER UPDATING TO THIS VERSION. OPEN ROOMS MANAGER GO TO SETTINGS AND CLICK SAVE. THATS IT.**
+2) switched to using single regularly scheduled timer for both ST and HE for different reasons:
+	- on ST because when ST infrastructure is under stress random processing can take really long and quickly get over the 20 second timeout.
+	- on HE because all timers are blocking and i dont want any individual timer running for more than 1 second like when device monitoring check.
+	- this allows rescheduling these kind of tasks after 10 seconds and 1 second of processing on ST and HE respectively.
+3) thermostat indicator fix for manage vents only mode.
+4) removed the lock only capability on ST because it causes issue with Alexa turning on and off the rooms occupancy device.
+4) few other tweaks here and there.
 
 Version: 0.85.0
 
