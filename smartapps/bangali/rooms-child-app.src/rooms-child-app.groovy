@@ -2008,7 +2008,7 @@ def updated()	{
 
 ///	child."${(isRoomEngaged() ? engaged : vacant)}"()
 	"${(isRoomEngaged() ? engaged : vacant)}"()
-log.debug "perf updated: ${now() - nowTime} ms"
+//log.debug "perf updated: ${now() - nowTime} ms"
 }
 
 private updateRoom()	{
@@ -2040,7 +2040,7 @@ private updateRoom()	{
 	state.switchesHasLevel = [:]
 	state.switchesHasColor = [:]
 	state.switchesHasColorTemperature = [:]
-	state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer : 5)
+	state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer as Integer : 5)
 	state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel as Integer : null)
 	state.dimToLevel = ((state.dimTimer && dimToLevel) ? dimToLevel as Integer : null)
 	if (engagedSwitch)	{
@@ -5037,7 +5037,7 @@ def scheduleFromToTimes(evt = [:])	{
 	}
 
 	if (process)	runOnce((time ? pTime : new Date(pTime.getTime() + Math.abs(new Random().nextInt(4000) % 4000) + 1000)), scheduleFromToTimes, [data: [option: "[${(time ? "process, time" : "process")}]"]]);
-log.debug "perf scheduleFromToTimes: ${(now() - nowTime)} ms"
+//log.debug "perf scheduleFromToTimes: ${(now() - nowTime)} ms"
 }
 
 private scheduleFromTime()	{
