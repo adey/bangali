@@ -1,6 +1,6 @@
 Version: 0.90.0
 
-DONE:   8/20/2018
+DONE:   9/20/2018
 1) more optimizations for speed:
 	- optimized how events are processed.
 	- moved interval processing of room switches to individual rooms instead of from rooms manager.

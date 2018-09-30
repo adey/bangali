@@ -2186,8 +2186,8 @@ private updateRoom()	{
 	updateRulesToState()
 	updateSwitchAttributesToStateAndSubscribe()
 
-//	subscribe(location, "sunrise", scheduleFromToTimes)
-//	subscribe(location, "sunset", scheduleFromToTimes)
+	subscribe(location, "sunrise", scheduleFromToTimes)
+	subscribe(location, "sunset", scheduleFromToTimes)
 	if (humiditySensor)		subscribe(humiditySensor, "humidity", humidityEventHandler,  [filterEvents:false]);
 	if (humiOverride)	{
 		if (roomDehumidifierSwitch)	{
