@@ -5236,7 +5236,6 @@ private checkPauseModesAndDoW()	{
 private checkRunDay(dayOfWeek = null)	{
 	long timestamp = now()
 	def thisDay = ((new Date(timestamp + location.timeZone.getOffset(timestamp))).day ?: 7)
-	log.debug "$thisDay | $dayOfWeek | $state.dayOfWeek"
 	return (dayOfWeek ?: state.dayOfWeek).contains(thisDay)
 }
 
