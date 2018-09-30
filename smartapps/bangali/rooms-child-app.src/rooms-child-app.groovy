@@ -288,7 +288,7 @@ def pageOnePager()	{
 		section("Motion sensor for OCCUPIED:", hideable: false)	{
 			input "motionSensors", "capability.motionSensor", title: "Which motion sensors?", required: true, multiple: true, submitOnChange: true
 			if (motionSensors)
-				inputERMSDO('whichNoMotion', 'Use which motion event for timeout?', true, false, true, 2, '[[1:"Last Motion Active"],[2:"Last Motion Inactive"]]')
+				inputERMSDO('whichNoMotion', 'Use which motion event for timeout?', true, false, true, 2, [[1:"Last Motion Active"], [2:"Last Motion Inactive"]])
 			else
 				paragraph "Use which motion event for timeout?\nselect motion sensor above to set"
 		}
@@ -5234,7 +5234,9 @@ private checkPauseModesAndDoW()	{
 }
 
 private checkRunDay(dayOfWeek = null)	{
-	def thisDay = (new Date(now())).getDay() + 1
+	long timestamp = now()
+	def thisDay = ((new Date(timestamp + location.timeZone.getOffset(timestamp))).day ?: 7)
+	log.debug "$thisDay | $dayOfWeek | $state.dayOfWeek"
 	return (dayOfWeek ?: state.dayOfWeek).contains(thisDay)
 }
 
