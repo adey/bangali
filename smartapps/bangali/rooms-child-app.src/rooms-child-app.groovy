@@ -1327,7 +1327,7 @@ def pageAsleepSettings()	{
 				paragraph "Button Number?\nselect button above to set"
 				paragraph "Button only sets Asleep?\nselect button above to set"
 			}
-			inputDRMS('asleepSwitch', 'switch', title: 'If switch turns ON?', false, true)
+			inputDRMS('asleepSwitch', 'switch', 'If switch turns ON?', false, true)
 			if (powerDevice)	{
 				if (!powerValueEngaged && !powerValueLocked)	{
 					inputNRDRS("powerValueAsleep", "Power value to set room to ASLEEP?", false, null, "0..99999", true)
@@ -1348,7 +1348,7 @@ def pageAsleepSettings()	{
 				paragraph "Power value triggers ASLEEP from VACANT?"
 				paragraph "Power stays below for how many seconds to reset ASLEEP?"
 			}
-			inputNRDRS("noAsleep", "Timeout ASLEEP after how many hours?", false, null, range: "1..99")
+			inputNRDRS("noAsleep", "Timeout ASLEEP after how many hours?", false, null, "1..99")
 			input "resetAsleepDirectly", "bool", title: "When resetting room from ASLEEP directly move to VACANT?", required: false, defaultValue: false
 			if (contactSensor)
 				inputERMSDO('resetAsleepWithContact', 'Reset ASLEEP when contact sensor open for?', false, false, false, null, [5:"5 mins", 10:"10 mins", 15:"15 mins", 30:"30 mins", 60:"60 mins"])
@@ -1357,7 +1357,8 @@ def pageAsleepSettings()	{
 			input "asleepOverrides", "bool", title: "ASLEEP overrides state trigger devices for ENGAGED and OCCUPIED?", required: false, defaultValue: false
 
 		}
-		section("${(hT == _Hubitat ? '<pre>' : '')}Night Lights:${(hT == _Hubitat ? '</pre>' : '')}", hideable: false)		{
+		section("${(hT != _Hubitat ? 'Night Lights:' : '')}", hideable: false)		{
+			if (hT == _Hubitat)		paragraph subHeaders("Night Lights While Asleep");
 			if (motionSensors)	{
 				inputDRMS('nightSwitches', 'switch', 'Turn ON which night switches with motion?', false, true, true)
 				inputERMSDO('nightMotionSensors', 'Use which room motion sensors?', false, true, false, null, roomMotionSensors)
