@@ -1,3 +1,10 @@
+Version: 0.90.2
+
+DONE:   10/1/2018
+1) fix for holiday lights. requires resaving holiday lights settings.
+2) bit more code optimization for frequent functions.
+3) other small fixes.
+
 Version: 0.90.0
 
 DONE:   9/20/2018

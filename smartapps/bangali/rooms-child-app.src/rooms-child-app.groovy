@@ -38,7 +38,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.90.0"  }
+public static String version()		{  return "v0.90.2"  }
 boolean isDebug()					{  return debugLogging  }
 
 import groovy.transform.Field
@@ -257,7 +257,7 @@ def roomName()	{
 				}
 			}
 			section("")	{
-					href "pageGeneralSettings", title: "${addImage(_GEimage)}MODE & OTHER SETTINGS", description: (miscSettings ? _TapToChg : _TapToCon), image: _GEimage
+					href "pageGeneralSettings", title: "${addImage(_GEimage)}GENERAL SETTINGS", description: (miscSettings ? _TapToChg : _TapToCon), image: _GEimage
 			}
 		}
 		section("")	{
@@ -1327,7 +1327,7 @@ def pageAsleepSettings()	{
 				paragraph "Button Number?\nselect button above to set"
 				paragraph "Button only sets Asleep?\nselect button above to set"
 			}
-			inputDRMS('asleepSwitch', 'switch', title: 'If switch turns ON?', false, true)
+			inputDRMS('asleepSwitch', 'switch', 'If switch turns ON?', false, true)
 			if (powerDevice)	{
 				if (!powerValueEngaged && !powerValueLocked)	{
 					inputNRDRS("powerValueAsleep", "Power value to set room to ASLEEP?", false, null, "0..99999", true)
@@ -1348,7 +1348,7 @@ def pageAsleepSettings()	{
 				paragraph "Power value triggers ASLEEP from VACANT?"
 				paragraph "Power stays below for how many seconds to reset ASLEEP?"
 			}
-			inputNRDRS("noAsleep", "Timeout ASLEEP after how many hours?", false, null, range: "1..99")
+			inputNRDRS("noAsleep", "Timeout ASLEEP after how many hours?", false, null, "1..99")
 			input "resetAsleepDirectly", "bool", title: "When resetting room from ASLEEP directly move to VACANT?", required: false, defaultValue: false
 			if (contactSensor)
 				inputERMSDO('resetAsleepWithContact', 'Reset ASLEEP when contact sensor open for?', false, false, false, null, [5:"5 mins", 10:"10 mins", 15:"15 mins", 30:"30 mins", 60:"60 mins"])
@@ -1357,7 +1357,8 @@ def pageAsleepSettings()	{
 			input "asleepOverrides", "bool", title: "ASLEEP overrides state trigger devices for ENGAGED and OCCUPIED?", required: false, defaultValue: false
 
 		}
-		section("${(hT == _Hubitat ? '<pre>' : '')}Night Lights:${(hT == _Hubitat ? '</pre>' : '')}", hideable: false)		{
+		section("${(hT != _Hubitat ? 'Night Lights:' : '')}", hideable: false)		{
+			if (hT == _Hubitat)		paragraph subHeaders("Night Lights While Asleep");
 			if (motionSensors)	{
 				inputDRMS('nightSwitches', 'switch', 'Turn ON which night switches with motion?', false, true, true)
 				inputERMSDO('nightMotionSensors', 'Use which room motion sensors?', false, true, false, null, roomMotionSensors)
@@ -1725,7 +1726,7 @@ def pageGeneralSettings()	{
 			input "allSwitchesOff", "bool", title: "Turn OFF?", required: false, defaultValue: true
 		}
 		section("When switching off lights dim to off?", hideable: false)		{
-			inputERMSDO('dimOver', 'Dim over seconds?', false, false, false, null, [[null:"No dimming"], [5:"5 seconds"], [10:"10 seconds"], [15:"15 seconds"], [30:"30 seconds"], [45:"45 seconds"], [60:"60 seconds"], [90:"90 seconds"]])
+			inputERMSDO('dimOver', 'Dim over seconds?', false, false, false, null, [[null:"No dimming"], [3:"3 seconds"], [5:"5 seconds"], [10:"10 seconds"], [15:"15 seconds"], [30:"30 seconds"], [45:"45 seconds"], [60:"60 seconds"], [90:"90 seconds"]])
 		}
 		if (!hideAdvanced)	{
 			section("Process execution rules only on state change?", hideable: false)		{
@@ -2073,7 +2074,8 @@ private updateRoom()	{
 //		str.each	{
 		for (def itc : str)		{
 			holiColors << itc
-			holiHues << [(holiColorCount):"${convertRGBToHueSaturation(itc)}"]
+			def hue = convertRGBToHueSaturation(itc)
+			holiHues << [(holiColorCount):hue]
 			holiColorCount = holiColorCount + 1
 		}
 		state.holidays << [(i):[name: settings["holiName$i"], count: holiColorCount, hues: holiHues, colors: holiColors, style: settings["holiStyle$i"], seconds: settings["holiSeconds$i"], level: settings["holiLevel$i"]]]
@@ -2214,8 +2216,8 @@ private updateRoom()	{
 	ifDebug("updateRoom final", 'info')
 	if (hT != _Hubitat)		updateIndicators();
 	state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + 5) % 60).intValue()
-	scheduleFromToTimes()
-	processCoolHeat()
+	runIn(0, scheduleFromToTimes)
+	runIn(1, processCoolHeat)
 //	processHumidity()
 }
 
@@ -2430,7 +2432,7 @@ def updateRulesToState()	{
 	for (def i = 1; i <= maxRules; i++)		{
 		def ruleNo = String.valueOf(i)
 		def thisRule = getRule(ruleNo, '*', false)
-		if (thisRule && !thisRule.disabled)	{
+		if (thisRule && !thisRule.disabled)		{
 			state.maxRuleNo = i
 			if (!state.rules)		state.rules = [:];
 			state.rules << ["$ruleNo":[isRule:true]]
@@ -2498,7 +2500,7 @@ private getNextRule(ruleNo, ruleType = '*', checkState = true, getConditionsOnly
 
 private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = false)	{
 	if (!ruleNo)	return null;
-	if (checkState && (!state.rules || !state.rules[ruleNo]))	return null;
+	if (checkState && (!state.rules || !state.rules[ruleNo.toString()]))	return null;
 	if (ruleTypeP == _ERule)		ruleTypeP = null;
 	if (checkState && ((!ruleTypeP && !state.execute) || (ruleTypeP == _TRule && !state.maintainRoomTemp) || (ruleTypeP == _HRule && !state.maintainRoomHumi)))
 		return null;
@@ -3690,6 +3692,7 @@ private ventsOn(lvl)	{
 
 private checkForRules(ruleType, rSt = null)		{
 	def turnOn = null
+	def turnOnRules = [:]
 	def thisRule = [:]
 	def child = getChildDevice(getRoom())
 	if (!rSt)	rSt = child?.currentValue(occupancy);
@@ -3717,9 +3720,10 @@ private checkForRules(ruleType, rSt = null)		{
 		for (def i = 1; i <= maxRules; i++)	{
 			def ruleHasTime = false
 			def ruleNo = String.valueOf(i)
-			thisRule = getNextRule(ruleNo, ruleType, true, true)
-//            ifDebug("ruleNo: $thisRule.ruleNo | thisRule.mode: $thisRule.mode | thisRule.state: $thisRule.state")
+			if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
+			else							thisRule = getNextRule(ruleNo, ruleType, true, true);
 			if (thisRule.ruleNo == 'EOR')	break;
+			if (!turnOnRules[(thisRule.ruleNo)])		turnOnRules << [(thisRule.ruleNo):thisRule];
 			i = thisRule.ruleNo as Integer
 			if (thisRule.mode && !thisRule.mode.contains(currentMode))	continue;
 			if (thisRule.state && !thisRule.state.contains(rSt))		continue;
@@ -4327,7 +4331,7 @@ def handleSwitches(oldState, newState, returnTimer = false)	{
 
 def switchesOnOrOff(switchesOnly = false)	{
 	ifDebug("switchesOnOrOff", 'info')
-	state.holidayLights = false
+//	state.holidayLights = false
 	def child = getChildDevice(getRoom())
 	def rSt = child?.currentValue(occupancy)
 	if (rSt && ['engaged', 'occupied', 'asleep', 'vacant'].contains(rSt))	{
@@ -4345,9 +4349,9 @@ private processRules(pRSt = null, switchesOnly = false)	{
 	if (!state.execute || !state.rules)		return false;
 	def nowTime	= now() + 1000
 	def nowDate = new Date(nowTime)
-	state.holidayLights = false
 	def child = getChildDevice(getRoom())
 	def turnOn = []
+	def turnOnRules = [:]
 	def previousRule = []
 	def previousRuleLux = null
 	state.lastRule = null
@@ -4378,8 +4382,10 @@ private processRules(pRSt = null, switchesOnly = false)	{
 	for (def i = 1; i <= maxRules; i++)	{
 		def ruleHasTime = false
 		def ruleNo = String.valueOf(i)
-		thisRule = getNextRule(ruleNo, _ERule, true, true)
+		if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
+		else							thisRule = getNextRule(ruleNo, _ERule, true, false);
 		if (thisRule.ruleNo == 'EOR')	break;
+		if (!turnOnRules[(thisRule.ruleNo)])		turnOnRules << [(thisRule.ruleNo):thisRule];
 		i = thisRule.ruleNo as Integer
 		if (thisRule.mode && !thisRule.mode.contains(currentMode))		continue;
 		if (thisRule.state && !thisRule.state.contains(rSt))			continue;
@@ -4422,6 +4428,7 @@ private processRules(pRSt = null, switchesOnly = false)	{
 			if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))	continue;
 			if (!timedRulesOnly)	{
 				turnOn = []
+//				turnOnRules = [:]
 				previousRule = []
 				previousRuleLux = null
 				timedRulesOnly = true
@@ -4453,10 +4460,11 @@ private processRules(pRSt = null, switchesOnly = false)	{
 	def ret
 	if (turnOn)		{
 		state.switchesPreventToggle = []
-		def rules = []
 //		turnOn.each	{
+		def rules = []
 		for (def trn : turnOn)	{
-			thisRule = getRule(trn, null)
+//			thisRule = getRule(trn, null)
+			thisRule = turnOnRules[(trn)]
 //			thisRule.switchesOn.each	{
 			for (def tR : thisRule.switchesOn)		{
 				def itID = tR.getId()
@@ -4472,10 +4480,11 @@ private processRules(pRSt = null, switchesOnly = false)	{
 	}
 	else
 	{
+		state.holidayLights = false
 		if (getHubType() != _Hubitat)	child.updateLastRuleInd(-1);
 		ret = false
 	}
-//log.debug "perf processRules: ${now() - nowTime + 1000} ms"
+log.debug "perf processRules: ${now() - nowTime + 1000} ms"
 	return ret
 }
 
@@ -4503,58 +4512,135 @@ private turnSwitchesOnAndOff(thisRule)	{
 	if (hT != _Hubitat)		getChildDevice(getRoom()).updateLastRuleInd(state.lastRule);
 	if (thisRule.switchesOn)	{
 		if (thisRule.level?.startsWith('HL'))	{
-			state.holiRuleNo = thisRule.ruleNo
-			def i = thisRule.level.substring(2)
-			state.holiHues = state.holidays[i].hues
-			state.holiStyle = state.holidays[i].style
-			state.holiSeconds = state.holidays[i].seconds
-			state.holiLevel = state.holidays[i].level
-			state.holiColorCount = state.holidays[i].count
-			state.holiColorIndex = -1
-			state.holiLastTW = [:]
-			state.holidayLights = true
-			holidayLights()
-		}
-		else		{
-			def colorTemperature = null
-			def level = null
-//			thisRule.switchesOn.each	{
-			for (def swt : thisRule.switchesOn)		{
-				def turnOn = true
-				def setCTorColor = false
-				def itID = swt.getId()
-				if (thisRule.color && state.switchesHasColor[itID])	{
-						swt.setColor(thisRule.hue); pauseIt()
-						setCTorColor = true
-						turnOn = false
-				}
-				else if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTemperature)) && state.switchesHasColorTemperature[itID])	{
-					if (!colorTemperature)
-						colorTemperature = (thisRule.level == 'AL' ? calculateLevelOrKelvin(true) : thisRule.colorTemperature) as Integer
-					if (colorTemperature)	{
-						swt.setColorTemperature(colorTemperature); pauseIt()
-						setCTorColor = true
-						turnOn = false
-					}
-				}
-				if (thisRule.level && state.switchesHasLevel[itID])	{
-					if (!level)		level = (thisRule.level == 'AL' ? calculateLevelOrKelvin(false) : thisRule.level) as Integer;
-					if (level)	{
-						if (setCTorColor)	pauseIt(true);
-						(hT == _Hubitat ? swt.setLevel(level, 0) : swt.setLevel(level))
-						turnOn = false
-					}
-				}
-				if (turnOn)		{ swt.on(); pauseIt() }
+			if (!state.holidayLights || state.holiRuleNo != thisRule.ruleNo)	{
+				state.holiRuleNo = thisRule.ruleNo
+				def i = thisRule.level.substring(2)
+				state.holiHues = state.holidays[i].hues
+				state.holiStyle = state.holidays[i].style
+				state.holiSeconds = state.holidays[i].seconds
+				state.holiLevel = state.holidays[i].level
+				state.holiColorCount = state.holidays[i].count
+				state.holiColorIndex = -1
+				state.holiLastTW = [:]
+				state.holidayLights = true
+				holidayLights()
 			}
 		}
+		else
+			turnSwitchesOn(thisRule)
 	}
 	for (def swt : thisRule.switchesOff)	{
-		if (!state.switchesPreventToggle.contains(swt.getId()))	{  swt.off(); pauseIt()  }
+		def itID = swt.getId()
+		if (!state.switchesPreventToggle.contains(itID))	{
+			if (dimOver && state.switchesHasLevel[itID])
+				(hT == _Hubitat ? swt.setLevel(0, dimOver.toInteger()) : swt.setLevel(0))
+			else
+				swt.off()
+			pauseIt()
+		}
+	}
+}
+
+private	turnSwitchesOn(thisRule)	{
+	state.holidayLights = false
+	def hT = getHubType()
+	def colorTemperature = null
+	def level = null
+//			thisRule.switchesOn.each	{
+	def uniform = true
+	int hasLevel = 0, hasColor = 0, hasColorTemperature = 0
+	if (state.rules[(thisRule.ruleNo)].containsKey('uniform'))		{
+		uniform = state.rules[(thisRule.ruleNo)].uniform
+		hasLevel = state.rules[(thisRule.ruleNo)].hasLevel
+		hasColor = state.rules[(thisRule.ruleNo)].hasColor
+		hasColorTemperature = state.rules[(thisRule.ruleNo)].hasColorTemperature
+	}
+	else	{
+		for (def swt : thisRule.switchesOn)		{
+			def itID = swt.getId()
+			if (thisRule.color)
+				if (state.switchesHasColor[itID])	{
+					if (hasColor == 0)	hasColor = 1		else if (hasColor != 1)		{ uniform = false; break }
+				}
+				else	{
+					if (hasColor == 0)	hasColor = -1		else if (hasColor != -1)	{ uniform = false; break }
+				}
+			if (thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTemperature))
+				if (state.switchesHasColorTemperature[itID])	{
+					if (hasColorTemperature == 0)	hasColorTemperature = 1			else if (hasColorTemperature != 1)		{ uniform = false; break }
+				}
+				else	{
+					if (hasColorTemperature == 0)	hasColorTemperature = -1		else if (hasColorTemperature != -1)		{ uniform = false; break }
+				}
+			if (thisRule.level)
+				if (state.switchesHasLevel[itID])	{
+					if (hasLevel == 0)	hasLevel = 1		else if (hasLevel != 1)		{ uniform = false; break }
+				}
+				else	{
+					if (hasLevel == 0)	hasLevel = -1		else if (hasLevel != -1)	{ uniform = false; break }
+				}
+		}
+		state.rules[(thisRule.ruleNo)] << [uniform:uniform]
+		state.rules[(thisRule.ruleNo)] << [hasLevel:hasLevel]
+		state.rules[(thisRule.ruleNo)] << [hasColor:hasColor]
+		state.rules[(thisRule.ruleNo)] << [hasColorTemperature:hasColorTemperature]
+	}
+	if (uniform)	{
+		def turnOn = true
+		if (hasColor == 1)	{
+			thisRule.switchesOn.setColor(thisRule.hue); pauseIt()
+			turnOn = false
+		}
+		else if (hasColorTemperature == 1)	{
+			colorTemperature = (thisRule.level == 'AL' ? calculateLevelOrKelvin(true) : thisRule.colorTemperature) as Integer
+			if (colorTemperature)	{
+				thisRule.switchesOn.setColorTemperature(colorTemperature); pauseIt()
+				turnOn = false
+			}
+		}
+		if (hasLevel == 1)	{
+			level = (thisRule.level == 'AL' ? calculateLevelOrKelvin(false) : thisRule.level) as Integer;
+			if (level)	{
+				(hT == _Hubitat && dimOver ? thisRule.switchesOn.setLevel(level, dimOver.toInteger()) : thisRule.switchesOn.setLevel(level))
+				turnOn = false
+			}
+		}
+		if (turnOn)		{ thisRule.switchesOn.on(); pauseIt() }
+		return
+	}
+	for (def swt : thisRule.switchesOn)		{
+		def turnOn = true
+		def setCTorColor = false
+		def itID = swt.getId()
+//				if (dimOver && thisRule.level && state.switchesHasLevel[itID] && swt.currentSwitch == off)		swt.setLevel(1);
+		if (thisRule.color && state.switchesHasColor[itID])	{
+				swt.setColor(thisRule.hue); pauseIt()
+				setCTorColor = true
+				turnOn = false
+		}
+		else if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTemperature)) && state.switchesHasColorTemperature[itID])	{
+			if (!colorTemperature)
+				colorTemperature = (thisRule.level == 'AL' ? calculateLevelOrKelvin(true) : thisRule.colorTemperature) as Integer
+			if (colorTemperature)	{
+				swt.setColorTemperature(colorTemperature); pauseIt()
+				setCTorColor = true
+				turnOn = false
+			}
+		}
+		if (thisRule.level && state.switchesHasLevel[itID])	{
+			if (!level)		level = (thisRule.level == 'AL' ? calculateLevelOrKelvin(false) : thisRule.level) as Integer;
+			if (level)	{
+				if (setCTorColor)	pauseIt(true);
+				(hT == _Hubitat && dimOver ? swt.setLevel(level, dimOver.toInteger()) : swt.setLevel(level))
+				turnOn = false
+			}
+		}
+		if (turnOn)		{ swt.on(); pauseIt() }
 	}
 }
 
 def holidayLights()	{
+	ifDebug('holidayLights', 'info')
 	if (!state.holidayLights)	return;
 	def thisRule = getRule(state.holiRuleNo, null)
 	if (state.holiStyle == 'RO')	{
@@ -4569,16 +4655,20 @@ def holidayLights()	{
 }
 
 private holidayLightsRotate(thisRule)	{
+	ifDebug('holidayLightsRotate', 'info')
 	def cI = state.holiColorIndex
 //	thisRule.switchesOn.each	{
 	for (def swt : thisRule.switchesOn)		{
 		def holiColor = state.holiHues."$cI"
+		if (swt.currentSwitch == off)	swt.on();
 		swt.setColor(holiColor); pauseIt()
+//		pauseExecution(1);
 		cI = (cI < (state.holiColorCount -1) ? cI + 1 : 0)
 	}
 }
 
 private holidayLightsTwinkle(thisRule)	{
+	ifDebug('holidayLightsTwinkle', 'info')
 	thisRule.switchesOn.setLevel(1)
 	def noSwitches = thisRule.switchesOn.size()
 	def noColors = state.holiHues.size()
@@ -4771,7 +4861,7 @@ def dimLights()	{
 					state.preDimLevel << [(swt.getId()):currentLevel]
 				//    it.setLevel((currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)); pauseIt()
 					def newLevel = (currentLevel > state.dimByLevel ? currentLevel - state.dimByLevel : 1)
-					(hT == _Hubitat ? swt.setLevel(newLevel, 0) : swt.setLevel(newLevel))
+					(hT == _Hubitat && dimOver ? swt.setLevel(newLevel, dimOver.toInteger()) : swt.setLevel(newLevel))
 					pauseIt()
 				}
 			}
@@ -4789,7 +4879,7 @@ def dimLights()	{
 					//    it.on(); pauseIt() // set level should be enough no need to turn on
 						state.preDimLevel << [(swt.getId()):swt.currentLevel]
 					//    it.setLevel(state.dimToLevel);
-						(hT == _Hubitat ? swt.setLevel(state.dimToLevel, 0) : swt.setLevel(state.dimToLevel))
+						(hT == _Hubitat && dimOver ? swt.setLevel(state.dimToLevel, dimOver.toInteger()) : swt.setLevel(state.dimToLevel))
 						pauseIt()
 					}
 				}
@@ -4803,11 +4893,12 @@ private unDimLights(rSt, returnTimer= false)	{
 	if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel) || !state.preDimLevel)	return;
 	if (!notRestoreLL || rSt != vacant)	{
 //		whichSwitchesAreOn().each	{
+		def hT = getHubType()
 		for (def swt : whichSwitchesAreOn())	{
 			def itID = swt.getId()
 			if (swt.currentSwitch == 'on' && state.switchesHasLevel[itID])
 				def newLevel = state.preDimLevel[itID]
-				if (newLevel > 0)	{ swt.setLevel(newLevel); pauseIt() }
+				if (newLevel > 0)	{ (hT == _Hubitat && dimOver ? swt.setLevel(newLevel, dimOver.toInteger()) : swt.setLevel(newLevel)); pauseIt() }
 			}
 	}
 	updateChildTimer(0)
@@ -4815,14 +4906,12 @@ private unDimLights(rSt, returnTimer= false)	{
 }
 
 def switches2Off()	{
-	state.holidayLights = false
-//	whichSwitchesAreOn(true).each	{
-//		(dimOver && state.switchesHasLevel[(it.getId())] ? it.setLevel(0, dimOver.toInteger()) : it.off())
-//		pauseIt()
-//	}
-	for (def swt : whichSwitchesAreOn(true))		{
-		(dimOver && state.switchesHasLevel[(swt.getId())] ? swt.setLevel(0, dimOver.toInteger()) : swt.off())
-		pauseIt()
+	if (state.holidayLights)		return;
+//	state.holidayLights = false
+	def switches = whichSwitchesAreOn(true)
+	for (def swt : switches)	{
+		if (swt.currentSwitch == on && swt.currentLevel != 0)
+			(dimOver && getHubType() == _Hubitat && state.switchesHasLevel[(swt.getId())] ? swt.setLevel(0, dimOver.toInteger()) : swt.off())
 	}
 }
 
@@ -4972,14 +5061,15 @@ def scheduleFromToTimes(evt = [:])	{
 		state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + 5) % 60).intValue()
 	}
 	else	{
-		if (evt?.option?.contains('process'))	{
+		if (evt?.option?.contains('process') && !onlyOnStateChange)	{
 //log.debug "new processChild"
 			checkAndTurnOnOffSwitchesC()
 			state.processChild = ((state.processChild + 5) % 60).intValue()
 		}
 		if (evt?.option?.contains('time'))	{
 //log.debug "new timeHandler"
-			if (checkPauseModesAndDoW() && !onlyOnStateChange)		switchesOnOrOff();
+//			if (checkPauseModesAndDoW())
+			processRules();
 		}
 	}
 	def sunriseAndSunset = getSunriseAndSunset()
@@ -4996,18 +5086,20 @@ def scheduleFromToTimes(evt = [:])	{
 
 	def process = true
 	def time = false
+	def runTime = pTime
 	if (state.rules && state.timeCheck)		{
 		def fromTime = scheduleFromTime()
 		if (fromTime && fromTime.getTime() < nowTime)		fromTime = fromTime.plus(1);
 		def toTime = scheduleToTime()
 		if (toTime && toTime.getTime() < nowTime)		toTime = toTime.plus(1);
-
 		if ((fromTime && !toTime) || (fromTime && fromTime <= toTime))	{
 			if (pTime.equals(fromTime))
 				time = true
 			else if (pTime.after(fromTime))	{
 				process = false
-				runOnce(fromTime, timeHandler)
+				time = true
+				runTime = fromTime
+//				runOnce(fromTime, timeHandler)
 			}
 		}
 		else if ((toTime && !fromTime) || (toTime && toTime < fromTime))	{
@@ -5015,12 +5107,15 @@ def scheduleFromToTimes(evt = [:])	{
 				time = true
 			else if (pTime.after(toTime))	{
 				process = false
-				runOnce(toTime, timeHandler)
+				time = true
+				runTime = toTime
+//				runOnce(toTime, timeHandler)
 			}
 		}
 	}
 
-	if (process)	runOnce((time ? pTime : new Date(pTime.getTime() + Math.abs(new Random().nextInt(4000) % 4000) + 1000)), scheduleFromToTimes, [data: [option: "[${(time ? "process, time" : "process")}]"]]);
+	if (process || time)
+		runOnce((time ? runTime : new Date(runTime.getTime() + Math.abs(new Random().nextInt(4000) % 4000) + 1000)), scheduleFromToTimes, [data: [option: "[${(process && time ? "process, time" : (process ? "process" : "time"))}]"]]);
 //log.debug "perf scheduleFromToTimes: ${(now() - nowTime)} ms"
 }
 
@@ -5070,6 +5165,7 @@ private scheduleTime(fromTime)	{
 	for (def i = 1; i <= maxRules; i++)	{
 		def ruleNo = String.valueOf(i)
 		def thisRule = getNextRule(ruleNo, _ERule, true, true)
+//log.debug thisRule
 		if (thisRule.ruleNo == 'EOR')	break;
 		i = thisRule.ruleNo as Integer
 		if (thisRule.fromDate && thisRule.toDate)	{
@@ -5079,6 +5175,7 @@ private scheduleTime(fromTime)	{
 			if ((!nextTime && nowDate >= fTime && nowDate <= tTime) || (nextTime && (fromTime ? fTime : tTime) >= nowDate && (fromTime ? fTime : tTime) < nextTime))
 				nextTime = (fromTime ? fTime : tTime)
 		}
+//log.debug "$thisRule.fromTimeType | $thisRule.fromTime | $thisRule.toTimeType | $thisRule.toTime"
 		if ((!thisRule.fromTimeType || (thisRule.fromTimeType == timeTime() && !thisRule.fromTime)) ||
 			(!thisRule.toTimeType || (thisRule.toTimeType == timeTime() && !thisRule.toTime)))
 			continue
