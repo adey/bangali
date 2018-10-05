@@ -195,11 +195,8 @@ def pageAnnouncementSpeakerTimeSettings()	{
 			if (ht == _SmartThings)
 				input "listOfMQs", "enum", title: "Select Ask Alexa Message Queues", options: state.askAlexaMQ, multiple: true, required: false
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()		{
+			if (hT == _Hubitat)		paragraph subHeaders("Announcement Volume");
 			if (playerDevice)	{
 				input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
 				input "useVariableVolume", "bool", title: "Use variable volume?", required: true, multiple: false, defaultValue: false
@@ -209,11 +206,8 @@ def pageAnnouncementSpeakerTimeSettings()	{
 				paragraph "Use variable volume?"
 			}
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Announcement hours");
 			if (playerDevice)	{
 				input "startHH", "number", title: "Announce from hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
 				input "endHH", "number", title: "Announce to hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
@@ -273,10 +267,6 @@ def pageModeSettings()	{
 			else
 				paragraph "Announce mode changes with light?\nselect light to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
 			if (playerDevice || announceSwitches)
 				input "announceInModes", "mode", title: "Announcements only in modes?", required: false, multiple: true
@@ -308,11 +298,8 @@ def pageArrivalDepartureSettings()	{
 			else
 				paragraph "Announce presence with color??\nselect announce with color light to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Presences to announce");
 			if (speakerAnnounce || speakerAnnounceColor)
 				input "presenceSensors", "capability.presenceSensor", title: "Which presence sensors?", required: true, multiple: true, submitOnChange: true
 			else
@@ -326,11 +313,8 @@ def pageArrivalDepartureSettings()	{
 			else
 				paragraph "Colors for presence sensors\nselect announce with color to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Announcement text");
 			if (playerDevice && speakerAnnounce)	{
 				href "pageAnnouncementTextHelp", title: "Announcement text format help:", description: "Click to read"
 				input "welcomeHome", "text", title: "Welcome home greeting?", required: true, multiple: false, defaultValue: 'Welcome home &.'
@@ -345,11 +329,8 @@ def pageArrivalDepartureSettings()	{
 				paragraph "Left home announcement closer?"
 			}
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Announcement triggers");
 			if (speakerAnnounce || speakerAnnounceColor)	{
 				input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensors close?", required: !motionSensors, multiple: true
 				input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensors?", required: !contactSensors, multiple: true
@@ -375,10 +356,6 @@ def pageSunAnnouncementSettings()	{
 			else
 				paragraph "Sunrise/sunset announcement?\nselect speaker or lights to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
 			if (['1', '2', '3'].contains(sunAnnounce))
 				input "speakSun", "bool", title: "Spoken announcement?", required: true, multiple: false, defaultValue: true
@@ -407,10 +384,6 @@ def pageBatteryAnnouncementSettings()	{
 			else
 				paragraph "Annouce battery status when?\nselect speakers or switches to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
 			if (batteryTime)
 				input "batteryLevel", "number", title: "Battery level below which to include in status?", required: true, multiple: false, defaultValue: 33, range: "1..100"
@@ -429,11 +402,8 @@ def pageBatteryAnnouncementSettings()	{
 			else
 				paragraph "Send SMS notification on low battery?\nselect announce battery status time to set"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Battery Devices to check");
 			if (batteryTime)	{
 				input "batteryCheckDevices", "capability.battery", title: "Check which battery devices?", required: false, multiple: true
 //				input "batteryNoCheckDevices", "capability.battery", title: "Do not check these devices?", required: false, multiple: true
@@ -462,10 +432,6 @@ def pageDeviceConnectivitySettings()	{
 				paragraph "Device event within how many hours?"
 			}
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section("")	{
 			if (checkHealth && (playerDevice || announceSwitches))
 				input "healthEvery", "enum", title: "Spoken announcement: Every how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
@@ -482,11 +448,8 @@ def pageDeviceConnectivitySettings()	{
 				paragraph "Color announcement: Device connectivity warning color?"
 			}
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Health critical");
 			if (checkHealth && phoneNumber)
 				input "healthCriticalNotification", "bool", title: "Critical devices: Send SMS if connectivity check fails?", required: false, defaultValue: false, submitOnChange: true
 			else
@@ -496,11 +459,8 @@ def pageDeviceConnectivitySettings()	{
 			else
 				paragraph "Critical devices: Which critical devices?${(!(checkHealth && phoneNumber) ? '' : "\nselect device connectivity to set" )}"
 		}
-		if (hT == _Hubitat)
-			section()	{
-				paragraph "$_Line"
-			}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Devices to check");
 			if (checkHealth)	{
 				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: false, multiple: true
 //				input "healthNoCheckDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Do not check these devices?", required: false, multiple: true
@@ -526,6 +486,11 @@ def pageGithubSettings()	{
 			}
 		}
 	}
+}
+
+private subHeaders(str)		{
+	if (str.size() > 50)	str = str.substring(0, 50);
+	return "<div style='text-align:center;background-color:#bbbbbb;color:#ffffff;'>${str.toUpperCase().center(50)}</div>"
 }
 
 def installed()		{ initialize() }

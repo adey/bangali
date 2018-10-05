@@ -1,8 +1,16 @@
+Version: 0.90.4
+
+DONE:   10/3/2018
+1) added color option to night lights.
+2) tweaked the holiday lights twinkle a bit for HE.
+3) optimized switches processing.
+4) started adding sub-headers on HE.
+
 Version: 0.90.2
 
 DONE:   10/1/2018
 1) fix for holiday lights. requires resaving holiday lights settings.
-2) bit more code optimization for frequent functions.
+2) more code optimization for frequent functions.
 3) other small fixes.
 
 Version: 0.90.0
