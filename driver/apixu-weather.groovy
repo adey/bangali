@@ -34,9 +34,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.0.0"  }
+public static String version()      {  return "v4.0.1"  }
 
 /***********************************************************************************************************************
+*
+* Version: 4.0.1
+*   10/14/2018: removed logging of weather data.
 *
 * Version: 4.0.0
 *   8/16/2018: added optional weather undergroud mappings.
@@ -279,7 +282,7 @@ private getXUdata()   {
             else                log.error "http call for ApiXU weather api did not return data: $resp";
         }
     } catch (e) { log.error "http call failed for ApiXU weather api: $e" }
-    log.debug "$obs"
+//    log.debug "$obs"
     return obs
 }
 
