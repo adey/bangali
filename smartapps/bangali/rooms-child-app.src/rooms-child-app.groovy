@@ -2471,6 +2471,7 @@ def updateSwitchAttributesToStateAndSubscribe()	{
 	def sOn = []
 	def sOff = []
 	def sID = []
+	def checkSwitches = []
 	for (def i = 1; i <= maxRules; i++)	{
 		def ruleNo = String.valueOf(i)
 		def thisRule = getNextRule(ruleNo, _ERule, false, false)
@@ -2495,11 +2496,14 @@ def updateSwitchAttributesToStateAndSubscribe()	{
 				if (swt.hasCommand("setColorTemperature"))		state.switchesHasColorTemperature << ["$itID":true];
 			}
 		}
+		if (thisRule.checkOn)		checkSwitches << thisRule.checkOn;
+		if (thisRule.checkOff)		checkSwitches << thisRule.checkOff;
 	}
 	if (hT != _Hubitat && sOn)	{
 		subscribe(sOn, "switch.on", switchOnEventHandler)
 		subscribe(sOn, "switch.off", switchOffEventHandler)
 	}
+	if (checkSwitches)		subsribe(checkSwitches, "switch", checkSwitchEventHandler)
 	for (def swt : nightSwitches)	{
 		def itID = swt.getId()
 		if (!sID.contains(itID))	{
@@ -3444,6 +3448,10 @@ def	lockedContactClosedEventHandler(evt)	{
 	if (!checkPauseModesAndDoW())	return;
 	if (child?.currentValue(occupancy) != locked)
 		locked()
+}
+
+def checkSwitchEventHandler(evt)	{
+	if (!onlyOnStateChange)		switchesOnOrOff();
 }
 
 def roomThermostatEventHandler(evt)	{
