@@ -51,6 +51,5 @@ def mainPage()	{
 def installed()		{  initialize()  }
 
 def updated()		{  initialize()  }
-}
 
 def initialize()	{  unsubscribe();	unschedule()  }
