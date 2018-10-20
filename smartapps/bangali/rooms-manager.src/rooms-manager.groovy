@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.90.4"  }
+public static String version()		{  return "v0.95.0"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -70,12 +70,6 @@ preferences	{
 def mainPage()	{
 	def appChildren = app.getChildApps().sort { it.label }
 	dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings")	{
-/*        section     {
-			for (aC in appChildren)	{
-				app(appName: "$aC.label")
-			}
-		}
-*/
 		section {
 			app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
@@ -83,14 +77,8 @@ def mainPage()	{
 }
 
 def pageSpeakerSettings()	{
-//    ifDebug("pageSpeakerSettings", 'info')
-//    def i = (presenceSensors ? presenceSensors.size() : 0)
-//    def str = (presenceNames ? presenceNames.split(msgSeparator) : [])
-//    def j = str.size()
 	def hT = getHubType()
 	def playerDevice = (speakerDevices || speechDevices || musicPlayers || (hT == _SmartThings && listOfMQs) ? true : false)
-//    if (i != j && getHubType() == _SmartThings)     sendNotification("Count of presense sensors and names do not match!", [method: "push"]);
-//    def colorsList = colorsRGB.collect { k, v -> ["$k":"${v[1]}"] }
 	def colorsList = colorsRGB.collect { [(it.key):it.value[1]] }
 	def nameString = []
 	def colorString = []
@@ -134,9 +122,6 @@ def pageSpeakerSettings()	{
 		section()	{
 			href "pageGithubSettings", title: "${addImage(_GitUpdateImage)}Github check settings", description: (gitTime ? "Tap to change existing settings" : "Tap to configure"), image: _GitUpdateImage
 		}
-//		section("Process execution rule(s) only on state change? (global setting overrides setting at room level)", hideable: false)		{
-//			input "onlyOnStateChange", "bool", title: "${addImage(_ProcessImage)}Only on state change?", required: false, multiple: false, defaultValue: false, image: _ProcessImage
-//		}
 		section()	{
 			href "", title: "${addImage(_GHimage)}Detailed readme on Github", style: "external", url: _gitREADME, description: "Click link to open in browser", image: _GHimage, required: false
 		}
@@ -151,8 +136,7 @@ def pagePersonNameSettings()	{
 	def namesList = []
 	dynamicPage(name: "pagePersonNameSettings", title: "Presence sensor names:", install: false, uninstall: false)	{
 		for (def pit : presenceSensors)		{
-			def itID = pit.getId()
-			def itDN = pit.getDisplayName()
+			def itID = pit.getId(), itDN = pit.getDisplayName()
 			section()	{
 				input "${itID}Name", "text", title: "$itDN Name?", required: true, multiple: false
 			}
@@ -164,8 +148,7 @@ def pagePersonColorSettings()	{
 	def colorsList = colorsRGB.collect { [(it.key):it.value[1]] }
 	dynamicPage(name: "pagePersonColorSettings", title: "Choose notification color:", install: false, uninstall: false)		{
 		for (def pit : presenceSensors)		{
-			def itID = pit.getId()
-			def itDN = pit.getDisplayName()
+			def itID = pit.getId(), itDN = pit.getDisplayName()
 			section()	{
 				input "${itID}Color", "enum", title: "$itDN Color?", required: true, multiple: false, options: colorsList
 			}
@@ -201,7 +184,7 @@ def pageAnnouncementSpeakerTimeSettings()	{
 				input "speakerVolume", "number", title: "Speaker volume?", required: false, multiple: false, defaultValue: 33, range: "1..100"
 				input "useVariableVolume", "bool", title: "Use variable volume?", required: true, multiple: false, defaultValue: false
 			}
-			else        {
+			else		{
 				paragraph "Speaker volume?\nselect any speaker to set"
 				paragraph "Use variable volume?"
 			}
@@ -212,7 +195,7 @@ def pageAnnouncementSpeakerTimeSettings()	{
 				input "startHH", "number", title: "Announce from hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
 				input "endHH", "number", title: "Announce to hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
 			}
-			else        {
+			else		{
 				paragraph "Announce from hour?\nselect speaker to set"
 				paragraph "Announce to hour?"
 			}
@@ -231,7 +214,7 @@ def pageAnnouncementColorTimeSettings()	{
 				input "startHHColor", "number", title: "Announce from hour?", description: "0..${(endHHColor ?: 23)}", required: true, multiple: false, defaultValue: 18, range: "0..${(endHH ?: 23)}", submitOnChange: true
 				input "endHHColor", "number", title: "Announce to hour?", description: "${(startHHColor ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
 			}
-			else        {
+			else		{
 				paragraph "Announce from hour?\nselect announce switches to set"
 				paragraph "Announce to hour?"
 			}
@@ -322,7 +305,7 @@ def pageArrivalDepartureSettings()	{
 				input "leftHome", "text", title: "Left home announcement?", required: true, multiple: false, defaultValue: '&has left home.'
 				input "leftHomeCloser", "text", title: "Left home announcement closer?", required: false, multiple: false
 			}
-			else    {
+			else	{
 				paragraph "Welcome home greeting?\nselect speaker announce to set."
 				paragraph "Welcome home greeting closer?"
 				paragraph "Left home announcement?"
@@ -332,11 +315,11 @@ def pageArrivalDepartureSettings()	{
 		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Announcement triggers");
 			if (speakerAnnounce || speakerAnnounceColor)	{
-				input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensors close?", required: !motionSensors, multiple: true
-				input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensors?", required: !contactSensors, multiple: true
+				input "contactSensors", "capability.contactSensor", title: "Welcome home greeting when which contact sensors close?", required: (motionSensors ? false : true), multiple: true
+				input "motionSensors", "capability.motionSensor", title: "Welcome home greeting with motion on which motion sensors?", required: (contactSensors ? false : true), multiple: true
 				input "secondsAfter", "number", title: "Left home announcement how many seconds after?", required: true, multiple: false, defaultValue: 15, range: "5..100"
 			}
-			else    {
+			else	{
 				paragraph "Welcome home greeting when which contact sensors close?\nselect announce to set."
 				paragraph "Welcome home greeting with motion on which motion sensors?\nselect announce to set."
 				paragraph "Left home announcement how many seconds after?\nselect announce to set."
@@ -393,7 +376,7 @@ def pageBatteryAnnouncementSettings()	{
 				input "batteryOkColor", "enum", title: "Battery all OK color?", required: false, multiple: false, options: colorsList
 				input "batteryLowColor", "enum", title: "Battery low color?", required: true, multiple: false, options: colorsList
 			}
-			else        {
+			else		{
 				paragraph "Battery all OK warning color?\nselect battery time to set"
 				paragraph "Battery low warning color?\nselect battery time to set"
 			}
@@ -408,7 +391,7 @@ def pageBatteryAnnouncementSettings()	{
 				input "batteryCheckDevices", "capability.battery", title: "Check which battery devices?", required: false, multiple: true
 //				input "batteryNoCheckDevices", "capability.battery", title: "Do not check these devices?", required: false, multiple: true
 			}
-			else        {
+			else		{
 				paragraph "Check which battery devices?\nselect announce battery status time to set"
 //				paragraph "Do not check these devices?"
 			}
@@ -443,7 +426,7 @@ def pageDeviceConnectivitySettings()	{
 				input "healthOkColor", "enum", title: "Color announcement: Device connectivity OK color?", required: false, multiple: false, options: colorsList
 				input "healthWarnColor", "enum", title: "Color announcement: Device connectivity warning color?", required: false, multiple: false, options: colorsList
 			}
-			else        {
+			else		{
 				paragraph "Color announcement: Device connectivity OK color?\nselect connectivity check and lights to set"
 				paragraph "Color announcement: Device connectivity warning color?"
 			}
@@ -465,7 +448,7 @@ def pageDeviceConnectivitySettings()	{
 				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: false, multiple: true
 //				input "healthNoCheckDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Do not check these devices?", required: false, multiple: true
 			}
-			else        {
+			else		{
 				paragraph "Check which devices?\nselect device connectivity to set"
 //				paragraph "Do not check these devices?"
 			}
@@ -480,7 +463,7 @@ def pageGithubSettings()	{
 				input "gitTime", "time", title: "At time of day?", required: false, submitOnChange: true
 				input "gitRepeat", "bool", title: "Repeat GITHUB updated notification?", required: !!gitTime
 			}
-			else        {
+			else		{
 				paragraph "At time of day?\nselect phone number to set"
 				paragraph "Repeat GITHUB updated notification?"
 			}
@@ -500,38 +483,36 @@ def updated()		{
 	ifDebug("updated", 'info')
 	initialize()
 	def hT = getHubType()
-	if (hT == _Hubitat)	{
-		if (settings["presenceNames"])			app.removeSetting("presenceNames")
-		if (settings["presenceColorString"])	app.removeSetting("presenceColorString")
-	}
 	announceSetup()
-//	if (!onlyOnStateChange)		runEvery5Minutes(processChildSwitches);
-//	schedule("0 0/15 * 1/1 * ? *", tellTime)
 	if (ht == _SmartThings)		subscribe(location, "askAlexaMQ", askAlexaMQHandler)
 	ifDebug("there are ${childApps.size()} rooms.", 'info')
 	for (def child : childApps)		{
 		def childRoomDevice = child.getChildRoomDevice()
 		ifDebug("initialize: room: ${child.label} id: ${child.id} childRoomDevice: $childRoomDevice", 'info')
 		subscribe(childRoomDevice, "occupancy", roomStateHistory)
-//		child.updateOnlyOnStateChange(onlyOnStateChange)
 	}
 	if (announceSwitches && ['1', '3'].contains(sunAnnounce))		subscribe(location, "sunrise", sunriseEventHandler);
 	if (announceSwitches && ['2', '3'].contains(sunAnnounce))		subscribe(location, "sunset", sunsetEventHandler);
 	githubUpdated(true)
-//	state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + 5) % 60)
 	state.healthHours = 0
 	scheduleNext()
-//	if (gitTime)	schedule(gitTime, githubUpdated);
 	subscribe(location, "mode", modeEventHandler)
-	state.processed = [children:[], inRun:false, runNumber:0]
 	state.connected = [devices:[], inRun:false, runNumber:0]
-log.debug "perf updated: ${now() - nowTime} ms"
+//log.debug "perf updated: ${now() - nowTime} ms"
 }
 
 def initialize()	{
 	ifDebug("initialize", 'info')
 	unsubscribe()
 	unschedule()
+	if (settings["healthNoCheckDevices"])		app.updateSetting("healthNoCheckDevices", []);
+	if (state.healthNoCheckDevices)			state.remove('healthNoCheckDevices');
+	if (settings["noBatteryCheckDevices"])		app.updateSetting("noBatteryCheckDevices", []);
+	if (state.noBatteryCheckDevices)		state.remove('noBatteryCheckDevices');
+	if (settings["noCheckDevices"])				app.updateSetting("noCheckDevices", []);
+	if (state.noCheckDevices)				state.remove('noCheckDevices');
+	if (settings["noHealthCheckDevices"])		app.updateSetting("noHealthCheckDevices", []);
+	if (state.noHealthCheckDevices)			state.remove('noHealthCheckDevices');
 	state.colorsRotating = false
 	state.lastBatteryUpdate = ''
 	sendLocationEvent(name: "AskAlexaMQRefresh", isStateChange: true)
@@ -565,15 +546,6 @@ def scheduleNext(data)		{
 		def gTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", x.format("HH", location.timeZone).toInteger(), x.format("mm", location.timeZone).toInteger()), location.timeZone), location.timeZone)
 		state.schedules << [type:'git', time:gTime, timeS:(gTime.format("HH:mm", location.timeZone))]
 	}
-//	def pTH
-//	if (state.processChild > cMM)	{
-//		pTH = cHH
-//	}
-//	else	{
-//		pTH = (cHH == 23 ? 0 : cHH + 1)
-//	}
-//	def pTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", pTH, state.processChild), location.timeZone), location.timeZone)
-//	state.schedules << [type:'process', time:pTime, timeS:(pTime.format("HH:mm", location.timeZone))]
 	def tTM = (cMM >= 45 ? 0 : (((cMM / 15).intValue() * 15) + 15))
 	def tTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (tTM == 0 ? (cHH == 23 ? 0 : cHH + 1) : cHH), tTM), location.timeZone), location.timeZone)
 	state.schedules << [type:'time', time:tTime, timeS:(tTime.format("HH:mm", location.timeZone))]
@@ -612,10 +584,6 @@ private timeTodayA(whichDate, thisDate, timeZone)	{
 	def newDate
 	if (thisDate.before(whichDate))	{
 		newDate = thisDate.plus(((whichDate.getTime() - thisDate.getTime()) / 86400000L).intValue() + 1)
-//		int dura = (int) ((whichDate.getTime() - thisDate.getTime()) / 86400000L)
-//		use (TimeCategory)	{
-//			newDate = thisDate + dura.day + 1.day
-//		}
 	}
 	else
 		newDate = thisDate
@@ -644,36 +612,46 @@ def unsubscribeChildRoomDevice(appChildDevice)	{
 		unsubscribe(appChildDevice)
 }
 
+
 def roomStateHistory(evt)	{
-	def rSH = [state: evt.value, time: new Date(now()).format("yyyy-MM-dd'T'HH:mm:ssZ", location.timeZone)]
-//    if (!state.rSH)	{
+	if (!(['asleep', 'engaged', 'occupied', 'vacant'].contains(evt.value)))		return;
+	def nowTime = now()
+	def rSH = [s: evt.value[0..0], t: nowTime]
+    if (!state.rSH)	{
 		state.rSH = [:]
 		ifDebug("rSH initialized")
-//    }
+    }
 //    ifDebug("rSH $evt.displayName | $evt.deviceId | $evt.value")
 //    if (state.rSH[(evt.deviceId)])	state.rSH[(evt.deviceId)] << rSH;
 //    else								state.rSH[(evt.deviceId)] = rSH;
-	if (!state.rSH[(evt.deviceId)])		state.rSH[(evt.deviceId)] = []
-	state.rSH[(evt.deviceId)] << rSH;
-	state.rSH.each		{ k, v ->
-		if (v instanceof List && v.size() > 10)	{
-			v.sort      { it.time }
-			for (; v.size() > 10; )	{
-				v = v.remove(v[0])
-			}
-			state.rsh[k] = v
-		}
-//        else        {
+	def dNI = evt.device.deviceNetworkId
+	if (!state.rSH["$dNI"])		state.rSH["$dNI"] = []
+	state.rSH["$dNI"] << rSH;
+	state.rSH["$dNI"].sort	{ it.t }
+//	state.rSH[(evt.deviceId)].each		{
+	def deleteTime = nowTime - 86400000000
+//	while (state.rSH["$evt.deviceId"].size() > 25)	{
+	while (state.rSH["$dNI"][0] && state.rSH["$dNI"][0].t < deleteTime)		{ state.rSH["$dNI"].remove(0); }
+//		if (it instanceof List && it.size() > 10)		{
+//			v.sort  	{ it.time }
+//			for (; v.size() > 10; )		{
+//				v = v.remove(v[0])
+//			}
+//			state.rsh[k] = v
+//		}
+//        else		{
 //            ifDebug("key: $k")
 //            ifDebug("value: $v")
 //        }
-	}
+//	}
 //    else                                state.rSH = [(evt.deviceId): rSH];
-/*    state.rSH.each     { dID, dMap ->
+/*    state.rSH.each 	{ dID, dMap ->
 		state.rSH[dID] = dMap.sort  { a, b -> b.value <=> a.value  }
 	}
 */
+log.debug "perf roomStateHistory: ${now() - nowTime} ms"
 }
+
 
 private announceSetup()	{
 	state.whoCameHome = [:]
@@ -683,57 +661,37 @@ private announceSetup()	{
 	state.personsColors = [:]
 	state.colorsToRotate = [:]
 	if (!speakerAnnounce && !speakerAnnounceColor)		return;
-		for (def pit : presenceSensors)		{
-			def itID = pit.getId()
-			state.whoCameHome.personNames << [(itID):settings["${itID}Name"]]
-			if (speakerAnnounceColor)	{
-				def hue = convertRGBToHueSaturation(settings["${itID}Color"])
-				state.personsColors << [(itID):hue]
-			}
+	for (def pit : presenceSensors)		{
+		def itID = pit.getId()
+		state.whoCameHome.personNames << [(itID):settings["${itID}Name"]]
+		if (speakerAnnounceColor)	{
+			def hue = convertRGBToHueSaturation(settings["${itID}Color"])
+			state.personsColors << [(itID):hue]
 		}
-		if (presenceSensors)	{
-			subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
-			subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
-		}
-		if (contactSensors)		subscribe(contactSensors, "contact.closed", contactClosedEventHandler);
-		if (motionSensors)		subscribe(motionSensors, "motion.active", contactClosedEventHandler);
-	def str, i
-	state.welcomeHome = [:]
-	if (welcomeHome)	{
-		str = welcomeHome.split(msgSeparator)
-		i = 0
-		str.each	{
-			state.welcomeHome[i] = it
+	}
+	if (presenceSensors)	{
+		subscribe(presenceSensors, "presence.present", presencePresentEventHandler)
+		subscribe(presenceSensors, "presence.not present", presenceNotPresentEventHandler)
+	}
+	if (contactSensors)		subscribe(contactSensors, "contact.closed", contactClosedEventHandler);
+	if (motionSensors)		subscribe(motionSensors, "motion.active", contactClosedEventHandler);
+	state.welcomeHome = splitStr(welcomeHome)
+	state.welcomeHomeCloser = splitStr(welcomeHomeCloser)
+	state.leftHome = splitStr(leftHome)
+	state.leftHomeCloser = splitStr(leftHomeCloser)
+}
+
+private splitStr(str)	{
+	def map = [:]
+	if (str)	{
+		def split = str.split(msgSeparator)
+		def i = 0
+		for (def s : split)	{
+			map[i] = s
 			i = i + 1
 		}
 	}
-	state.welcomeHomeCloser = [:]
-	if (welcomeHomeCloser)	{
-		str = welcomeHomeCloser.split(msgSeparator)
-		i = 0
-		str.each	{
-			state.welcomeHomeCloser[i] = it
-			i = i + 1
-		}
-	}
-	state.leftHome = [:]
-	if (leftHome)	{
-		str = leftHome.split(msgSeparator)
-		i = 0
-		str.each	{
-			state.leftHome[i] = it
-			i = i + 1
-		}
-	}
-	state.leftHomeCloser = [:]
-	if (leftHomeCloser)	{
-		str = leftHomeCloser.split(msgSeparator)
-		i = 0
-		str.each	{
-			state.leftHomeCloser[i] = it
-			i = i + 1
-		}
-	}
+	return map
 }
 
 def getChildRoomDeviceObject(childID)	{
@@ -831,16 +789,16 @@ private speakIt(str)	{
 		if (isMuteOn)		speakerDevices.unmute();
 		speakerDevices.playTextAndResume(str, vol);
 		if (currentVolume != vol)		speakerDevices.setLevel(currentVolume)
-		if (isMuteOn)	musicPlayers.mute();
+		if (isMuteOn)		musicPlayers.mute();
 	}
 	if (speechDevices)		speechDevices.speak(str);
 	if (musicPlayers)	{
 		def currentVolume = musicPlayers.currentLevel
 		def isMuteOn = musicPlayers.currentMute.contains("muted")
-		if (isMuteOn)	musicPlayers.unmute();
+		if (isMuteOn)		musicPlayers.unmute();
 		musicPlayers.playTrackAndResume(str, vol)
-		if (currentVolume != vol)	musicPlayers.setLevel(currentVolume)
-		if (isMuteOn)	musicPlayers.mute();
+		if (currentVolume != vol)		musicPlayers.setLevel(currentVolume)
+		if (isMuteOn)		musicPlayers.mute();
 	}
 	if (hT == _SmartThings && listOfMQs)
 		sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
@@ -869,7 +827,7 @@ def rotateColors()	{
 	state.colorsIndex = (state.colorsIndex < (state.colorsToRotate.size() -1) ? state.colorsIndex + 1 : 0)
 	if (state.colorsRotateSeconds > 0)
 		runIn(5, rotateColors)
-	else        {
+	else		{
 		state.colorsRotating = false
 		state.colorsToRotate = [:]
 		pauseIt(true); announceSwitches.off(); pauseIt(true)
@@ -882,16 +840,10 @@ private whoCameHome(presenceSensor, left = false)	{
 	def presenceName = state.whoCameHome.personNames[(pID)]
 	if (!presenceName)		return;
 	ifDebug("presenceName: $presenceName | left: $left", 'info')
-/*    if (left)	{
-		if (state.whoCameHome.persons && state.whoCameHome.persons.contains(presenceName))
-			state.whoCameHome.persons.remove(presenceName)
-		return
-	}*/
-	long nowTime = now()
-	long howLong
 	if (!left)	{
+		long nowTime = now()
 		if (state.whoCameHome.personsIn)	{
-			howLong = nowTime - state.whoCameHome.lastOne
+			long howLong = nowTime - state.whoCameHome.lastOne
 			if (howLong > 300000L)		state.whoCameHome.personsIn = [];
 		}
 		state.whoCameHome.lastOne = nowTime
@@ -901,15 +853,13 @@ private whoCameHome(presenceSensor, left = false)	{
 	else	{
 		if (!state.whoCameHome.personsOut || !(state.whoCameHome.personsOut.contains(presenceName)))
 			state.whoCameHome.personsOut << presenceName
-		runIn(secondsAfter as Integer, contactClosedEventHandler)
+		runIn(secondsAfter, contactClosedEventHandler)
 	}
-	if (speakerAnnounceColor)
-		state.colorsToRotate << [(state.colorsToRotate.size()):state.personsColors[(pID)]]
+	if (speakerAnnounceColor)		state.colorsToRotate << [(state.colorsToRotate.size()):state.personsColors[(pID)]];
 }
 
 def getRoomNames(childID)	{
 	def roomNames = [:]
-//	childApps.each	{ child ->
 	for (def child : childApps)		{
 		if (childID != child.id)		roomNames << [(child.id):(child.label)];
 	}
@@ -970,13 +920,12 @@ def handleAdjRooms()	{
 }
 
 def getLastStateDate(childID)	{
-	def nowDate = new Date()
 	def lastStateDate = [:]
 	if (childID)
 		for (def child : childApps)		{
 			if (childID == child.id)	{
-				def lastStateDateChild = child.getLastStateChild()
-				lastStateDate = lastStateDateChild
+				lastStateDate = child.getLastStateChild()
+				break
 			}
 		}
 	return lastStateDate
@@ -1057,24 +1006,24 @@ def setupColorNotification()	{
 		state.colorColorSave = []
 		state.colorColorTemperatureSave = []
 		state.colorColorTemperatureTrueSave = []
-		//		announceSwitches.each	{
 		for (def swt : announceSwitches)	{
 			state.colorSwitchSave << swt.currentSwitch
 			state.colorColorSave << [hue: swt.currentHue, saturation: swt.currentSaturation, level: swt.currentLevel]
 			def evts = swt.events(max: 250)
 			def foundValue = false
 			def keepSearching = true
-		//			evts.each	{
 			for (def evt : evts)	{
-				if (!foundValue && keepSearching)
-					if (evt.value == 'setColorTemperature')		{
+				if (!foundValue && keepSearching)	{
+					if (evt.value == 'setColorTemperature')
 						foundValue = true
-						state.colorColorTemperatureTrueSave << true
-					}
-				else if (['hue', 'saturation'].contains(evt.name))
-					keepSearching = false
+					else if (['hue', 'saturation'].contains(evt.name))
+						keepSearching = false
+				}
+				else
+					break
 			}
-			if (!foundValue)		state.colorColorTemperatureTrueSave << false;
+//			if (!foundValue)		state.colorColorTemperatureTrueSave << false;
+			state.colorColorTemperatureTrueSave << (foundValue ? true : false)
 			state.colorColorTemperatureSave << swt.currentColorTemperature
 		}
 		notifyWithColor()
@@ -1087,26 +1036,21 @@ def notifyWithColor()	{
 //    ifDebug("notifyWithColor", 'info')
 	if (state.colorNotifyTimes % 2)	{
 		announceSwitches.on(); pauseIt()
-		announceSwitches.setColor(state.colorNotificationColor); pauseIt()
-//        announceSwitches.setLevel(99)
-//        announceSwitches.setHue(state.colorNotificationColor.hue)
-//        announceSwitches.setSaturation(state.colorNotificationColor.saturation)
+		announceSwitches.setColor(state.colorNotificationColor)
 	}
-	else    {
-		announceSwitches.off(); pauseIt()
-	}
+	else
+		announceSwitches.off()
+	pauseIt()
+
 	state.colorNotifyTimes = state.colorNotifyTimes - 1
-//    if (state.colorNotifyTimes >= 0)      runIn(state.colorNotifyTimes % 2f).trunc(0) + 1, notifyWithColor)
 	if (state.colorNotifyTimes >= 0)
 		runIn(1, notifyWithColor)
-	else        {
+	else		{
 		def i = 0
-		//		announceSwitches.each	{
 		for (def swt : announceSwitches)	{
 			ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
 			(state.colorColorTemperatureTrueSave[(i)] == true ? swt.setColorTemperature(state.colorColorTemperatureSave[(i)]) : swt.setColor(state.colorColorSave[(i)])); pauseIt(true)
-			(state.colorSwitchSave[(i)] == 'off' ? swt.off() : swt.on()); pauseIt()
-		//            (state.colorSwitchSave[(i)] == 'off' ? it.off() : it.on()); pauseIt()
+			swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"(); pauseIt()
 			i = i + 1
 		}
 	}
@@ -1136,7 +1080,7 @@ def githubUpdated(storeCommitTimestamp = false)	{
 	def result = null
 	def githubText = false
 	def latestCommitDate
-	try    {
+	try	{
 		httpGet(params)	{ response ->
 			if (response.status == 200)		result = response;
 		}
@@ -1206,7 +1150,7 @@ def checkDeviceHealth()	{
 			def lastEvents
 			for (def x = 1; x < 3; x++)		{
 				def noOfEvents = Math.pow(5, x).toInteger()
-				lastEvents = dit.events(max: noOfEvents).findAll    { it.eventSource == 'DEVICE' && it.date.after(cDT) }
+				lastEvents = dit.events(max: noOfEvents).findAll	{ it.eventSource == 'DEVICE' && it.date.after(cDT) }
 				if (lastEvents)	{
 					deviceEventFound = true
 					break
@@ -1273,7 +1217,7 @@ def allDevices()	{
 	def aDID = []
 	def itID
 	for (def sit : settings)	{
-		sit.value.each       {
+		sit.value.each   	{
 			itID = isADevice(sit)
 			if (itID && !aDID.contains(itID))	{
 				aD << sit
@@ -1307,7 +1251,7 @@ private convertRGBToHueSaturation(setColorTo)	{
 
 	if (max == min)
 		h = s = 0 // achromatic
-	else    {
+	else	{
 		float d = max - min
 		s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
 		switch (max)	{

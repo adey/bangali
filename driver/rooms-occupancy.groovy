@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.90.0"  }
+public static String version()		{  return "v0.95.0"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -109,8 +109,7 @@ def	initialize()	{
 
 def getHubType()	{
 	if (!state.hubId)	state.hubId = location.hubs[0].id.toString()
-	if (state.hubId.length() > 5)	return _SmartThings();
-	else							return _Hubitat();
+	return (state.hubId.length() > 5 ? _SmartThings() : _Hubitat())
 }
 
 def setupAlarmC()	{
@@ -132,10 +131,7 @@ def setupAlarmC()	{
 	}
 	else
 		state.alarmDayOfWeek = ''
-	if (alarmSound)
-		state.alarmSound = ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer]
-	else
-		state.alarmSound = ''
+	state.alarmSound = (alarmSound ? ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer] : '')
 	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmTime", value: "${(alarmTime ? timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone) : '')}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmDayOfWeek", value: "$state.alarmDayOfWeek", descriptionText: "alarm days of week is $state.alarmDayOfWeek", isStateChange: true, displayed: true)
@@ -155,7 +151,7 @@ def on()	{
 	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", isStateChange: true, displayed: true)
 }
 
-def setOnStateC(e)		{ state.onState = (e ? e.toString() : 'occupied') }
+def setOnStateC(e)		{  state.onState = (e ? e.toString() : 'occupied')  }
 
 def	off()		{
 	vacant()
@@ -184,31 +180,22 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-//def occupied(handleSwitches = true)			{ stateUpdate('occupied', handleSwitches) }
 def occupied(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'occupied', handleSwitches:handleSwitches]]) }
 
-//def checking(handleSwitches = true)			{ stateUpdate('checking', handleSwitches) }
 def checking(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'checking', handleSwitches:handleSwitches]]) }
 
-//def vacant(handleSwitches = true)			{ stateUpdate('vacant', handleSwitches) }
 def vacant(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'vacant', handleSwitches:handleSwitches]]) }
 
-//def donotdisturb(handleSwitches = true)		{ stateUpdate('donotdisturb', handleSwitches) }
 def donotdisturb(handleSwitches = true)		{ runIn(0, stateUpdate, [data: [newState:'donotdisturb', handleSwitches:handleSwitches]]) }
 
-//def reserved(handleSwitches = true)			{ stateUpdate('reserved', handleSwitches) }
 def reserved(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'reserved', handleSwitches:handleSwitches]]) }
 
-//def asleep(handleSwitches = true)			{ stateUpdate('asleep', handleSwitches) }
 def asleep(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'asleep', handleSwitches:handleSwitches]]) }
 
-//def locked(handleSwitches = true)			{ stateUpdate('locked', handleSwitches) }
 def locked(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'locked', handleSwitches:handleSwitches]]) }
 
-//def engaged(handleSwitches = true)			{ stateUpdate('engaged', handleSwitches) }
 def engaged(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'engaged', handleSwitches:handleSwitches]]) }
 
-//def kaput(handleSwitches = true)			{ stateUpdate('kaput', handleSwitches) }
 def kaput(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'kaput', handleSwitches:handleSwitches]]) }
 
 def	stateUpdate(data)		{
@@ -216,10 +203,8 @@ def	stateUpdate(data)		{
 	def newState = data.newState
 	def handleSwitches = data.handleSwitches
 	if (state.oldState != newState)		{
-        if (handleSwitches && parent)		{
-			def timer = parent.handleSwitches(state.oldState, newState, true)
-			setupTimer((int) (timer ?: 0))
-		}
+        if (handleSwitches && parent)
+			setupTimer((int) (parent.handleSwitches(state.oldState, newState, true) ?: 0))
 		updateOccupancy(state.oldState, newState)
 		state.oldState = newState
 	}
@@ -261,8 +246,7 @@ def alarmOn()	{
 def alarmOff(endLoop = false)	{
 	if (device.currentValue('occupancy') == 'alarm' || endLoop)
 		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "$device.displayName alarm is off", isStateChange: true, displayed: true)
-	if (endLoop)	unschedule();
-	else			runIn(1, alarmOn);
+	(endLoop ? unschedule() : runIn(1, alarmOn))
 }
 
 def alarmOffAction()	{
@@ -273,34 +257,10 @@ def alarmOffAction()	{
 }
 
 private updateRoomStatusMsg()		{
-	state.statusMsg = formatLocalTime()
-	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
-}
-
-private formatLocalTime(time = now(), format = "EEE, MMM d yyyy @ h:mm:ss a z")		{
-	def formatter = new java.text.SimpleDateFormat(format)
+	def formatter = new java.text.SimpleDateFormat("EEE, MMM d yyyy @ h:mm:ss a z")
 	formatter.setTimeZone(location.timeZone)
-	return formatter.format(time)
-}
-
-def deviceList(devicesMap)		{
-	def devicesTitle = ['busyCheck':'Busy Check', 'engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
-						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor', 'adjRoomNames':'Adjacent Room',
-						'awayModes':'Away Mode', 'pauseModes':'Pause Mode', 'sleepSensor':'Sleep Sensor', 'nightButton':'Night Button', 'nightSwitches':'Night Switch']
-	def deviceCount = 12
-	def i = 1
-	devicesMap.each	{ k, v ->
-		if (v)			{
-			v.each	{
-				if (it && i <= deviceCount)		{
-					sendEvent(name: "deviceList" + i, value: (devicesTitle[k] + ":\n" + (it.hasProperty('displayName') ? it.displayName : it)), isStateChange: true, displayed: false)
-					i = i +1
-				}
-			}
-		}
-	}
-	for (; i <= deviceCount; i++)
-		sendEvent(name: "deviceList" + i, value: null, isStateChange: true, displayed: false)
+	state.statusMsg = formatter.format(now())
+	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
 }
 
 private	resetTile(occupancy)	{
@@ -310,14 +270,14 @@ private	resetTile(occupancy)	{
 def turnSwitchesAllOn()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(true)
-		if (getHubType() != _Hubitat())	updateSwitchInd(1)
+		if (getHubType() != _Hubitat())		updateSwitchInd(1);
 	}
 }
 
 def turnSwitchesAllOff()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(false)
-		if (getHubType() != _Hubitat())	updateSwitchInd(0);
+		if (getHubType() != _Hubitat())		updateSwitchInd(0);
 	}
 }
 
@@ -325,7 +285,7 @@ def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		if (getHubType() != _Hubitat())	updateNSwitchInd(1)
+		if (getHubType() != _Hubitat())		updateNSwitchInd(1)
 	}
 }
 
@@ -333,7 +293,7 @@ def turnNightSwitchesAllOff()	{
 	ifDebug("turnNightSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
-		if (getHubType() != _Hubitat())	updateNSwitchInd(0)
+		if (getHubType() != _Hubitat())		updateNSwitchInd(0)
 	}
 }
 

@@ -1,3 +1,13 @@
+Version: 0.95.0
+
+DONE:   10/7/2018
+
+1) added power value, switches on and switches off triggers to rules definition and processing.
+2) optimized rooms processing and how timed rules are handled.
+	- **REQUIRES SAVING ROOMS MANAGER & ROOMS CHILD SETTINGS AFTER UPDATING TO THIS VERSION. OPEN SETTINGS FOR EACH AND CLICK SAVE. THATS IT.**
+3) start collecting rooms state history.
+4) cleanup code here and there.
+
 Version: 0.90.4
 
 DONE:   10/3/2018

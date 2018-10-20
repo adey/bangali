@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.90.0"  }
+public static String version()		{  return "v0.95.0"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -97,26 +97,6 @@ metadata {
 	//
 
 	tiles(scale: 2)		{
-// old style display
-/*    	multiAttributeTile(name: "occupancy", width: 2, height: 2, canChangeBackground: true)		{
-			tileAttribute ("device.occupancy", key: "PRIMARY_CONTROL")		{
-				attributeState "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
-				attributeState "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
-				attributeState "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
-				attributeState "donotdisturb", label: 'Do Not Disturb', icon:"st.Seasonal Winter.seasonal-winter-011", backgroundColor:"#009cb2"
-				attributeState "reserved", label: 'Reserved', icon:"st.Office.office7", backgroundColor:"#ccac00"
-				attributeState "asleep", label: 'Asleep', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879af"
-				attributeState "locked", label: 'Locked', icon:"st.locks.lock.locked", backgroundColor:"#c079a3"
-				attributeState "engaged", label: 'Engaged', icon:"st.locks.lock.unlocked", backgroundColor:"#ff6666"
-				attributeState "kaput", label: 'Kaput', icon:"st.Outdoor.outdoor18", backgroundColor:"#95623d"
-			}
-			tileAttribute ("device.status", key: "SECONDARY_CONTROL")	{
-				attributeState "default", label:'${currentValue}'
-			}
-		}
-*/
-// new style display
-	//	standardTile("occupancy", "device.occupancy", width: 2, height: 2, inactiveLabel: true, canChangeBackground: true)		{
 		standardTile("occupancy", "device.occupancy", width: 2, height: 2, canChangeBackground: true)		{
 			state "alarm", label: 'Alarm!', icon:"st.alarm.beep.beep", action:"alarmOffAction", backgroundColor:"#ff8c00"
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
@@ -452,7 +432,6 @@ metadata {
 
 		main (["occupancy"])
 
-		// display all tiles
 		details ([	"occupancy", "occupied", "engaged",
 					"vacant", "asleep", "locked",
 					"status", "timerL", "timer",
@@ -469,16 +448,6 @@ metadata {
 					"outTempL", "outTempInd", "ventL", "ventInd", "fanL", "fanInd",
 					"roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "humidityL", "humidityInd",
 					"rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
-
-//		details (["occupancy", "engaged", "vacant", "status", "timer", "timeInd", "motionInd", "luxInd", "contactInd", "presenceInd", "switchInd", "musicInd", "occupied", "asleep", "powerInd", "pauseInd", "temperatureInd", "maintinInd", "donotdisturb", "locked", "kaput"])
-		// details (["occupancy", "engaged", "vacant", "statusFiller", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
-		// display main and other button tiles only
-		// details (["occupancy", "engaged", "vacant", "status", "occupied", "donotdisturb", "reserved", "asleep", "locked", "kaput"])
-		// display main tiles and devices list only
-		// details (["occupancy", "engaged", "vacant", "status", "deviceList1", "deviceList2", "deviceList3", "deviceList4", "deviceList5", "deviceList6", "deviceList7", "deviceList8", "deviceList9", "deviceList10", "deviceList11", "deviceList12")
-		// display main tiles only
-		// details (["occupancy", "engaged", "vacant", "status"])
-
 	}
 
 	// REMOVE TILL HERE FOR HUBITAT		<<<<<
@@ -506,8 +475,7 @@ def	initialize()	{
 
 def getHubType()	{
 	if (!state.hubId)	state.hubId = location.hubs[0].id.toString()
-	if (state.hubId.length() > 5)	return _SmartThings();
-	else							return _Hubitat();
+	return (state.hubId.length() > 5 ? _SmartThings() : _Hubitat())
 }
 
 def setupAlarmC()	{
@@ -529,10 +497,7 @@ def setupAlarmC()	{
 	}
 	else
 		state.alarmDayOfWeek = ''
-	if (alarmSound)
-		state.alarmSound = ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer]
-	else
-		state.alarmSound = ''
+	state.alarmSound = (alarmSound ? ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer] : '')
 	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmTime", value: "${(alarmTime ? timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone) : '')}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
 	sendEvent(name: "alarmDayOfWeek", value: "$state.alarmDayOfWeek", descriptionText: "alarm days of week is $state.alarmDayOfWeek", isStateChange: true, displayed: true)
@@ -552,7 +517,7 @@ def on()	{
 	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", isStateChange: true, displayed: true)
 }
 
-def setOnStateC(e)		{ state.onState = (e ? e.toString() : 'occupied') }
+def setOnStateC(e)		{  state.onState = (e ? e.toString() : 'occupied')  }
 
 def	off()		{
 	vacant()
@@ -581,31 +546,22 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-//def occupied(handleSwitches = true)			{ stateUpdate('occupied', handleSwitches) }
 def occupied(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'occupied', handleSwitches:handleSwitches]]) }
 
-//def checking(handleSwitches = true)			{ stateUpdate('checking', handleSwitches) }
 def checking(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'checking', handleSwitches:handleSwitches]]) }
 
-//def vacant(handleSwitches = true)			{ stateUpdate('vacant', handleSwitches) }
 def vacant(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'vacant', handleSwitches:handleSwitches]]) }
 
-//def donotdisturb(handleSwitches = true)		{ stateUpdate('donotdisturb', handleSwitches) }
 def donotdisturb(handleSwitches = true)		{ runIn(0, stateUpdate, [data: [newState:'donotdisturb', handleSwitches:handleSwitches]]) }
 
-//def reserved(handleSwitches = true)			{ stateUpdate('reserved', handleSwitches) }
 def reserved(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'reserved', handleSwitches:handleSwitches]]) }
 
-//def asleep(handleSwitches = true)			{ stateUpdate('asleep', handleSwitches) }
 def asleep(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'asleep', handleSwitches:handleSwitches]]) }
 
-//def locked(handleSwitches = true)			{ stateUpdate('locked', handleSwitches) }
 def locked(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'locked', handleSwitches:handleSwitches]]) }
 
-//def engaged(handleSwitches = true)			{ stateUpdate('engaged', handleSwitches) }
 def engaged(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'engaged', handleSwitches:handleSwitches]]) }
 
-//def kaput(handleSwitches = true)			{ stateUpdate('kaput', handleSwitches) }
 def kaput(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'kaput', handleSwitches:handleSwitches]]) }
 
 def	stateUpdate(data)		{
@@ -613,10 +569,8 @@ def	stateUpdate(data)		{
 	def newState = data.newState
 	def handleSwitches = data.handleSwitches
 	if (state.oldState != newState)		{
-        if (handleSwitches && parent)		{
-			def timer = parent.handleSwitches(state.oldState, newState, true)
-			setupTimer((int) (timer ?: 0))
-		}
+        if (handleSwitches && parent)
+			setupTimer((int) (parent.handleSwitches(state.oldState, newState, true) ?: 0))
 		updateOccupancy(state.oldState, newState)
 		state.oldState = newState
 	}
@@ -658,8 +612,7 @@ def alarmOn()	{
 def alarmOff(endLoop = false)	{
 	if (device.currentValue('occupancy') == 'alarm' || endLoop)
 		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "$device.displayName alarm is off", isStateChange: true, displayed: true)
-	if (endLoop)	unschedule();
-	else			runIn(1, alarmOn);
+	(endLoop ? unschedule() : runIn(1, alarmOn))
 }
 
 def alarmOffAction()	{
@@ -670,34 +623,10 @@ def alarmOffAction()	{
 }
 
 private updateRoomStatusMsg()		{
-	state.statusMsg = formatLocalTime()
-	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
-}
-
-private formatLocalTime(time = now(), format = "EEE, MMM d yyyy @ h:mm:ss a z")		{
-	def formatter = new java.text.SimpleDateFormat(format)
+	def formatter = new java.text.SimpleDateFormat("EEE, MMM d yyyy @ h:mm:ss a z")
 	formatter.setTimeZone(location.timeZone)
-	return formatter.format(time)
-}
-
-def deviceList(devicesMap)		{
-	def devicesTitle = ['busyCheck':'Busy Check', 'engagedButton':'Button', 'presence':'Presence Sensor', 'engagedSwitch':'Engaged Switch', 'contactSensor':'Contact Sensor',
-						'motionSensors':'Motion Sensor', 'switchesOn':'Switch ON', 'switchesOff':'Switch OFF', 'luxSensor':'Lux Sensor', 'adjRoomNames':'Adjacent Room',
-						'awayModes':'Away Mode', 'pauseModes':'Pause Mode', 'sleepSensor':'Sleep Sensor', 'nightButton':'Night Button', 'nightSwitches':'Night Switch']
-	def deviceCount = 12
-	def i = 1
-	devicesMap.each	{ k, v ->
-		if (v)			{
-			v.each	{
-				if (it && i <= deviceCount)		{
-					sendEvent(name: "deviceList" + i, value: (devicesTitle[k] + ":\n" + (it.hasProperty('displayName') ? it.displayName : it)), isStateChange: true, displayed: false)
-					i = i +1
-				}
-			}
-		}
-	}
-	for (; i <= deviceCount; i++)
-		sendEvent(name: "deviceList" + i, value: null, isStateChange: true, displayed: false)
+	state.statusMsg = formatter.format(now())
+	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
 }
 
 private	resetTile(occupancy)	{
@@ -707,14 +636,14 @@ private	resetTile(occupancy)	{
 def turnSwitchesAllOn()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(true)
-		if (getHubType() != _Hubitat())	updateSwitchInd(1)
+		if (getHubType() != _Hubitat())		updateSwitchInd(1);
 	}
 }
 
 def turnSwitchesAllOff()		{
 	if (parent)		{
 		parent.turnSwitchesAllOnOrOff(false)
-		if (getHubType() != _Hubitat())	updateSwitchInd(0);
+		if (getHubType() != _Hubitat())		updateSwitchInd(0);
 	}
 }
 
@@ -722,7 +651,7 @@ def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
 	if (parent)	{
 		parent.dimNightLights()
-		if (getHubType() != _Hubitat())	updateNSwitchInd(1)
+		if (getHubType() != _Hubitat())		updateNSwitchInd(1)
 	}
 }
 
@@ -730,7 +659,7 @@ def turnNightSwitchesAllOff()	{
 	ifDebug("turnNightSwitchesAllOff")
 	if (parent)		{
 		parent.nightSwitchesOff()
-		if (getHubType() != _Hubitat())	updateNSwitchInd(0)
+		if (getHubType() != _Hubitat())		updateNSwitchInd(0)
 	}
 }
 
