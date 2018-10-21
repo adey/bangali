@@ -47,7 +47,7 @@ def wato()		{
 	if (attrDev)	for (def aD : attrDev)		attrDevCount++;
 	state.attrDevCount = attrDevCount
 	if (attrDevCount == 1)
-		allAttrs = attrDev.supportedAttributes.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
+		allAttrs = attrDev.supportedAttributes.flatten().unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
 	else if (attrDevCount > 1)	{
 		def fT = true
 		for (def aD : attrDev)	{
