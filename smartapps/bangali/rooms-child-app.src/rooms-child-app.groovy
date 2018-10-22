@@ -876,7 +876,7 @@ def pageRules()	{
 							ruleDesc = (thisRule.powerThreshold ? "$ruleDesc Power=$thisRule.powerThreshold" : "$ruleDesc")
 							ruleDesc = (thisRule.presence ? "$ruleDesc Presence=$thisRule.presence" : "$ruleDesc")
 							ruleDesc = (thisRule.checkOn ? "$ruleDesc Check ON=$thisRule.checkOn" : "$ruleDesc")
-							ruleDesc = (thisRule.checkOff ? "$ruleDesc Check OFF=$thisRule.CheckOff" : "$ruleDesc")
+							ruleDesc = (thisRule.checkOff ? "$ruleDesc Check OFF=$thisRule.checkOff" : "$ruleDesc")
 							ruleDesc = (thisRule.piston ? "$ruleDesc Piston=$thisRule.piston" : "$ruleDesc")
 							ruleDesc = (thisRule.actions ? "$ruleDesc Routines=$thisRule.actions" : "$ruleDesc")
 						}
