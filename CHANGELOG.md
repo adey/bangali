@@ -1,3 +1,10 @@
+Version: 0.95.1
+
+DONE:   10/22/2018
+
+1) changed how sunrise and sunset in rules are checked for time match to avoid issue with sunrise and sunset subscription intermittently not working.
+2) fixed subscription to newly added check on and check off switches in rules.
+
 Version: 0.95.0
 
 DONE:   10/7/2018

@@ -36,6 +36,9 @@ import groovy.transform.Field
 
 @Field final String _ImgSize = '36'
 
+@Field final String on	= 'on'
+@Field final String off	= 'off'
+
 @Field final List   _healthCheck = [1, 2, 3, 6, 12, 24]
 
 definition (
@@ -1048,6 +1051,7 @@ def notifyWithColor()	{
 	else		{
 		def i = 0
 		for (def swt : announceSwitches)	{
+//log.debug "$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}"
 			ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
 			(state.colorColorTemperatureTrueSave[(i)] == true ? swt.setColorTemperature(state.colorColorTemperatureSave[(i)]) : swt.setColor(state.colorColorSave[(i)])); pauseIt(true)
 			swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"(); pauseIt()
@@ -1416,8 +1420,6 @@ private convertRGBToHueSaturation(setColorTo)	{
 	yellow: [[255, 255, 0], 'Yellow'],
 	yellowgreen: [[154, 205, 50], 'Yellow Green']
 ]
-
-@Field final String _Line = "<div style='text-align:center;'><code>" + (" " * 50) + "</code></div>"
 
 @Field final String _SpokenImage = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerSpoken.png"
 @Field final String _ColorImage = 'https://cdn.rawgit.com/adey/bangali/master/resources/icons/roomsManagerColor.png'
