@@ -5263,8 +5263,8 @@ private sunRiseAndSet()		{
 //	def sunriseTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunriseTime)
 //	def sunsetTime = new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", state.sunsetTime)
 
-	sunriseTime = sunriseAndSunset.sunrise
-	sunsetTime  = sunriseAndSunset.sunset
+	def sunriseTime = sunriseAndSunset.sunrise
+	def sunsetTime  = sunriseAndSunset.sunset
 //log.debug "rise: $sunriseTime | set: $sunsetTime"
 	return [rise:sunriseTime, set:sunsetTime]
 }
