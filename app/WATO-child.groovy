@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2018-10-22	added rises above and drops below check for numbers and decimals
 *  2018-10-18	added option for case insensitive check when comparing text value
 *  2018-10-18	added avg/max/min/sum when getting integer or deciaml attribute from multiple attribute devices
 *  2018-10-18	added support for multiple attribute devices
@@ -25,7 +26,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v2.0.0"  }
+public static String version()		{  return "v3.0.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -47,31 +48,34 @@ def wato()		{
 	if (attrDev)	for (def aD : attrDev)		attrDevCount++;
 	state.attrDevCount = attrDevCount
 	if (attrDevCount == 1)
-		allAttrs = attrDev.supportedAttributes.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
+		allAttrs = attrDev.supportedAttributes.flatten().unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
 	else if (attrDevCount > 1)	{
 		def fT = true
 		for (def aD : attrDev)	{
 			def nSs = aD.supportedAttributes.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
 			if (!allAttrs && fT)	{
 				allAttrs = nSs
+//				xAttrs = nSs
 				fT = false
 			}
 			else	{
-				def dSs = []
-				for (def aSs : allAttrs)		{
-					def match = false
-					for (def nS : nSs)		{
-						if (nS.value == aSs.value)		{
-							match = true
-							break
-						}
-					}
-					if (!match)		dSs << aSs.value;
-				}
-				if (dSs)	allAttrs = allAttrs.findAll{ !dSs.contains(it.value) }
+//				def dSs = []
+//				for (def aSs : allAttrs)		{
+//					def match = false
+//					for (def nS : nSs)		{
+//						if (nS.value == aSs.value)		{
+//							match = true
+//							break
+//						}
+//					}
+//					if (!match)		dSs << aSs.value;
+//				}
+//				if (dSs)	allAttrs = allAttrs.findAll{ !dSs.contains(it.value) }
+				allAttrs = allAttrs.findAll{ nSs.containsValue(it.value) }
 			}
 		}
 	}
+//log.debug allAttrs
 
 	def allCmds = []
 	def sCs
@@ -79,33 +83,35 @@ def wato()		{
 	if (dev)	for (def d : dev)	devCount++;
 	if (devCount == 1)	{
 		sCs = dev.supportedCommands.flatten()
-		if (sCs)	allCmds = sCs.unique{ it.name }.collectEntries{ [(it):"${it.toString().capitalize()}"] };
+		if (sCs)	allCmds = sCs.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] };
 	}
 	else if (devCount > 1)	{
 		def fT = true
 		for (def d : dev)	{
-			def nCs = d.supportedCommands.unique{ it.name }.collectEntries{ [(it):"${it.toString().capitalize()}"] }
+			def nCs = d.supportedCommands.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
 			if (!allCmds && fT)		{
 				sCs = d.supportedCommands
 				allCmds = nCs
 				fT = false
 			}
 			else	{
-				def dCs = []
-				for (def aCs : allCmds)		{
-					def match = false
-					for (def nC : nCs)		{
-						if (nC.value == aCs.value)		{
-							match = true;
-							break;
-						}
-					}
-					if (!match)		dCs << aCs.value;
-				}
-				if (dCs)	allCmds = allCmds.findAll{ !dCs.contains(it.value) }
+//				def dCs = []
+//				for (def aCs : allCmds)		{
+//					def match = false
+//					for (def nC : nCs)		{
+//						if (nC.value == aCs.value)		{
+//							match = true;
+//							break;
+//						}
+//					}
+//					if (!match)		dCs << aCs.value;
+//				}
+//				if (dCs)	allCmds = allCmds.findAll{ !dCs.contains(it.value) }
+				allCmds = allCmds.findAll{ nCs.containsValue(it.value) }
 			}
 		}
 	}
+//log.debug allCmds
 
 	state.cParam = []
 	state.unCParam = []
@@ -131,9 +137,9 @@ def wato()		{
 			if (attrDev)
 				input "attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allAttrs
 			if (attr)
-				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:["<", "<=", "=", ">=", ">", "!="]
+				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:["<", "<=", "=", ">=", ">", "!=", "⬆︎", "⬇︎"]
 			if (attrOp)
-				input "attrTyp", "enum", title: "Type?", required:true, multiple:false, submitOnChange:true, options:["Text", "Number", "Decimal"]
+				input "attrTyp", "enum", title: "Type?", required:true, multiple:false, submitOnChange:true, options:(['⬆︎', '⬇︎'].contains(attrOp) ? ["Number", "Decimal"] : ["Text", "Number", "Decimal"])
 			if (attrTyp == 'Text')
 				input "attrCase", "bool", title: "Case sensitive?", required:true, multiple:false, defaultValue:true
 			else if (attrDevCount > 1)
@@ -186,7 +192,7 @@ private subHeaders(str, div = false, opt = false)	{
 	str = str.center(50)
 	def divider = (div ? "<hr width='75%' size='10' noshade>" : '');
 	if (opt)
-		return "$divider<div style='text-align:center;background-color:#f9f2ec;color:#777777;'>$str</div>"
+		return "$divider<div style='text-align:center;background-color:#f9f2ec;color:#999999;'>$str</div>"
 	else
 		return "$divider<div style='text-align:center;background-color:#0066cc;color:#ffffff;'>$str</div>"
 }
@@ -196,7 +202,10 @@ def installed()		{  initialize()  }
 def updated()		{
 	initialize()
 	updLbl()
-	if (!state.watoDisabled)		subscribe(attrDev, "${attr.toString()}", checkAttr);
+	if (!state.watoDisabled)	{
+		subscribe(attrDev, "${attr.toString()}", checkAttr)
+		state.prvAttrVal = checkVal()
+	}
 }
 
 private updLbl()	{
@@ -256,8 +265,9 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 		def nowDate = new Date(now())
 		if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))		return;
 	}
-	def evtVal, eV
-	eV = (state.attrDevCount == 1 ? evt.value : checkVal())
+	def evtVal
+//	eV = (state.attrDevCount == 1 ? evt.value : checkVal())
+	def eV = checkVal()
 	if (!eV)		return;
 	switch(attrTyp)		{
 		case "Text":	evtVal = (attrCase ? eV.toString().toLowerCase() : eV.toString());		break
@@ -268,6 +278,7 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 	if (evtVal == null)		return;
 	def aV = (attrCase ? attrVal.toLowerCase() : attrVal)
 	def match = false
+	def noCmdRun = false
 	switch(attrOp) {
 		case "<":		if (evtVal < aV)		match = true;	break
 		case "<=":		if (evtVal <= aV)		match = true;	break
@@ -275,8 +286,24 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 		case ">=":		if (evtVal >= aV)		match = true;	break
 		case ">":		if (evtVal > aV)		match = true;	break
 		case "!=":		if (evtVal != aV)		match = true;	break
+		case "⬆︎":
+			if (evtVal > aV)
+				if (state.prvAttrVal <= aV)		match = true;
+				else							noCmdRun = true;
+			else
+				if (state.prvAttrVal <= aV)		noCmdRun = true;
+			break
+		case "⬇︎":
+			if (evtVal < aV)
+				if (state.prvAttrVal >= aV)		match = true;
+				else							noCmdRun = true;
+			else
+				if (state.prvAttrVal >= aV)		noCmdRun = true;
+			break
 	}
 //log.debug "$eV $attrOp $aV | $dev | $devCmd $state.cParams | $devUnCmd $state.unCParams | $match"
+	state.prvAttrVal = evtVal
+	if (noCmdRun)	return;
 	def cmd = (match ? devCmd : devUnCmd)
 	if (!cmd)		return;
 	switch((match ? (state.cParams ?: 0) : (state.unCParams ?: 0)))	{
@@ -295,6 +322,7 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 
 private checkVal()	{
 	def aDs = attrDev."current${attr.substring(0, 1).toUpperCase() + attr.substring(1)}"
+	if (state.attrDevCount == 1)	return aDs[0];
 	def eV = null
 	switch(attrTyp) {
 		case "Text":
