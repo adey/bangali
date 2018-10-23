@@ -5265,7 +5265,7 @@ private sunRiseAndSet()		{
 
 	sunriseTime = sunriseAndSunset.sunrise
 	sunsetTime  = sunriseAndSunset.sunset
-log.debug "rise: $sunriseTime | set: $sunsetTime"
+//log.debug "rise: $sunriseTime | set: $sunsetTime"
 	return [rise:sunriseTime, set:sunsetTime]
 }
 
