@@ -14,6 +14,8 @@
 *
 *  Author: bangali
 *
+*  2018-10-26	change value type when retrieving from state
+*  2018-10-26	change device subscription for attribute
 *  2018-10-22	added rises above and drops below check for numbers and decimals
 *  2018-10-18	added option for case insensitive check when comparing text value
 *  2018-10-18	added avg/max/min/sum when getting integer or deciaml attribute from multiple attribute devices
@@ -26,7 +28,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v3.1.0"  }
+public static String version()		{  return "v3.2.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -265,16 +267,10 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 		def nowDate = new Date(now())
 		if (!(timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)))		return;
 	}
-	def evtVal
 //	eV = (state.attrDevCount == 1 ? evt.value : checkVal())
 	def eV = checkVal()
 	if (!eV)		return;
-	switch(attrTyp)		{
-		case "Text":	evtVal = (attrCase ? eV.toString().toLowerCase() : eV.toString());		break
-		case "Number":	evtVal = eV as Integer;		break
-		case "Decimal":	evtVal = eV as BigDecimal;	break
-		default:		evtVal = null;				break
-	}
+	def evtVal = setValType(eV)
 	if (evtVal == null)		return;
 	def aV = (attrCase ? attrVal.toLowerCase() : attrVal)
 	def match = false
@@ -287,18 +283,20 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 		case ">":		if (evtVal > aV)		match = true;	break
 		case "!=":		if (evtVal != aV)		match = true;	break
 		case "⬆︎":
+			def prvAttrVal = setValType(state.prvAttrVal)
 			if (evtVal > aV)
-				if (state.prvAttrVal <= aV)		match = true;
-				else							noCmdRun = true;
+				if (prvAttrVal <= aV)		match = true;
+				else						noCmdRun = true;
 			else
-				if (state.prvAttrVal <= aV)		noCmdRun = true;
+				if (prvAttrVal <= aV)		noCmdRun = true;
 			break
 		case "⬇︎":
+			def prvAttrVal = setValType(state.prvAttrVal)
 			if (evtVal < aV)
-				if (state.prvAttrVal >= aV)		match = true;
-				else							noCmdRun = true;
+				if (prvAttrVal >= aV)		match = true;
+				else						noCmdRun = true;
 			else
-				if (state.prvAttrVal >= aV)		noCmdRun = true;
+				if (prvAttrVal >= aV)		noCmdRun = true;
 			break
 	}
 //log.debug "$eV $attrOp $aV | $dev | $devCmd $state.cParams | $devUnCmd $state.unCParams | $match"
@@ -318,6 +316,17 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 		default:
 			dev."$cmd"();	break
 	}
+}
+
+private setValType(val)	{
+	def value
+	switch(attrTyp)		{
+		case "Text":	value = (attrCase ? val.toString().toLowerCase() : val.toString());		break
+		case "Number":	value = val as Integer;		break
+		case "Decimal":	value = val as BigDecimal;	break
+		default:		value = null;				break
+	}
+	return value
 }
 
 private checkVal()	{
