@@ -26,7 +26,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v3.0.0"  }
+public static String version()		{  return "v3.1.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -203,7 +203,7 @@ def updated()		{
 	initialize()
 	updLbl()
 	if (!state.watoDisabled)	{
-		subscribe(attrDev, "${attr.toString()}", checkAttr)
+		for (def d : attrDev)		subscribe(d, "${attr.toString()}", checkAttr);
 		state.prvAttrVal = checkVal()
 	}
 }
