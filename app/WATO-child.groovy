@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2018-10-26	change device subscription for attribute
 *  2018-10-22	added rises above and drops below check for numbers and decimals
 *  2018-10-18	added option for case insensitive check when comparing text value
 *  2018-10-18	added avg/max/min/sum when getting integer or deciaml attribute from multiple attribute devices
@@ -26,7 +27,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v3.0.0"  }
+public static String version()		{  return "v3.1.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -203,7 +204,7 @@ def updated()		{
 	initialize()
 	updLbl()
 	if (!state.watoDisabled)	{
-		subscribe(attrDev, "${attr.toString()}", checkAttr)
+		for (def d : attrDev)		subscribe(d, "${attr.toString()}", checkAttr);
 		state.prvAttrVal = checkVal()
 	}
 }
