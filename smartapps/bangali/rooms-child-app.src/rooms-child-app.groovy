@@ -79,8 +79,8 @@ import groovy.transform.Field
 @Field final String _SmartThings = 'ST'
 @Field final String _Hubitat     = 'HU'
 
-@Field final List   occupancyButtons =
-		[[1:"occupied"],[2:"checking"],[3:"vacant"],[4:"locked"],[5:"reserved"],[6:"kaput"],[7:"donotdisturb"],[8:"asleep"],[9:"engaged"]]
+@Field final Map   occupancyButtons =
+		[1:"occupied",2:"checking",3:"vacant",4:"locked",5:"reserved",6:"kaput",7:"donotdisturb",8:"asleep",9:"engaged"]
 @Field final Map    genericButtons =
 		[1:"One",2:"Two",3:"Three",4:"Four",5:"Five",6:"Six",7:"Seven",8:"Eight",9:"Nine",10:"Ten",11:"Eleven",12:"Twelve",13:"Thirteen",14:"Fourteen",15:"Fifteen",16:"Sixteen"]
 
