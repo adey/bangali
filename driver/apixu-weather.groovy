@@ -34,9 +34,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.0.1"  }
+public static String version()      {  return "v4.0.2"  }
 
 /***********************************************************************************************************************
+*
+* Version: 4.0.2
+*   10/28/2018: continue publishing lux even if apixu api call fails.
 *
 * Version: 4.0.1
 *   10/14/2018: removed logging of weather data.
@@ -297,8 +300,7 @@ private getSunriseAndSunset(latitude, longitude, forDate)	{
 }
 
 def updateLux()     {
-    if (!state.sunriseTime || !state.sunsetTime || !state.noonTime ||
-        !state.twilight_begin || !state.twilight_end || !state.condition_code || !state.tz_id)
+    if (!state.sunriseTime || !state.sunsetTime || !state.noonTime || !state.twilight_begin || !state.twilight_end || !state.tz_id)
         return
 
     def tZ = TimeZone.getTimeZone(state.tz_id)
