@@ -1776,7 +1776,7 @@ def pageGeneralSettings()	{
 		if (!hideAdvanced)	{
 			section("Process execution rules only on state change?", hideable: false)		{
 				input "onlyOnStateChange", "bool", title: "Only on state change?", required: false, defaultValue: false
-				inputERMSDO("butNotInStates", 'But not in these states?', false, false, false, null, [asleep, engaged, occupied, vacant])
+				inputERMSDO("butNotInStates", 'But not in these states?', false, true, false, null, [asleep, engaged, occupied, vacant])
 			}
 			section("Debug logging?", hideable: false)		{
 				input "debugLogging", "bool", title: "Turn on?", required: false, defaultValue: false
