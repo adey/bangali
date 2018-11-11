@@ -1,3 +1,17 @@
+Version: 0.96.0
+
+DONE:   10/31/2018
+
+1) updated code for time handling to fix issue with midnight changes for sunrise and sunset rules.
+2) moved rooms vacation mode code from rooms manager to its own child app.
+	- **REQUIRES SAVING ROOMS VACATION CODE AS A NEW APP.**
+3) updated spoken announcements code in rooms manager because HE does not support all of the same commands that ST does.
+	- **PROBABLY NEED TO DO THE SAME FOR ROOMS CHILD APP AS WELL. BUT WANT TO LET THIS CHANGE BAKE IN REAL WORLD A BIT BEFORE I DO THAT.**
+4) added setting for exception states for only on state change settings.
+5) added 15% and 25% to light level setting.
+6) added option to select 24 hours for announcement.
+7) cleaning up settings text etc.
+
 Version: 0.95.1
 
 DONE:   10/22/2018

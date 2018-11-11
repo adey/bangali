@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.95.0"  }
+public static String version()		{  return "v0.96.0"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -72,10 +72,15 @@ preferences	{
 
 def mainPage()	{
 	def appChildren = app.getChildApps().sort { it.label }
-	dynamicPage(name: "mainPage", title: "Installed Rooms", install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings")	{
-		section {
+	def hT = getHubType()
+	dynamicPage(name: "mainPage", title: (hT != _SmartThings ? 'Installed Rooms' : ''), install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings")	{
+		section() {
 			app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
+		if (hT != 'HU')
+			section {
+				app(name: "rooms manager", appName: "rooms vacation", namespace: "bangali", title: "Vacation Manager", multiple: false)
+			}
 	}
 }
 
@@ -93,40 +98,40 @@ def pageSpeakerSettings()	{
 	}
 	dynamicPage(name: "pageSpeakerSettings", title: "MAIN SETTINGS PAGE", install: true, uninstall: true)	{
 		section()	{
-			href "pageAnnouncementSpeakerTimeSettings", title: "${addImage(_SpokenImage)}Spoken announcement settings", description: (playerDevice ? "Tap to change existing settings" : "Tap to configure"), image: _SpokenImage
+			href "pageAnnouncementSpeakerTimeSettings", title: "${addImage(_SpokenImage)}Spoken announcement settings", description: (playerDevice ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _SpokenImage : null)
 		}
 		section()	{
-			href "pageAnnouncementColorTimeSettings", title: "${addImage(_ColorImage)}Color announcement settings", description: (announceSwitches ? "Tap to change existing settings" : "Tap to configure"), image: _ColorImage
+			href "pageAnnouncementColorTimeSettings", title: "${addImage(_ColorImage)}Color announcement settings", description: (announceSwitches ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _ColorImage : null)
 		}
 		section()	{
-			href "pageSMSSettings", title: "${addImage(_SMSImage)}SMS announcement settings", description: (startHHSms || endHHSms ? "Tap to change existing settings" : "Tap to configure"), image: _SMSImage
+			href "pageSMSSettings", title: "${addImage(_SMSImage)}SMS announcement settings", description: (startHHSms || endHHSms ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _SMSImage : null)
 		}
 		section()	{
-			href "pageModeSettings", title: "${addImage(_ModeImage)}Mode announcement settings", description: (speakModes || modeColor || announceInModes ? "Tap to change existing settings" : "Tap to configure"), image: _ModeImage
+			href "pageModeSettings", title: "${addImage(_ModeImage)}Mode announcement settings", description: (speakModes || modeColor || announceInModes ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _ModeImage : null)
 		}
 		section()	{
-			href "pageArrivalDepartureSettings", title: "${addImage(_PresenceImage)}Arrival and departure settings", description: (speakerAnnounce || speakerAnnounceColor ? "Tap to change existing settings" : "Tap to configure"), image: _PresenceImage
+			href "pageArrivalDepartureSettings", title: "${addImage(_PresenceImage)}Arrival and departure settings", description: (speakerAnnounce || speakerAnnounceColor ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _PresenceImage : null)
 		}
 		section()	{
 			if (playerDevice)
-				input "timeAnnounce", "enum", title: "${addImage(_TimeImage)}Announce time?", required: false, multiple: false, options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], image: _TimeImage
+				input "timeAnnounce", "enum", title: "${addImage(_TimeImage)}Announce time?", required: false, multiple: false, options: [[1:"Every 15 minutes"], [2:"Every 30 minutes"], [3:"Every hour"], [4:"No"]], image: (hT != _Hubitat ? _TimeImage : null)
 			else
 				paragraph "${addImage(_TimeImage)}Announce time?\nselect speaker devices to set."
 		}
 		section()	{
-			href "pageSunAnnouncementSettings", title: "${addImage(_SunImage)}Sun announcement settings", description: (sunAnnounce ? "Tap to change existing settings" : "Tap to configure"), image: _SunImage
+			href "pageSunAnnouncementSettings", title: "${addImage(_SunImage)}Sun announcement settings", description: (sunAnnounce ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _SunImage : null)
 		}
 		section()	{
-			href "pageBatteryAnnouncementSettings", title: "${addImage(_BatteryImage)}Battery level check settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure"), image: _BatteryImage
+			href "pageBatteryAnnouncementSettings", title: "${addImage(_BatteryImage)}Battery level check settings", description: (batteryTime ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _BatteryImage : null)
 		}
 		section()	{
-			href "pageDeviceConnectivitySettings", title: "${addImage(_HealthImage)}Device connectivity check settings", description: (checkHealth ? "Tap to change existing settings" : "Tap to configure"), image: _HealthImage
+			href "pageDeviceConnectivitySettings", title: "${addImage(_HealthImage)}Device connectivity check settings", description: (checkHealth ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _HealthImage : null)
 		}
 		section()	{
-			href "pageGithubSettings", title: "${addImage(_GitUpdateImage)}Github check settings", description: (gitTime ? "Tap to change existing settings" : "Tap to configure"), image: _GitUpdateImage
+			href "pageGithubSettings", title: "${addImage(_GitUpdateImage)}Github check settings", description: (gitTime ? "Tap to change existing settings" : "Tap to configure"), image: (hT != _Hubitat ? _GitUpdateImage : null)
 		}
 		section()	{
-			href "", title: "${addImage(_GHimage)}Detailed readme on Github", style: "external", url: _gitREADME, description: "Click link to open in browser", image: _GHimage, required: false
+			href "", title: "${addImage(_GHimage)}Detailed readme on Github", style: "external", url: _gitREADME, description: "Click link to open in browser", image: (hT != _Hubitat ? _GHimage : null), required: false
 		}
 	}
 }
@@ -195,8 +200,8 @@ def pageAnnouncementSpeakerTimeSettings()	{
 		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Announcement hours");
 			if (playerDevice)	{
-				input "startHH", "number", title: "Announce from hour?", description: "0..${(endHH ?: 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH ?: 23)}", submitOnChange: true
-				input "endHH", "number", title: "Announce to hour?", description: "${(startHH ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+				input "startHH", "number", title: "Announce from hour?", description: "0..${(endHH < 24 ? endHH : 23)}", required: true, multiple: false, defaultValue: 7, range: "0..${(endHH < 24 ? endHH : 23)}", submitOnChange: true
+				input "endHH", "number", title: "Announce to hour?", description: "${(startHH ? startHH + 1 : 0)}..24", required: true, multiple: false, defaultValue: 23, range: "${(startHH ? startHH + 1 : 0)}..24", submitOnChange: true
 			}
 			else		{
 				paragraph "Announce from hour?\nselect speaker to set"
@@ -214,8 +219,8 @@ def pageAnnouncementColorTimeSettings()	{
 		}
 		section()	{
 			if (announceSwitches)	{
-				input "startHHColor", "number", title: "Announce from hour?", description: "0..${(endHHColor ?: 23)}", required: true, multiple: false, defaultValue: 18, range: "0..${(endHH ?: 23)}", submitOnChange: true
-				input "endHHColor", "number", title: "Announce to hour?", description: "${(startHHColor ?: 0)}..23", required: true, multiple: false, defaultValue: 23, range: "${(startHH ?: 0)}..23", submitOnChange: true
+				input "startHHColor", "number", title: "Announce from hour?", description: "0..${(endHHColor < 24 ? endHHColor : 23)}", required: true, multiple: false, defaultValue: 18, range: "0..${(endHHColor < 24 ? endHHColor : 23)}", submitOnChange: true
+				input "endHHColor", "number", title: "Announce to hour?", description: "${(startHHColor ? startHHColor + 1 : 0)}..24", required: true, multiple: false, defaultValue: 23, range: "${(startHHColor ? startHHColor + 1 : 0)}..24", submitOnChange: true
 			}
 			else		{
 				paragraph "Announce from hour?\nselect announce switches to set"
@@ -228,8 +233,8 @@ def pageAnnouncementColorTimeSettings()	{
 def pageSMSSettings()	{
 	dynamicPage(name: "pageSMSSettings", title: "ANNOUNCE WITH SMS", install: false, uninstall: false)	{
 		section()	{
-			input "startHHSms", "number", title: "SMS from hour?", description: "0..${(endHHSms ?: 23)}", required: true, multiple: false, defaultValue: 9, range: "0..${(endHHSms ?: 23)}", submitOnChange: true
-			input "endHHSms", "number", title: "SMS to hour?", description: "${(startHHSms ?: 0)}..23", required: true, multiple: false, defaultValue: 21, range: "${(startHHSms ?: 0)}..23", submitOnChange: true
+			input "startHHSms", "number", title: "SMS from hour?", description: "0..${(endHHSms < 24 ? endHHSms : 23)}", required: true, multiple: false, defaultValue: 9, range: "0..${(endHHSms < 24 ? endHHSms : 23)}", submitOnChange: true
+			input "endHHSms", "number", title: "SMS to hour?", description: "${(startHHSms ? startHHSms + 1 : 0)}..24", required: true, multiple: false, defaultValue: 21, range: "${(startHHSms ? startHHSms + 1 : 0)}..24", submitOnChange: true
 			if (startHHSms && endHHSms)
 				input "phoneNumber", "phone", title: "Phone number for SMS?", required: true
 			else
@@ -323,9 +328,9 @@ def pageArrivalDepartureSettings()	{
 				input "secondsAfter", "number", title: "Left home announcement how many seconds after?", required: true, multiple: false, defaultValue: 15, range: "5..100"
 			}
 			else	{
-				paragraph "Welcome home greeting when which contact sensors close?\nselect announce to set."
-				paragraph "Welcome home greeting with motion on which motion sensors?\nselect announce to set."
-				paragraph "Left home announcement how many seconds after?\nselect announce to set."
+				paragraph "Welcome home greeting when which contact sensors close?\nselect announce to set"
+				paragraph "Welcome home greeting with motion on which motion sensors?"
+				paragraph "Left home announcement how many seconds after?"
 			}
 		}
 	}
@@ -390,14 +395,10 @@ def pageBatteryAnnouncementSettings()	{
 		}
 		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Battery Devices to check");
-			if (batteryTime)	{
+			if (batteryTime)
 				input "batteryCheckDevices", "capability.battery", title: "Check which battery devices?", required: false, multiple: true
-//				input "batteryNoCheckDevices", "capability.battery", title: "Do not check these devices?", required: false, multiple: true
-			}
-			else		{
+			else
 				paragraph "Check which battery devices?\nselect announce battery status time to set"
-//				paragraph "Do not check these devices?"
-			}
 		}
 	}
 }
@@ -447,14 +448,10 @@ def pageDeviceConnectivitySettings()	{
 		}
 		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Devices to check");
-			if (checkHealth)	{
-				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: false, multiple: true
-//				input "healthNoCheckDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Do not check these devices?", required: false, multiple: true
-			}
-			else		{
+			if (checkHealth)
+				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: true, multiple: true
+			else
 				paragraph "Check which devices?\nselect device connectivity to set"
-//				paragraph "Do not check these devices?"
-			}
 		}
 	}
 }
@@ -489,19 +486,33 @@ def updated()		{
 	announceSetup()
 	if (ht == _SmartThings)		subscribe(location, "askAlexaMQ", askAlexaMQHandler)
 	ifDebug("there are ${childApps.size()} rooms.", 'info')
-	for (def child : childApps)		{
-		def childRoomDevice = child.getChildRoomDevice()
-		ifDebug("initialize: room: ${child.label} id: ${child.id} childRoomDevice: $childRoomDevice", 'info')
-		subscribe(childRoomDevice, "occupancy", roomStateHistory)
-	}
+	updateVaca()
 	if (announceSwitches && ['1', '3'].contains(sunAnnounce))		subscribe(location, "sunrise", sunriseEventHandler);
 	if (announceSwitches && ['2', '3'].contains(sunAnnounce))		subscribe(location, "sunset", sunsetEventHandler);
+	if (speakerDevices)	{
+		subscribe(speakerDevices, "status", speakerStoppedEventHandler)
+		subscribe(speakerDevices, "status", speakerStoppedEventHandler)
+	}
+	if (musicPlayers)		{
+		subscribe(musicPlayers, "status", musicStoppedEventHandler);
+		subscribe(musicPlayers, "status", musicStoppedEventHandler);
+	}
+
 	githubUpdated(true)
 	state.healthHours = 0
 	scheduleNext()
 	subscribe(location, "mode", modeEventHandler)
 	state.connected = [devices:[], inRun:false, runNumber:0]
 //log.debug "perf updated: ${now() - nowTime} ms"
+}
+
+def updateVaca()	{
+	def vacaApp = spawnVacationApp()
+	vacaApp.subscribeToRooms()
+}
+
+def triggerSubscribeToVaca()	{
+	runIn(0, updateVaca)
 }
 
 def initialize()	{
@@ -516,14 +527,18 @@ def initialize()	{
 	if (state.noCheckDevices)				state.remove('noCheckDevices');
 	if (settings["noHealthCheckDevices"])		app.updateSetting("noHealthCheckDevices", []);
 	if (state.noHealthCheckDevices)			state.remove('noHealthCheckDevices');
+	if (state.rSH)		state.remove('rSH');
 	state.colorsRotating = false
 	state.lastBatteryUpdate = ''
+	state.audioData = [:]
+	state.speaking = false
 	sendLocationEvent(name: "AskAlexaMQRefresh", isStateChange: true)
 }
 
 def scheduleNext(data)		{
 	def nowTime = now()
 	if (data?.option)	{
+log.debug data
 		if (data.option.contains('time'))		tellTime();
 		if (data.option.contains('battery'))	batteryCheck();
 		if (data.option.contains('health'))		checkDeviceHealth();
@@ -579,7 +594,7 @@ def scheduleNext(data)		{
 		state.schedules << [type:'next', time:rTime, timeS:rTimeS, options:"$rOpts"]
 		runOnce(rTime, scheduleNext, [data: [option: "$rOpts"]])
 	}
-log.debug "perf scheduleNext: ${now() - nowTime} ms"
+//log.debug "perf scheduleNext: ${now() - nowTime} ms"
 }
 
 // since hubitat does not support timeTodayAfter(...) 2018-04-08
@@ -614,47 +629,6 @@ def unsubscribeChildRoomDevice(appChildDevice)	{
 	else
 		unsubscribe(appChildDevice)
 }
-
-
-def roomStateHistory(evt)	{
-	if (!(['asleep', 'engaged', 'occupied', 'vacant'].contains(evt.value)))		return;
-	def nowTime = now()
-	def rSH = [s: evt.value[0..0], t: nowTime]
-    if (!state.rSH)	{
-		state.rSH = [:]
-		ifDebug("rSH initialized")
-    }
-//    ifDebug("rSH $evt.displayName | $evt.deviceId | $evt.value")
-//    if (state.rSH[(evt.deviceId)])	state.rSH[(evt.deviceId)] << rSH;
-//    else								state.rSH[(evt.deviceId)] = rSH;
-	def dNI = evt.device.deviceNetworkId
-	if (!state.rSH["$dNI"])		state.rSH["$dNI"] = []
-	state.rSH["$dNI"] << rSH;
-	state.rSH["$dNI"].sort	{ it.t }
-//	state.rSH[(evt.deviceId)].each		{
-	def deleteTime = nowTime - 86400000000
-//	while (state.rSH["$evt.deviceId"].size() > 25)	{
-	while (state.rSH["$dNI"][0] && state.rSH["$dNI"][0].t < deleteTime)		{ state.rSH["$dNI"].remove(0); }
-//		if (it instanceof List && it.size() > 10)		{
-//			v.sort  	{ it.time }
-//			for (; v.size() > 10; )		{
-//				v = v.remove(v[0])
-//			}
-//			state.rsh[k] = v
-//		}
-//        else		{
-//            ifDebug("key: $k")
-//            ifDebug("value: $v")
-//        }
-//	}
-//    else                                state.rSH = [(evt.deviceId): rSH];
-/*    state.rSH.each 	{ dID, dMap ->
-		state.rSH[dID] = dMap.sort  { a, b -> b.value <=> a.value  }
-	}
-*/
-log.debug "perf roomStateHistory: ${now() - nowTime} ms"
-}
-
 
 private announceSetup()	{
 	state.whoCameHome = [:]
@@ -697,28 +671,43 @@ private splitStr(str)	{
 	return map
 }
 
-def getChildRoomDeviceObject(childID)	{
+def getRoomDevices(rooms)	{
+	def roomsDevices = [:]
+	for (def child : childApps)
+		if (rooms.contains(child.id.toString()) && child.name != 'rooms vacation')
+			roomsDevices << [(child.getChildRoomOccupancyDevice().deviceNetworkId):[id:(child.id), label:(child.label)]]
+	return roomsDevices
+}
+
+def getChildRoomOccupancyDeviceObject(childID)	{
 	def roomDeviceObject = null
-//	childApps.each	{ child ->
 	for (def child : childApps)		{
-		if (childID == child.id)		roomDeviceObject = child.getChildRoomDevice();
+		if (childID == child.id)		{
+			roomDeviceObject = child.getChildRoomOccupancyDevice()
+			break
+		}
 	}
-//    ifDebug("getChildRoomDeviceObject: childID: $childID | roomDeviceObject: $roomDeviceObject")
+//    ifDebug("getChildRoomOccupancyDeviceObject: childID: $childID | roomDeviceObject: $roomDeviceObject")
 	return roomDeviceObject
+}
+
+def getChildRoomOccupancyDeviceObjects()		{
+	def roomDeviceObjects = []
+	for (def child : childApps)		{
+		if (child.name != 'rooms vacation')
+			roomDeviceObjects << child.getChildRoomOccupancyDevice()
+	}
+	return roomDeviceObjects
 }
 
 def checkThermostatValid(childID, checkThermostat)	{
 	ifDebug("checkThermostatValid: $checkThermostat", 'info')
 	if (!checkThermostat)		return null;
 	def otherRoom = null
-//	childApps.each	{ child ->
 	for (def child : childApps)		{
 		if (childID != child.id)	{
 			def thermo = child.getChildRoomThermostat()
-			if (thermo && checkThermostat.getId() == thermo.thermostat.getId())	{
-//                ifDebug("getChildRoomThermostat: $thermo.name")
-				otherRoom = thermo.name
-			}
+			if (thermo && checkThermostat.getId() == thermo.thermostat.getId())		otherRoom = thermo.name;
 		}
 	}
 	return otherRoom
@@ -750,7 +739,6 @@ def contactClosedEventHandler(evt = null)	{
 		def str2 = str.split(special)
 		str = ''
 		for (i = 0; i < str2.size(); i++)	{
-//            def trimmed = str2[i].replaceAll("\\s","")
 			def replaceWith
 			switch(special)	{
 				case '&':       replaceWith = persons;		break
@@ -762,11 +750,48 @@ def contactClosedEventHandler(evt = null)	{
 		}
 		if (!str)	str = str2;
 	}
-//    ifDebug("message: $str")
 	speakIt(str)
 	if (evt)	state.whoCameHome.personsIn = [];
 	else		state.whoCameHome.personsOut = [];
 	if (speakerAnnounceColor)	setupColorRotation();
+}
+
+def speakerStoppedEventHandler(evt)	{
+log.debug evt.value
+log.debug state.audioData
+	if (evt.value != 'stopped')		return;
+	def dNI = evt.device.deviceNetworkId.toString()
+	if (!state.audioData || !state.audioData."$dNI")		return;
+	def sC = state.audioData."$dNI".stopCount
+	if (sC > 0)		{
+		state.audioData."$dNI".stopCount = sC - 1
+		return
+	}
+	def hT = getHubType()
+	evt.device.setLevel(state.audioData."$dNI".volume)
+	if (state.audioData."$dNI".trackData?.trackUri && state.audioData."$dNI".status == 'playing')
+		evt.device.playTrack(state.audioData."$dNI".trackData.trackUri)
+	if (state.audioData."$dNI".mute != 'unmuted')		evt.device.mute();
+	state.audioData.remove(dNI)
+}
+
+def musicStoppedEventHandler(evt)	{
+log.debug evt.value
+log.debug state.audioData
+	if (evt.value != 'stopped')		return;
+	def dNI = evt.device.deviceNetworkId.toString()
+	if (!state.audioData || !state.audioData."$dNI")		return;
+	def sC = state.audioData."$dNI".stopCount
+	if (sC > 0)		{
+		state.audioData."$dNI".stopCount = sC - 1
+		return
+	}
+	def hT = getHubType()
+	evt.device.setLevel(state.audioData."$dNI".volume)
+	if (state.audioData."$dNI".trackData?.trackUri && state.audioData."$dNI".status == 'playing')
+		evt.device.playTrack(state.audioData."$dNI".trackData.trackUri)
+	if (state.audioData."$dNI".mute != 'unmuted')		evt.device.mute();
+	state.audioData.remove(dNI)
 }
 
 private speakIt(str)	{
@@ -779,37 +804,77 @@ private speakIt(str)	{
 	def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
 	ifDebug("$intCurrentHH | $intCurrentMM | $startHH | $endHH")
 	if (intCurrentHH < startHH || (intCurrentHH > endHH || (intCurrentHH == endHH && intCurrentMM != 0)))		return;
-//    if (intCurrentHH >= startHH && (intCurrentHH < endHH || (intCurrentHH == endHH && intCurrentMM == 0)))	{
+	if (state.speaking)		{
+		runIn(10, speakRetry, [overwrite: false, data: [str: str]])
+		return
+	}
+	state.speaking = true
 	def vol = speakerVolume
 	if (useVariableVolume)	{
 		int x = startHH + ((endHH - startHH) / 4)
 		int y = endHH - ((endHH - startHH) / 3)
 		if (intCurrentHH <= x || intCurrentHH >= y)		vol = (speakerVolume - (speakerVolume / 3)).toInteger();
 	}
+	state.audioData = [:]
 	if (speakerDevices)	{
-		def currentVolume = speakerDevices.currentLevel
-		def isMuteOn = speakerDevices.currentMute.contains("muted")
-		if (isMuteOn)		speakerDevices.unmute();
-		speakerDevices.playTextAndResume(str, vol);
-		if (currentVolume != vol)		speakerDevices.setLevel(currentVolume)
-		if (isMuteOn)		musicPlayers.mute();
+		saveAudioData(speakerDevices)
+		speakerDevices.unmute()
+		if (hT != _Hubitat)
+			speakerDevices.playTextAndResume(str, vol)
+		else	{
+			speakerDevices.setLevel(vol)
+			speakerDevices.speak(str)
+		}
 	}
 	if (speechDevices)		speechDevices.speak(str);
 	if (musicPlayers)	{
-		def currentVolume = musicPlayers.currentLevel
-		def isMuteOn = musicPlayers.currentMute.contains("muted")
-		if (isMuteOn)		musicPlayers.unmute();
-		musicPlayers.playTrackAndResume(str, vol)
-		if (currentVolume != vol)		musicPlayers.setLevel(currentVolume)
-		if (isMuteOn)		musicPlayers.mute();
+		saveAudioData(musicPlayers)
+		musicPlayers.unmute()
+		if (hT != _Hubitat)
+			musicPlayers.playTrackAndResume(str, vol)
+		else	{
+			musicPlayers.setLevel(vol)
+			musicPlayers.speak(str)
+		}
 	}
 	if (hT == _SmartThings && listOfMQs)
 		sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
-//    }
+	state.speaking = false
+}
+
+def speakRetry(data)	{
+	if (data.str)		speakIt(data.str);
+}
+
+private saveAudioData(players)	{
+	def hT = getHubType()
+	for (def p : players)	{
+		def pDNI = p.deviceNetworkId.toString()
+		def pS = p.currentStatus
+		state.audioData."$pDNI" = [status:pS]
+		def sC = (pS == 'playing' ? 2 : 0)
+		state.audioData."$pDNI" << [stopCount:sC]
+		if (hT == _Hubitat)		{
+			def aT = p.currentTrackData
+			if (aT)		{
+				def tD = new groovy.json.JsonSlurper().parseText(aT)
+				if (tD)		{
+					assert tD instanceof Map;
+					state.audioData."$pDNI".trackData = tD
+				}
+				else
+					state.audioData."$pDNI".trackData = null
+			}
+			else
+				state.audioData."$pDNI".trackData = null
+		}
+		state.audioData."$pDNI" << [volume:(p.currentLevel)]
+		state.audioData."$pDNI" << [mute:(p.currentMute)]
+	}
 }
 
 private setupColorRotation()	{
-	if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))	return false;
+	if (!announceSwitches || (announceInModes && !(announceInModes.contains(location.currentMode.toString()))))		return false;
 	state.colorsRotateSeconds = state.colorsToRotate.size() * 30
 	if (!state.colorsRotating)	{
 		state.colorsRotating = true
@@ -824,8 +889,6 @@ def rotateColors()	{
 	ifDebug("rotateColors", 'info')
 	ifDebug("$state.colorsIndex | $state.colorsRotateSeconds | ${state.colorsToRotate."$state.colorsIndex"}")
 	announceSwitches.setColor(state.colorsToRotate."$state.colorsIndex"); pauseIt()
-//    announceSwitches.setHue(state.colorsToRotate."$state.colorsIndex".hue)
-//    announceSwitches.setSaturation(state.colorsToRotate."$state.colorsIndex".saturation)
 	state.colorsRotateSeconds = (state.colorsRotateSeconds >= 5 ? state.colorsRotateSeconds - 5 : 0)
 	state.colorsIndex = (state.colorsIndex < (state.colorsToRotate.size() -1) ? state.colorsIndex + 1 : 0)
 	if (state.colorsRotateSeconds > 0)
@@ -833,8 +896,9 @@ def rotateColors()	{
 	else		{
 		state.colorsRotating = false
 		state.colorsToRotate = [:]
-		pauseIt(true); announceSwitches.off(); pauseIt(true)
+		announceSwitches.off(); pauseIt(true)
 	}
+	return
 }
 
 private whoCameHome(presenceSensor, left = false)	{
@@ -864,7 +928,7 @@ private whoCameHome(presenceSensor, left = false)	{
 def getRoomNames(childID)	{
 	def roomNames = [:]
 	for (def child : childApps)		{
-		if (childID != child.id)		roomNames << [(child.id):(child.label)];
+		if (childID != child.id && child.name != 'rooms vacation')		roomNames << [(child.id):(child.label)];
 	}
 	return (roomNames.sort { it.value })
 }
@@ -872,37 +936,17 @@ def getRoomNames(childID)	{
 def handleAdjRooms()	{
 	ifDebug("handleAdjRooms >>>>>", 'info')
 	def time = now()
-//  adjRoomDetails = ['childid':app.id, 'adjrooms':adjRooms]
-
-//    def skipAdjRoomsMotionCheck = true
-	def adjRoomDetailsMap = [:]
-//	childApps.each	{ c ->
 	for (def c : childApps)		{
-		def adjRooms = c.getAdjRoomsSetting()
-		adjRoomDetailsMap << [(c.id):(adjRooms)]
-//        if (adjRooms)       skipAdjRoomsMotionCheck = false;
-	}
-//    if (skipAdjRoomsMotionCheck)        return false;
-
-//    ifDebug("adjRoomDetailsMap: $adjRoomDetailsMap")
-
-//	childApps.each	{ c ->
-	for (def c : childApps)		{
+		if (c.name == 'rooms vacation')		continue;
 		def childID = c.id
-		def adjRooms = adjRoomDetailsMap[childID]
+		def adjRooms = c.getAdjRoomsSetting()
 		def adjMotionSensors = []
 		if (adjRooms)	{
 			def adjMotionSensorsIds = []
-//			childApps.each	{ c2 ->
 			for (def c2 : childApps)		{
-				def cid = c2.id
-//                ifDebug("childID: $childID | cid: $cid | adjRooms: $adjRooms | ${adjRooms.contains(cid)} | ${adjRooms.grep{it.toString() == cid.toString()}}")
-//                if (childID != cid && adjRooms.contains(cid))	{
-				if (childID != cid && adjRooms.grep{it.toString() == cid.toString()})	{
-//                    ifDebug("checking $c2.label")
+				if (c.name == 'rooms vacation')		continue;
+				if (adjRooms.grep{it.toString() == c2.id.toString()})	{
 					def mS = c2.getAdjMotionSensors()
-//                    ifDebug("got $mS")
-//                    if (mS)
 					for (def m : mS)	{
 						def motionSensorId = m.getId()
 						if (!adjMotionSensorsIds.contains(motionSensorId))	{
@@ -914,24 +958,34 @@ def handleAdjRooms()	{
 			}
 		}
 		ifDebug("rooms manager: updating room $c.label with adjacent motion sensors: $adjMotionSensors | ${now() - time} ms", 'info')
-//        ifDebug("$adjMotionSensors")
-//        c.updateRoom(adjMotionSensors)
 		c.updateRoomAdjMS(adjMotionSensors)
 	}
 	ifDebug("handleAdjRooms <<<<<", 'info')
-	return true
+//	return true
 }
 
 def getLastStateDate(childID)	{
 	def lastStateDate = [:]
 	if (childID)
-		for (def child : childApps)		{
-			if (childID == child.id)	{
+		for (def child : childApps)	{
+			if (childID.toString() == child.id.toString())	{
 				lastStateDate = child.getLastStateChild()
 				break
 			}
 		}
 	return lastStateDate
+}
+
+def getCurrentState(childID)	{
+	def currentState = null
+	if (childID)
+		for (def child : childApps)	{
+			if (childID.toString() == child.id.toString())	{
+				currentState = child.getLastStateChild()?.state
+				break
+			}
+		}
+	return currentState
 }
 
 def batteryCheck()	{
@@ -944,15 +998,13 @@ def batteryCheck()	{
 	def batteryLow = 0
 	def cnt = 0
 	for (def bit : batteryCheckDevices)	{
-//		if (bit.hasCapability("Battery"))	{
-			cnt = cnt + 1
-			bat = bit.currentBattery
-			if (bat < batteryLevel)		{
-				batteryLow = batteryLow + 1
-				batteryNames = batteryNames + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
-			}
-			state.batteryLevels = state.batteryLevels + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
-//		}
+		cnt = cnt + 1
+		bat = bit.currentBattery
+		if (bat < batteryLevel)		{
+			batteryLow = batteryLow + 1
+			batteryNames = batteryNames + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
+		}
+		state.batteryLevels = state.batteryLevels + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
 	}
 	if (batteryNames)		batteryNames = addAnd(batteryNames);
 	if (state.batteryNames)	state.batteryNames = addAnd(state.batteryNames);
@@ -965,7 +1017,7 @@ def batteryCheck()	{
 	state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." : "no device battery below $batteryLevel percent.")
 	speakIt(state.lastBatteryUpdate);
 	if (batterySms && batteryLow > 0)		roomsSMS("Rooms Manager: $batteryLow ${(batteryLow > 1 ? 'batteries are' : 'battery is')} low.");
-log.debug "perf batteryCheck: ${now() - nowTime} ms, checked $cnt devices"
+//log.debug "perf batteryCheck: ${now() - nowTime} ms, checked $cnt devices"
 }
 
 def modeEventHandler(evt)	{
@@ -997,7 +1049,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 
 def setupColorNotification()	{
 	ifDebug("setupColorNotification", 'info')
-	if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))		return false;
+	if (!announceSwitches || (announceInModes && !(announceInModes.contains(location.currentMode.toString()))))		return false;
 	def nowDate = new Date(now())
 	def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 	def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -1025,7 +1077,6 @@ def setupColorNotification()	{
 				else
 					break
 			}
-//			if (!foundValue)		state.colorColorTemperatureTrueSave << false;
 			state.colorColorTemperatureTrueSave << (foundValue ? true : false)
 			state.colorColorTemperatureSave << swt.currentColorTemperature
 		}
@@ -1051,9 +1102,24 @@ def notifyWithColor()	{
 	else		{
 		def i = 0
 		for (def swt : announceSwitches)	{
-//log.debug "$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}"
 			ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
-			(state.colorColorTemperatureTrueSave[(i)] == true ? swt.setColorTemperature(state.colorColorTemperatureSave[(i)]) : swt.setColor(state.colorColorSave[(i)])); pauseIt(true)
+			if (state.colorColorTemperatureTrueSave[(i)] == true)	{
+			 	swt.setColorTemperature(state.colorColorTemperatureSave[(i)])
+				pauseIt(true)
+			}
+			else
+				swt.setColor(state.colorColorSave[(i)])
+			pauseIt(true)
+			swt.setLevel(state.colorColorSave[(i)].level)
+			i = i + 1
+		}
+		if (getHubType() == _Hubitat)	{
+			def nowTime = now()
+			def tillTime = nowTime + 250
+			while (nowTime < tillTime)		nowTime = now();
+		}
+		i = 0
+		for (def swt : announceSwitches)	{
 			swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"(); pauseIt()
 			i = i + 1
 		}
@@ -1061,9 +1127,6 @@ def notifyWithColor()	{
 }
 
 private pauseIt(longOne = false)	{
-//	def hT = getHubType()
-//	if (hT == _SmartThings)		pause(pauseMSecST);
-//    else if (hT == _Hubitat)    pauseExecution(pauseMSecHU * (longOne ? 10 : 1));
 }
 
 def tellTime()	{
@@ -1162,12 +1225,8 @@ def checkDeviceHealth()	{
 			}
 		}
 		else		{
-//			def lastEvent = dit.currentStates.date.max()
 			for (def cS : dit.currentStates)	{
-//			if (lastEvent)	{
 				if (Date.parse("yyyy-MM-dd HH:mm:ss.SSS", cS.date.toString()).after(cDT))	{
-//				def dT = Date.parse("yyyy-MM-dd HH:mm:ss.SSS", lastEvent.toString())
-//				if (dT.after(cDT))		deviceEventFound = true;
 					deviceEventFound =  true
 					break
 				}
@@ -1201,13 +1260,11 @@ def checkDeviceHealth()	{
 			state.healthHours = (state.healthHours == 0 ? healthEvery.toInteger() : state.healthHours - 1)
 		}
 	}
-log.debug "perf checkDeviceHealth: ${now() - nowTime} ms, checked $cnt devices"
+//log.debug "perf checkDeviceHealth: ${now() - nowTime} ms, checked $cnt devices"
 	state.connected.inRun = false
 }
 
-def deviceAgain()	{
-	checkDeviceHealth()
-}
+def deviceAgain()	{  checkDeviceHealth()  }
 
 private addAnd(str)	{
 	if (!str)	return '';
@@ -1215,30 +1272,10 @@ private addAnd(str)	{
 	return (lio == -1 ? str : (str.substring(0, lio) + " and " + str.substring(lio + 1)))
 }
 
-/*
-def allDevices()	{
-	def aD = []
-	def aDID = []
-	def itID
-	for (def sit : settings)	{
-		sit.value.each   	{
-			itID = isADevice(sit)
-			if (itID && !aDID.contains(itID))	{
-				aD << sit
-				aDID << itID
-			}
-		}
-	}
-	return aD
+def setRoomState(childID, roomState)	{
+	def cOD = getChildRoomOccupancyDeviceObject(childID)
+	if (cOD)	cOD."$roomState"();
 }
-
-private isADevice(thisThing)	{
-	def itID = false
-	try { itID = thisThing.id }    catch (all)	{};
-//    if (itID)       ifDebug("$thisThing | $itID")
-	return itID
-}
-*/
 
 private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $app.label: " + msg  }
 
@@ -1266,6 +1303,19 @@ private convertRGBToHueSaturation(setColorTo)	{
 		h /= 6
 	}
 	return [hue: Math.round(h * 100), saturation: Math.round(s * 100), level: Math.round(l * 100)]
+}
+
+private spawnVacationApp()	{
+	ifDebug("spawnChildApp")
+	def app = getVacationApp()
+	if (!app)	app = addChildApp("bangali", "rooms vacation", "# rooms vacation", [completedSetup: true]);
+	return app
+}
+
+private getVacationApp()	{
+	def app = null
+	for (def a : childApps)		if (a.name == 'rooms vacation')		{  app = a; break;  }
+	return app
 }
 
 //------------------------------------------------------------------------------------------------------------------------//

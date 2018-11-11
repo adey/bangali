@@ -18,3 +18,4 @@ app/scheduleFromAndToTime.groovy
 app/buildHumidityMap.groovy
 app/colorsRGB.groovy
 app/processChildSwitches.groovy
+smartapps/bangali/rooms-holiday-lights/rooms-holiday-lights.groovy
