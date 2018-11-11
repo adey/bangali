@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2018-10-30	display defaul room name in settings
 *  2018-10-26	change value type when retrieving from state
 *  2018-10-26	change device subscription for attribute
 *  2018-10-22	added rises above and drops below check for numbers and decimals
@@ -28,7 +29,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v3.2.0"  }
+public static String version()		{  return "v3.3.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -126,7 +127,7 @@ def wato()		{
 
 	if (attrTyp == 'Text')		app.removeSetting("attrMath");
 	else						app.removeSetting("attrCase");
-	updLbl()
+	def lS = updLbl()
 
 	dynamicPage(name: "wato", title: "", install: true, uninstall: true)		{
 		section("")		{
@@ -179,6 +180,7 @@ def wato()		{
 		section("")	{
 			paragraph subHeaders('App Name (optional)', true, true)
 			input "appName", "text", title: "WATO Name:", required:false, submitOnChange:true
+			paragraph lS;
 		}
 		section("")		{
 			paragraph subHeaders('Restrictions (optional)', true, true)
@@ -229,8 +231,10 @@ private updLbl()	{
 		else
 			if (state.unCParams == null)		state.unCParams = i - 1;
 	}
-	def l = (appName ?: lblStr())
+	def lS = lblStr()
+	def l = (appName ?: lS)
 	if (l)	app.updateLabel(l);
+	return lS
 }
 
 private lblStr()	{
