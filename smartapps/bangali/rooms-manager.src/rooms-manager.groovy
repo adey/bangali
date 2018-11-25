@@ -550,6 +550,7 @@ def initialize()	{
 	state.lastBatteryUpdate = ''
 	state.audioData = [:]
 	state.speaking = false
+	state.rSH = null
 	sendLocationEvent(name: "AskAlexaMQRefresh", isStateChange: true)
 }
 
