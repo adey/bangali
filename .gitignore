@@ -19,3 +19,7 @@ app/buildHumidityMap.groovy
 app/colorsRGB.groovy
 app/processChildSwitches.groovy
 smartapps/bangali/rooms-holiday-lights/rooms-holiday-lights.groovy
+app/rooms-child-app-pre-cool-heat.groovy
+app/rooms-child-app-pre-settings-change.groovy
+app/rooms-occupancy-before-removing-alarm.groovy
+smartapps/bangali/rooms-child-cool-heat.src/rooms-child-cool-heat.groovy

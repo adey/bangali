@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.95.0"  }
+public static String version()		{  return "v0.99.0"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -50,11 +50,6 @@ metadata {
 //		attribute "occupancyIconXL", "String"
 //		attribute "occupancyIconXXL", "String"
 		attribute "occupancyIconURL", "String"
-		attribute "alarmEnabled", "boolean"
-		attribute "alarmTime", "String"
-		attribute "alarmDayOfWeek", "String"
-		attribute "alarmRepeat", "number"
-		attribute "alarmSound", "String"
 		attribute "countdown", "String"
 		command "occupied"
 		command "checking"
@@ -72,24 +67,12 @@ metadata {
 		command "turnSwitchesAllOff"
 		command "turnNightSwitchesAllOn"
 		command "turnNightSwitchesAllOff"
-		command "alarmOffAction"
 	}
 
 	simulator	{
 	}
 
 	preferences		{
-		section("Alarm settings:")		{
-			input "alarmDisabled", "bool", title: "Disable alarm?", required: true, defaultValue: true
-			input "alarmTime", "time", title: "Alarm Time?", required: false
-			input "alarmVolume", "number", title: "Volume?", description: "0-100%", required: (alarmTime ? true : false), range: "1..100"
-			input "alarmSound", "enum", title:"Sound?", required: (alarmTime ? true : false), multiple: false, defaultValue: null,
-								options: ["0":"Bell 1", "1":"Bell 2", "2":"Dogs Barking", "3":"Fire Alarm", "4":"Piano", "5":"Lightsaber"]
-			input "alarmRepeat", "number", title: "Repeat?", description: "1-999", required: (alarmTime ? true : false), range: "1..999"
-			input "alarmDayOfWeek", "enum", title: "Which days of the week?", required: false, multiple: false, defaultValue: null,
-								options: ["ADW0":"All Days of Week","ADW8":"Monday to Friday","ADW9":"Saturday & Sunday","ADW2":"Monday", \
-										  "ADW3":"Tuesday","ADW4":"Wednesday","ADW5":"Thursday","ADW6":"Friday","ADW7":"Saturday","ADW1":"Sunday"]
-		}
 	}
 
 	//
@@ -98,7 +81,6 @@ metadata {
 
 	tiles(scale: 2)		{
 		standardTile("occupancy", "device.occupancy", width: 2, height: 2, canChangeBackground: true)		{
-			state "alarm", label: 'Alarm!', icon:"st.alarm.beep.beep", action:"alarmOffAction", backgroundColor:"#ff8c00"
 			state "occupied", label: 'Occupied', icon:"st.Health & Wellness.health12", backgroundColor:"#90af89"
 			state "checking", label: 'Checking', icon:"st.Health & Wellness.health9", backgroundColor:"#616969"
 			state "vacant", label: 'Vacant', icon:"st.Home.home18", backgroundColor:"#32b399"
@@ -464,7 +446,6 @@ def	initialize()	{
 	unschedule()
 	sendEvent(name: "numberOfButtons", value: 9, descriptionText: "set number of buttons to 9.", isStateChange: true, displayed: true)
 	state.timer = 0
-	setupAlarmC()
 	sendEvent(name: "countdown", value: '0s', descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
 	if (getHubType() == _SmartThings)		{
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online")
@@ -476,33 +457,6 @@ def	initialize()	{
 def getHubType()	{
 	if (!state.hubId)	state.hubId = location.hubs[0].id.toString()
 	return (state.hubId.length() > 5 ? _SmartThings() : _Hubitat())
-}
-
-def setupAlarmC()	{
-	if (parent)		parent.setupAlarmP(alarmDisabled, alarmTime, alarmVolume, alarmSound, alarmRepeat, alarmDayOfWeek);
-	if (alarmDayOfWeek != 'ADW0')	{
-		state.alarmDayOfWeek = []
-		switch(alarmDayOfWeek)	{
-			case 'ADW1':	state.alarmDayOfWeek << 'Mon';		break
-			case 'ADW2':	state.alarmDayOfWeek << 'Tue';		break
-			case 'ADW3':	state.alarmDayOfWeek << 'Wed';		break
-			case 'ADW4':	state.alarmDayOfWeek << 'Thu';		break
-			case 'ADW5':	state.alarmDayOfWeek << 'Fri';		break
-			case 'ADW6':	state.alarmDayOfWeek << 'Sat';		break
-			case 'ADW7':	state.alarmDayOfWeek << 'Sun';		break
-			case 'ADW8':   	state.alarmDayOfWeek = state.alarmDayOfWeek + ['Mon','Tue','Wed','Thu','Fri'];	break
-			case 'ADW9':   	state.alarmDayOfWeek = state.alarmDayOfWeek + ['Sat','Sun'];					break
-			default:  		state.alarmDayOfWeek = null;		break
-		}
-	}
-	else
-		state.alarmDayOfWeek = ''
-	state.alarmSound = (alarmSound ? ["Bell 1", "Bell 2", "Dogs Barking", "Fire Alarm", "Piano", "Lightsaber"][alarmSound as Integer] : '')
-	sendEvent(name: "alarmEnabled", value: ((alarmDisabled || !alarmTime) ? 'No' : 'Yes'), descriptionText: "alarm enabled is ${(!alarmDisabled)}", isStateChange: true, displayed: true)
-	sendEvent(name: "alarmTime", value: "${(alarmTime ? timeToday(alarmTime, location.timeZone).format("HH:mm", location.timeZone) : '')}", descriptionText: "alarm time is ${alarmTime}", isStateChange: true, displayed: true)
-	sendEvent(name: "alarmDayOfWeek", value: "$state.alarmDayOfWeek", descriptionText: "alarm days of week is $state.alarmDayOfWeek", isStateChange: true, displayed: true)
-	sendEvent(name: "alarmSound", value: "$state.alarmSound", descriptionText: "alarm sound is $state.alarmSound", isStateChange: true, displayed: true)
-	sendEvent(name: "alarmRepeat", value: alarmRepeat, descriptionText: "alarm sounds is repeated $alarmRepeat times", isStateChange: true, displayed: true)
 }
 
 def on()	{
@@ -546,33 +500,35 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-def occupied(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'occupied', handleSwitches:handleSwitches]]) }
+def occupied(hS = true, vM = false)			{  stateUpdateSetup('occupied', hS, vM)  }
 
-def checking(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'checking', handleSwitches:handleSwitches]]) }
+def checking(hS = true, vM = false)			{  stateUpdateSetup('checking', hS, vM)  }
 
-def vacant(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'vacant', handleSwitches:handleSwitches]]) }
+def vacant(hS = true, vM = false)			{  stateUpdateSetup('vacant', hS, vM)  }
 
-def donotdisturb(handleSwitches = true)		{ runIn(0, stateUpdate, [data: [newState:'donotdisturb', handleSwitches:handleSwitches]]) }
+def donotdisturb(hS = true, vM = false)		{  stateUpdateSetup('donotdisturb', hS, vM)  }
 
-def reserved(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'reserved', handleSwitches:handleSwitches]]) }
+def reserved(hS = true, vM = false)			{  stateUpdateSetup('reserved', hS, vM)  }
 
-def asleep(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'asleep', handleSwitches:handleSwitches]]) }
+def asleep(hS = true, vM = false)			{  stateUpdateSetup('asleep', hS, vM)  }
 
-def locked(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'locked', handleSwitches:handleSwitches]]) }
+def locked(hS = true, vM = false)			{  stateUpdateSetup('locked', hS, vM)  }
 
-def engaged(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'engaged', handleSwitches:handleSwitches]]) }
+def engaged(hS = true, vM = false)			{  stateUpdateSetup('engaged', hS, vM)  }
 
-def kaput(handleSwitches = true)			{ runIn(0, stateUpdate, [data: [newState:'kaput', handleSwitches:handleSwitches]]) }
+def kaput(hS = true, vM = false)			{  stateUpdateSetup('kaput', hS, vM)  }
+
+private stateUpdateSetup(rSt, hS, vM)	{
+	runIn(0, stateUpdate, [data: [newState:rSt, handleSwitches:true, vacationMode:vM]])
+}
 
 def	stateUpdate(data)		{
 	if (!data)		return;
-	def newState = data.newState
-	def handleSwitches = data.handleSwitches
-	if (state.oldState != newState)		{
-        if (handleSwitches && parent)
-			setupTimer((int) (parent.handleSwitches(state.oldState, newState, true) ?: 0))
-		updateOccupancy(state.oldState, newState)
-		state.oldState = newState
+	if (state.oldState != data.newState)		{
+        if (data.handleSwitches && parent)
+			setupTimer((int) (parent.handleSwitches(state.oldState, data.newState, true, data.vacationMode) ?: 0))
+		updateOccupancy(state.oldState, data.newState)
+		state.oldState = data.newState
 	}
 	resetTile(newState)
 }
@@ -602,24 +558,6 @@ def updateOccupancy(oldOcc, newOcc) 	{
 		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
 
 	updateRoomStatusMsg()
-}
-
-def alarmOn()	{
-	sendEvent(name: "occupancy", value: 'alarm', descriptionText: "$device.displayName alarm is on", isStateChange: true, displayed: true)
-	runIn(2, alarmOff)
-}
-
-def alarmOff(endLoop = false)	{
-	if (device.currentValue('occupancy') == 'alarm' || endLoop)
-		sendEvent(name: "occupancy", value: "$state.oldState", descriptionText: "$device.displayName alarm is off", isStateChange: true, displayed: true)
-	(endLoop ? unschedule() : runIn(1, alarmOn))
-}
-
-def alarmOffAction()	{
-	ifDebug("alarmOffAction")
-	unschedule()
-	if (parent)		parent.ringAlarm(true);
-	alarmOff(true)
 }
 
 private updateRoomStatusMsg()		{
@@ -799,7 +737,6 @@ def updateOutTempIndC(temp)		{
 }
 
 def updateVentIndC(vent)		{
-	ifDebug("updateVentIndC: $vent")
 	def vL, dD
 	switch(vent)	{
 		case -1:	vL = 'none';		dD = "indicate no vents";		break
@@ -810,12 +747,48 @@ def updateVentIndC(vent)		{
 	sendEvent(name: 'ventInd', value: vL, descriptionText: dD, isStateChange: true, displayed: false)
 }
 
-def updateMaintainIndC(temp)		{
-	def tS = (location.temperatureScale ?: 'F')
-	sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"), isStateChange: true, displayed: false)
+def updateMaintainIndC(maintainRoomTemp, turnOn, temperature, coolTemp, heatTemp, outTempSensor, outTemp, autoAdjustWithOutdoor)		{
+	def temp = 999
+	if (turnOn)		{
+		boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
+		if (outTempSensor && autoAdjustWithOutdoor)	{
+			if (outTemp > (isFarenheit ? 90 : 26.7))	coolTemp = coolTemp - (isFarenheit ? 0.5 : 0.28);
+			if (outTemp < (isFarenheit ? 32 : 0))		heatTemp = heatTemp + (isFarenheit ? 0.5 : 0.28);
+		}
+		if (maintainRoomTemp == '1')
+			temp = coolTemp
+		else if (maintainRoomTemp == '2')
+			temp = heatTemp
+		else if (maintainRoomTemp == '3' || maintainRoomTemp == '5')	{
+			def x = Math.abs(temperature - coolTemp)
+			def y = Math.abs(temperature - heatTemp)
+			temp = (x >= y ? heatTemp : coolTemp)
+		}
+	}
+	else
+		temp = -1
+	if (temp != 999)	{
+		def tS = (location.temperatureScale ?: 'F')
+		sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"), isStateChange: true, displayed: false)
+	}
 }
 
-def updateThermostatIndC(thermo)		{
+def updateThermostatIndC(currentPresence, maintainRoomTemp, useThermostat, currentThermostatOperatingState, roomCoolSwitch, roomHeatSwitch)		{
+	def thermo = 9
+	def isHere = currentPresence.contains('present')
+	if ((useThermostat && currentThermostatOperatingState == 'cooling') || (!useThermostat && roomCoolSwitch == on))
+		thermo = 4
+	else if ((useThermostat && currentThermostatOperatingState == 'heating') || (!useThermostat && roomHeatSwitch == on))
+		thermo = 5
+	else if (!isHere && ['1', '2', '3'].contains(maintainRoomTemp))
+		thermo = 0
+	else if (maintainRoomTemp == '3')
+		thermo = 1
+	else if (maintainRoomTemp == '1')
+		thermo = 2
+	else if (maintainRoomTemp == '2')
+		thermo = 3
+	ifDebug("updateThermostatIndC: thermo: $thermo")
 	def vV = '--'
 	def dD = "indicate no thermostat setting"
 	switch(thermo)	{
