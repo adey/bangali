@@ -687,15 +687,15 @@ def getRoomDevices(rooms)	{
 	def roomsDevices = [:]
 	for (def c : childApps)
 		if (rooms.contains(c.id.toString()) && c.name != 'rooms vacation' && c.name != 'rooms child settings')
-			roomsDevices << [(c.getChildRoomOccupancyDevice().deviceNetworkId):[id:(c.id), label:(c.label)]]
+			roomsDevices << [(c.getChildRoomOccupancyDeviceC().deviceNetworkId):[id:(c.id), label:(c.label)]]
 	return roomsDevices
 }
 
 def getChildRoomOccupancyDeviceObject(childID)	{
 	def roomDeviceObject = null
-	for (def child : childApps)
+	for (def c : childApps)
 		if (childID == child.id)		{
-			roomDeviceObject = child.getChildRoomOccupancyDevice()
+			roomDeviceObject = c.getChildRoomOccupancyDeviceC()
 			break
 		}
 //    ifDebug("getChildRoomOccupancyDeviceObject: childID: $childID | roomDeviceObject: $roomDeviceObject")
@@ -706,7 +706,7 @@ def getChildRoomOccupancyDeviceObjects()		{
 	def roomDeviceObjects = []
 	for (def c : childApps)
 		if (c.name != 'rooms vacation' && c.name != 'rooms child settings')
-			roomDeviceObjects << c.getChildRoomOccupancyDevice()
+			roomDeviceObjects << c.getChildRoomOccupancyDeviceC()
 	return roomDeviceObjects
 }
 

@@ -4503,7 +4503,7 @@ def getLastStateChild()		{
 	return addRoom
 }
 
-def getChildRoomOccupancyDevice()	{
+def getChildRoomOccupancyDeviceC()	{
 	return getChildDevice(getRoom())
 }
 
