@@ -487,7 +487,7 @@ def updated()		{
 	app.updateLabel(app.name + ' - ' + version())
 	def hT = getHubType()
 	announceSetup()
-	if (ht == _SmartThings)		{
+	if (hT == _SmartThings)		{
 		subscribeToRoomsP()
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler)
 	}
@@ -522,7 +522,7 @@ private subscribeToRoomsP()	{
 log.debug "perf subscribeToRoomsP: ${now() - nowTime} ms"
 }
 
-def forSTRelatedSmartApps()		{}
+def forSTRelatedSmartApps(evt)		{}
 
 def updateVaca()	{
 	def vacaApp = spawnVacationApp()
@@ -586,6 +586,7 @@ log.debug data
 	def tTM = (cMM >= 45 ? 0 : (((cMM / 15).intValue() * 15) + 15)),
 		tTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (tTM == 0 ? (cHH == 23 ? 0 : cHH + 1) : cHH), tTM), location.timeZone), location.timeZone)
 	state.schedules << [type:'time', time:tTime, timeS:(tTime.format("HH:mm", location.timeZone))]
+//log.debug state.schedules
 
 	def rTime = false, rTimeS, rOpts = []
 	for (def schedule : state.schedules)	{
@@ -685,28 +686,31 @@ private splitStr(str)	{
 
 def getRoomDevices(rooms)	{
 	def roomsDevices = [:]
-	for (def c : childApps)
+	for (def c : childApps)		{
 		if (rooms.contains(c.id.toString()) && c.name != 'rooms vacation' && c.name != 'rooms child settings')
 			roomsDevices << [(c.getChildRoomOccupancyDeviceC().deviceNetworkId):[id:(c.id), label:(c.label)]]
+	}
 	return roomsDevices
 }
 
 def getChildRoomOccupancyDeviceObject(childID)	{
 	def roomDeviceObject = null
-	for (def c : childApps)
+	for (def c : childApps)		{
 		if (childID == child.id)		{
 			roomDeviceObject = c.getChildRoomOccupancyDeviceC()
 			break
 		}
+	}
 //    ifDebug("getChildRoomOccupancyDeviceObject: childID: $childID | roomDeviceObject: $roomDeviceObject")
 	return roomDeviceObject
 }
 
 def getChildRoomOccupancyDeviceObjects()		{
 	def roomDeviceObjects = []
-	for (def c : childApps)
+	for (def c : childApps)	{
 		if (c.name != 'rooms vacation' && c.name != 'rooms child settings')
 			roomDeviceObjects << c.getChildRoomOccupancyDeviceC()
+	}
 	return roomDeviceObjects
 }
 

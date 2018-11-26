@@ -4482,7 +4482,7 @@ private updateTimeFromToInd()	{
 
 private updateTimeouts()	{
 	if (getHubType() != _Hubitat)
-		getChildDevice(getRoom()).updateTimersInd(state.noMotion, state.dimTimer, state.noMotionEngaged, state.noMotionAsleep)
+		getChildDevice(getRoom())?.updateTimersInd(state.noMotion, state.dimTimer, state.noMotionEngaged, state.noMotionAsleep)
 }
 
 private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
