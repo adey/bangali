@@ -696,7 +696,7 @@ def getRoomDevices(rooms)	{
 def getChildRoomOccupancyDeviceObject(childID)	{
 	def roomDeviceObject = null
 	for (def c : childApps)		{
-		if (childID == child.id)		{
+		if (childID == c.id)		{
 			roomDeviceObject = c.getChildRoomOccupancyDeviceC()
 			break
 		}
