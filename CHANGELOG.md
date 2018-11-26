@@ -1,3 +1,17 @@
+Version: 0.99.0
+
+DONE:   11/20/2018
+
+1) performance optimizations for hubitat along with:
+	- **REQUIRES SAVING ROOMS MANAGER, ROOMS CHILD APP AND ROOMS VACATION SETTINGS AFTER UPDATING CODE SINCE SUBSCRIPTIONS HAVE CHANGED.**
+	- heave code reuse.
+	- deprecated code for alarm settings in rooms occupancy device
+	- deprecated code for setting room to engaged with music player
+	- deprecated code for setting window shades with rules
+	- moved settings view code to new rooms child settings app so its take it out of runtime
+		- **REQUIRES SAVING ROOMS CHILD SETTINGS CODE AS A NEW APP.**
+2) added option to set room to asleep at time of day
+
 Version: 0.96.0
 
 DONE:   10/31/2018
