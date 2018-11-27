@@ -625,7 +625,7 @@ def timerNext()		{
 private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))	log."${level ?: 'debug'}" " $device.displayName device: " + msg  }
 
 //
-// REMOVE THE FOLLOWING FOR HUBITAT		<<<<<
+// REMOVE THE FOLLOWING CODE FOR HUBITAT TILL END OF FILE		<<<<<
 //
 
 def updateMotionInd(motionOn)		{

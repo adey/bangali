@@ -4111,8 +4111,8 @@ private calculateLK(min, max, fadeW, fadeWB, fadeWA, fadeS, fadeSB, fadeSA)	{
 
 // since hubitat does not support timeTodayAfter(...) 2018-04-08
 private timeTodayA(Date whichDate, Date thisDate, timeZone)	{
-log.debug "whichDate: $whichDate | thisDate: $thisDate | timeZone: $timeZone"
-if (thisDate instanceof Date)		log.debug "is date";
+//log.debug "whichDate: $whichDate | thisDate: $thisDate | timeZone: $timeZone"
+//if (thisDate instanceof Date)		log.debug "is date";
 	return (thisDate.before(whichDate) ? thisDate.plus(((whichDate.getTime() - thisDate.getTime()) / 86400000L).intValue() + 1) : thisDate)
 }
 
