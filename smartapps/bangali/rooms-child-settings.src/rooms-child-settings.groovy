@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.96.0"  }
+public static String version()		{  return "v0.99.1"  }
 
 import groovy.transform.Field
 
@@ -114,6 +114,13 @@ def initialize()	{  unsubscribe(); unschedule()  }
 def allSettings(setings, allRules, childCreated, onlyHas, anonIt)	{
 //    ifDebug("pageAllSettings")
 	def hT = getHubType()
+	def pVer = parent.version()
+	def ver = version()
+	if (pVer != ver)		{
+		def errMsg = "Rooms Child Settings app verion does not match Rooms Manager app version. Parent version is $pVer and this app version is ${ver}. Please update app code and save${(hT == _SmartThings ? '/publish' : '')} before trying again."
+		log.error errMsg
+		return errMsg
+	}
 	def varAllS, varTranslate
 	def para = ''
 	def sum, s
@@ -249,14 +256,23 @@ private varHoli(x, setings, allRules, childCreated, onlyHas, anonIt)		{
 	return holiString
 }
 
+def ruleDelete(allRules)	{
+	def rulesList = []
+	for (def thisRule : allRules)	{
+		if (!thisRule)		continue;
+		rulesList << [(thisRule.ruleNo):"${varRuleString(thisRule, false)}"]
+	}
+	return rulesList
+}
+
 private varRule(x, setings, allRules, childCreated, onlyHas, anonIt)		{
 	def hT = getHubType()
 	def rS = ''
-	for (def thisRule : allRules)		rS = rS + "\n${(hT == _Hubitat ? '&emsp;&emsp;' : '')}" + varRuleString(thisRule, onlyHas, anonIt);
+	for (def thisRule : allRules)		rS = rS + "\n${(hT == _Hubitat ? '&emsp;&emsp;' : '')}" + varRuleString(thisRule, anonIt);
 	return rS
 }
 
-private varRuleString(thisRule, onlyHas, anonIt)	{
+private varRuleString(thisRule, anonIt)	{
 	def rD = "$thisRule.ruleNo:"
 	rD = (thisRule.disabled ? "$rD Disabled＝$thisRule.disabled" : "$rD")
 	rD = (thisRule.mode ? "$rD Mode＝$thisRule.mode" : "$rD")
@@ -268,11 +284,8 @@ private varRuleString(thisRule, onlyHas, anonIt)	{
 	rD = (thisRule.checkOn ? "$rD Check ON＝${(anonIt ? thisRule.checkOn.size() : thisRule.checkOn)}" : "$rD")
 	rD = (thisRule.checkOff ? "$rD Check OFF＝${(anonIt ? thisRule.checkOff.size() : thisRule.checkOff)}" : "$rD")
 	if (thisRule.fromDate && thisRule.toDate)	{
-		def rDFT = dateInputValid(setings["fromDate$ruleNo"], setings["toDate$ruleNo"])
-		if (rDFT[0] && rDFT[1])	{
-			rD = (thisRule.fromDate ? "$rD From＝${setings["fromDate$ruleNo"]}" : "$rD")
-			rD = (thisRule.toDate ? "$rD To＝${setings["toDate$ruleNo"]}" : "$rD")
-		}
+		rD = "$rD From＝$thisRule.fromDate"
+		rD = "$rD To＝$thisRule.toDate"
 	}
 	if (thisRule.fromTimeType && thisRule.toTimeType)	{
 		def rFT = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime, location.timeZone)) : '')
@@ -417,7 +430,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 
 	["asleep settings:"],
 	["asleepSensor", "Asleep sensor:", null, true],
-	["asleepTime", "Asleep time:", null, false],
+	[["asleepTime", "Asleep time:", null, false], "varDate"],
 	["asleepButtonType", "Asleep button type:", null, false, "or", "asleepButton"],
 	["asleepButton", "Button device:", null, true],
 	["buttonIsAsleep", "Button number:", null, false, "or", "asleepButton"],

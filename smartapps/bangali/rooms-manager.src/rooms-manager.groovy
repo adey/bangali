@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.0"  }
+public static String version()		{  return "v0.99.1"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -519,7 +519,7 @@ private subscribeToRoomsP()	{
 	def rDOs = getChildRoomOccupancyDeviceObjects()
 	ifDebug("there are ${rDOs.size()} occupancy devices.", 'info')
 	for (def rD : rDOs)		subscribe(rD, "occupancy", forSTRelatedSmartApps);
-log.debug "perf subscribeToRoomsP: ${now() - nowTime} ms"
+//log.debug "perf subscribeToRoomsP: ${now() - nowTime} ms"
 }
 
 def forSTRelatedSmartApps(evt)		{}
@@ -547,6 +547,8 @@ def initialize()	{
 	if (state.noHealthCheckDevices)			state.remove('noHealthCheckDevices');
 	if (state.rSH)		state.remove('rSH');
 	state.colorsRotating = false
+	state.colorNotificationColor = null
+	state.colorNotificationColorStack = []
 	state.lastBatteryUpdate = ''
 	state.audioData = [:]
 	state.speaking = false
@@ -557,7 +559,7 @@ def initialize()	{
 def scheduleNext(data)		{
 	def nowTime = now()
 	if (data?.option)	{
-log.debug data
+//log.debug data
 		if (data.option.contains('time'))		tellTime();
 		if (data.option.contains('battery'))	batteryCheck();
 		if (data.option.contains('health'))		checkDeviceHealth();
@@ -583,15 +585,17 @@ log.debug data
 		def gTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", x.format("HH", location.timeZone).toInteger(), x.format("mm", location.timeZone).toInteger()), location.timeZone), location.timeZone)
 		state.schedules << [type:'git', time:gTime, timeS:(gTime.format("HH:mm", location.timeZone))]
 	}
-	def tTM = (cMM >= 45 ? 0 : (((cMM / 15).intValue() * 15) + 15)),
-		tTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (tTM == 0 ? (cHH == 23 ? 0 : cHH + 1) : cHH), tTM), location.timeZone), location.timeZone)
+	def tTM = (cMM >= 45 ? 0 : (((cMM / 15).intValue() * 15) + 15))
+	def	tTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (tTM == 0 ? (cHH == 23 ? 0 : cHH + 1) : cHH), tTM), location.timeZone), location.timeZone)
 	state.schedules << [type:'time', time:tTime, timeS:(tTime.format("HH:mm", location.timeZone))]
 //log.debug state.schedules
 
 	def rTime = false, rTimeS, rOpts = []
 	for (def schedule : state.schedules)	{
 		if (!rTime)		{
-			rTime = schedule.time; rTimeS = schedule.timeS; rOpts << schedule.type;
+			rTime = schedule.time
+			rTimeS = schedule.timeS
+			rOpts << schedule.type;
 			continue
 		}
 		if (rTimeS == schedule.timeS)	{
@@ -599,16 +603,18 @@ log.debug data
 			continue
 		}
 		if (schedule.time.before(rTime))	{
-			rTime = schedule.time; rTimeS = schedule.timeS; rOpts = [(schedule.type)];
+			rTime = schedule.time
+			rTimeS = schedule.timeS
+			rOpts = [(schedule.type)];
 		}
 	}
 //log.debug state.schedules
 //log.debug "rTime: $rTime | rTimeS: $rTimeS | rOpts : $rOpts"
 	if (rTime)	{
 		state.schedules << [type:'next', time:rTime, timeS:rTimeS, options:"$rOpts"]
-		runOnce(rTime, scheduleNext, [data: [option: "$rOpts"]])
+		runOnce(new Date(rTime.getTime() + 1000), scheduleNext, [data: [option: "$rOpts"]])
 	}
-//log.debug "perf scheduleNext: ${now() - nowTime} ms"
+log.debug "perf scheduleNext: ${now() - nowTime} ms"
 }
 
 // since hubitat does not support timeTodayAfter(...) 2018-04-08
@@ -719,7 +725,7 @@ def checkThermostatValid(childID, checkThermostat)	{
 	if (!checkThermostat)		return null;
 	def otherRoom = null
 	for (def child : childApps)		{
-		if (childID != child.id)	{
+		if (childID != child.id && (child.name != 'rooms vacation' && child.name != 'rooms child settings'))	{
 			def thermo = child.getChildRoomThermostat()
 			if (thermo && checkThermostat.getId() == thermo.thermostat.getId())		otherRoom = thermo.name;
 		}
@@ -896,6 +902,7 @@ private setupColorRotation()	{
 	state.colorsRotateSeconds = state.colorsToRotate.size() * 30
 	if (!state.colorsRotating)	{
 		state.colorsRotating = true
+		saveAnnounceSwitches()
 		state.colorsIndex = 0
 		announceSwitches.on()
 //        announceSwitches.setLevel(99)
@@ -912,11 +919,10 @@ def rotateColors()	{
 	if (state.colorsRotateSeconds > 0)
 		runOnce(new Date(now() + 5000), rotateColors)
 	else		{
+		restoreAnnounceSwitches()
 		state.colorsRotating = false
 		state.colorsToRotate = [:]
-		announceSwitches.off()
 	}
-	return
 }
 
 private whoCameHome(presenceSensor, left = false)	{
@@ -1026,8 +1032,8 @@ def batteryCheck()	{
 
 	if (announceSwitches && ((batteryLow == 0 && batteryOkColor) || (batteryLow > 0 && batteryLowColor)))	{
 		def color = convertRGBToHueSaturation((colorsRGB[(batteryLow > 0 ? batteryLowColor : batteryOkColor)][1]))
-		state.colorNotificationColor = color
-		setupColorNotification()
+////		state.colorNotificationColor = color
+		setupColorNotification(color)
 	}
 	state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." : "no device battery below $batteryLevel percent.")
 	speakIt(state.lastBatteryUpdate);
@@ -1038,68 +1044,62 @@ def batteryCheck()	{
 def modeEventHandler(evt)	{
 	ifDebug("modeEventHandler", 'info')
 	if (modeColor)	{
-		state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[modeColor][1]))
-		setupColorNotification()
+////		state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[modeColor][1]))
+		setupColorNotification(convertRGBToHueSaturation((colorsRGB[modeColor][1])))
 	}
 	if (speakModes)		speakIt(' Location mode changed to ' + location.currentMode.toString() + '. ')
+	scheduleNext()
 }
 
 def sunriseEventHandler(evt = null)	{
 	ifDebug("sunriseEventHandler", 'info')
-	state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunriseColor][1]))
-	setupColorNotification()
+////	state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunriseColor][1]))
+	setupColorNotification(convertRGBToHueSaturation((colorsRGB[sunriseColor][1])))
 	if (speakSun)		speakIt(' Sun rise, time is ' + format24hrTime() + ' hours. ')
+	scheduleNext()
 }
 
 def sunsetEventHandler(evt = null)	{
 	ifDebug("sunsetEventHandler", 'info')
-	state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunsetColor][1]))
-	setupColorNotification()
+////	state.colorNotificationColor = convertRGBToHueSaturation((colorsRGB[sunsetColor][1]))
+	setupColorNotification(convertRGBToHueSaturation((colorsRGB[sunsetColor][1])))
 	if (speakSun)		speakIt(' Sun set, time is ' + format24hrTime() + ' hours. ');
+	scheduleNext()
 }
 
 private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")		{
 	return timeToFormat.format("HH:mm", location.timeZone)
 }
 
-def setupColorNotification()	{
+def setupColorNotification(color = null)	{
 	ifDebug("setupColorNotification", 'info')
 	unschedule('setupColorNotification')
-	if (!announceSwitches || (announceInModes && !(announceInModes.contains(location.currentMode.toString()))))		return false;
 	def nowDate = new Date(now())
 	def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 	def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
-	if (intCurrentHH < startHHColor || (intCurrentHH > endHHColor || (intCurrentHH == endHHColor && intCurrentMM != 0)))
-		return
-	if (!state.colorsRotating)	{
-		state.colorNotifyTimes = 9
-		state.colorSwitchSave = []
-		state.colorColorSave = []
-		state.colorColorTemperatureSave = []
-		state.colorColorTemperatureTrueSave = []
-		for (def swt : announceSwitches)	{
-			state.colorSwitchSave << swt.currentSwitch
-			state.colorColorSave << [hue: swt.currentHue, saturation: swt.currentSaturation, level: swt.currentLevel]
-			def evts = swt.events(max: 250)
-			def foundValue = false
-			def keepSearching = true
-			for (def evt : evts)	{
-				if (!foundValue && keepSearching)	{
-					if (evt.value == 'setColorTemperature')
-						foundValue = true
-					else if (['hue', 'saturation'].contains(evt.name))
-						keepSearching = false
-				}
-				else
-					break
-			}
-			state.colorColorTemperatureTrueSave << (foundValue ? true : false)
-			state.colorColorTemperatureSave << swt.currentColorTemperature
-		}
-		notifyWithColor()
+	if ((!announceSwitches || (announceInModes && !(announceInModes.contains(location.currentMode.toString())))) ||
+		(intCurrentHH < startHHColor || (intCurrentHH > endHHColor || (intCurrentHH == endHHColor && intCurrentMM != 0))))	{
+		state.colorNotificationColorStack = []
+		return false
 	}
-	else
+	if (!state.colorsRotating && state.colorNotifyTimes <= 0)	{
+		state.colorNotifyTimes = 9
+		saveAnnounceSwitches()
+		if (!color)		{
+			if (state.colorNotificationColorStack)		{
+				color = state.colorNotificationColorStack[0]
+				state.colorNotificationColorStack.remove(0)
+			}
+		}
+		if (color)		{
+			state.colorNotificationColor = color
+			notifyWithColor()
+		}
+	}
+	else	{
+		if (color)		state.colorNotificationColorStack << color;
 		runOnce(new Date(now() + 10000), setupColorNotification)
+	}
 }
 
 def notifyWithColor()	{
@@ -1112,31 +1112,63 @@ def notifyWithColor()	{
 		announceSwitches.off()
 	unschedule('notifyWithColor')
 	state.colorNotifyTimes = state.colorNotifyTimes - 1
-	if (state.colorNotifyTimes >= 0)
+	if (state.colorNotifyTimes > 0)
 		runOnce(new Date(now() + 1000), notifyWithColor)
-	else		{
-		def i = 0
-		for (def swt : announceSwitches)	{
-			ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
-			if (state.colorColorTemperatureTrueSave[(i)] == true)	{
-			 	swt.setColorTemperature(state.colorColorTemperatureSave[(i)])
+	else	{
+		restoreAnnounceSwitches()
+		if (state.colorNotificationColorStack)
+			runOnce(new Date(now() + 3000), setupColorNotification)
+	}
+}
+
+private saveAnnounceSwitches()		{
+	unschedule('setAnnounceSwitches')
+	state.colorSwitchSave = []
+	state.colorColorSave = []
+	state.colorColorTemperatureSave = []
+	state.colorColorTemperatureTrueSave = []
+	for (def swt : announceSwitches)	{
+		state.colorSwitchSave << swt.currentSwitch
+		state.colorColorSave << [hue: swt.currentHue, saturation: swt.currentSaturation, level: swt.currentLevel]
+		def evts = swt.events(max: 250)
+		def foundValue = false
+		def keepSearching = true
+		for (def evt : evts)	{
+			if (!foundValue && keepSearching)	{
+				if (evt.value == 'setColorTemperature')
+					foundValue = true
+				else if (['hue', 'saturation'].contains(evt.name))
+					keepSearching = false
 			}
 			else
-				swt.setColor(state.colorColorSave[(i)])
-			swt.setLevel(state.colorColorSave[(i)].level)
-			i = i + 1
+				break
 		}
-		if (getHubType() == _Hubitat)	{
-			def nowTime = now()
-			def tillTime = nowTime + 250
-			while (nowTime < tillTime)		nowTime = now();
-		}
-		i = 0
-		for (def swt : announceSwitches)	{
-			swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"()
-			i = i + 1
-		}
+		state.colorColorTemperatureTrueSave << (foundValue ? true : false)
+		state.colorColorTemperatureSave << swt.currentColorTemperature
 	}
+}
+
+private restoreAnnounceSwitches()	{
+	def i = 0
+	for (def swt : announceSwitches)	{
+		ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
+		if (state.colorColorTemperatureTrueSave[(i)] == true)
+			swt.setColorTemperature(state.colorColorTemperatureSave[(i)])
+		else
+			swt.setColor(state.colorColorSave[(i)])
+		swt.setLevel(state.colorColorSave[(i)].level)
+		i = i + 1
+	}
+	runOnce(new Date(now() + 1500), setAnnounceSwitches)
+}
+
+def setAnnounceSwitches()	{
+	def i = 0
+	for (def swt : announceSwitches)	{
+		swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"()
+		i = i + 1
+	}
+	scheduleNext()
 }
 
 def tellTime()	{
@@ -1260,8 +1292,8 @@ def checkDeviceHealth()	{
 		state.lastDeviceHealthUpdate = (state.deviceConnectivity ? "$state.deviceConnectivity devices have not checked in last $eventHours hours." : "device connectivity is ok.")
 		if (announceSwitches && ((!state.deviceConnectivity && healthOkColor) || (state.deviceConnectivity && healthWarnColor)))	{
 			def color = convertRGBToHueSaturation(colorsRGB[(state.deviceConnectivity ?  healthWarnColor : healthOkColor)][1])
-			state.colorNotificationColor = color
-			setupColorNotification()
+////			state.colorNotificationColor = color
+			setupColorNotification(color)
 		}
 		if (_healthCheck.contains(healthEvery?.toInteger()))	{
 			ifDebug("_healthCheck: $_healthCheck | healthEvery: $healthEvery | state.healthHours: $state.healthHours")
@@ -1331,8 +1363,12 @@ private getVacationApp()	{
 
 def pageAllSettings(setings, allRules, childCreated, onlyHas, anonIt)	{
 	def settingsApp = spawnChildSettings()
-log.debug settingsApp.name
 	return	(settingsApp.allSettings(setings, allRules, childCreated, onlyHas, anonIt))
+}
+
+def pageRuleDelete(allRules)	{
+	def settingsApp = spawnChildSettings()
+	return	(settingsApp.ruleDelete(allRules))
 }
 
 private spawnChildSettings()	{

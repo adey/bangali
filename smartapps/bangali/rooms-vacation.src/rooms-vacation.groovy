@@ -25,7 +25,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.0"  }
+public static String version()		{  return "v0.99.1"  }
 boolean isDebug()					{  return false  }
 
 definition	(
@@ -73,9 +73,15 @@ def installed()		{ initialize() }
 
 def updated()		{
 	def nowTime = now()
-	ifDebug("updated", 'info')
 	initialize()
 	def hT = getHubType()
+	def pVer = parent.version()
+	def ver = version()
+	if (pVer != ver)		{
+		ifDebug("Rooms Vacation app verion does not match Rooms Manager app version. Parent version is $pVer and this app version is ${ver}. Please update app code and save${(hT == _SmartThings ? '/publish' : '')} before trying again.", 'error')
+		return
+	}
+	ifDebug("updated", 'info')
 	if (hT == 'ST')		state.vacaDisabled = (vacaState ? false : true);
 	state.vacaRoomDevices = (vacaRooms ? parent.getRoomDevices(vacaRooms) : [:])
 	if (!state.vacaDisabled)	{

@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.0"  }
+public static String version()		{  return "v0.99.1"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -154,7 +154,7 @@ def engaged(hS = true, vM = false)			{  stateUpdateSetup('engaged', hS, vM)  }
 def kaput(hS = true, vM = false)			{  stateUpdateSetup('kaput', hS, vM)  }
 
 private stateUpdateSetup(rSt, hS, vM)	{
-	runIn(0, stateUpdate, [data: [newState:rSt, handleSwitches:true, vacationMode:vM]])
+	runIn(0, stateUpdate, [data: [newState:rSt, handleSwitches:hS, vacationMode:vM]])
 }
 
 def	stateUpdate(data)		{
@@ -247,7 +247,7 @@ def setupTimer(int timer)	{
 }
 
 def timerNext()		{
-	int timerUpdate = (state.timerLeft > 60 ? 60 : (state.timerLeft < 5 ? state.timerLeft : 5))
+	int timerUpdate = (state.timerLeft > 30 ? 30 : (state.timerLeft < 5 ? state.timerLeft : 5))
 	def timerInd = (state.timerLeft > 3600 ? (state.timerLeft / 3600f).round(1) + 'h' : (state.timerLeft > 60 ? (state.timerLeft / 60f).round(1) + 'm' : state.timerLeft + 's')).replace(".0","")
 	if (getHubType() != _Hubitat())
 		sendEvent(name: "timer", value: (timerInd ?: '--'), isStateChange: true, displayed: false)
