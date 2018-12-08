@@ -2065,6 +2065,9 @@ def	initialize()	{
 	unschedule()
 	sendLocationEvent(name: "AskAlexaMQRefresh", isStateChange: true)
 	state.remove("pList")
+	state.colorsRotating = false
+	state.colorNotificationColor = null
+	state.colorNotificationColorStack = []
 }
 
 def askAlexaMQHandler(evt)	{
@@ -2917,8 +2920,8 @@ private contactEngaged(fromOpened)	{
 private contactAnnounce(dev, cV, opened)		{
 	if (announceDoor)	{
 		if (announceDoorColor)	{
-			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceDoorColor][1])
-			setupColorNotification()
+//			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceDoorColor][1])
+			setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceDoorColor][1]))
 		}
 		if (announceDoorSpeaker)
 			speakIt(dev.displayName + (opened ? ' opened. ' : ' closed. '))
@@ -2944,8 +2947,8 @@ def contactStaysOpen()	{
 		if (cOCount > 0 && announceContact)	{
 			cO = addAnd(cO)
 			if (announceContactColor)	{
-				state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactColor][1])
-				setupColorNotification()
+//				state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactColor][1])
+				setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceContactColor][1]))
 			}
 			if (announceContactSpeaker)		speakIt('Contacts ' + cO + " ${(cOCount == 1 ? 'is' : 'are')} open. ");
 		}
@@ -2994,8 +2997,8 @@ def	contactsRTEventHandler(evt)	{
 	if (getHubType() != _Hubitat)		child.updateContactRTIndC(contactSensorsRT.currentContact.contains(open) ? 0 : 1);
 	if (announceContactRT)	{
 		if (announceContactRTColor)	{
-			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1])
-			setupColorNotification()
+//			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1])
+			setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1]))
 		}
 		if (announceContactRTSpeaker)	speakIt(evt.device.displayName + ' ' + evt.value.toString() + '.');
 	}
@@ -4709,37 +4712,54 @@ private speakIt(str)	{
 	}
 }
 
-def setupColorNotification()	{
+def setupColorNotification(color = null)	{
 	ifDebug("setupColorNotification", 'info')
-	if (announceInModes && !(announceInModes.contains(location.currentMode.toString())))		return false;
+	unschedule('setupColorNotification')
 	def nowDate = new Date(now())
 	def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 	def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
-	if (intCurrentHH < startHHColor || (intCurrentHH > endHHColor || (intCurrentHH == endHHColor && intCurrentMM != 0)))
-		return
-	if (!state.colorsRotating)	{
+	if ((!announceSwitches || (announceInModes && !(announceInModes.contains(location.currentMode.toString())))) ||
+		(intCurrentHH < startHHColor || (intCurrentHH > endHHColor || (intCurrentHH == endHHColor && intCurrentMM != 0))))	{
+		state.colorNotificationColorStack = []
+		return false
+	}
+	if (!state.colorsRotating && state.colorNotifyTimes <= 0)	{
 		state.colorNotifyTimes = 9
 		saveAnnounceSwitches()
-		notifyWithColor()
+		if (!color)		{
+			if (state.colorNotificationColorStack)		{
+				color = state.colorNotificationColorStack[0]
+				state.colorNotificationColorStack.remove(0)
+			}
+		}
+		if (color)		{
+			state.colorNotificationColor = color
+			notifyWithColor()
+		}
 	}
-	else
-		runIn(10, setupColorNotification)
+	else	{
+		if (color)		state.colorNotificationColorStack << color;
+		runOnce(new Date(now() + 10000), setupColorNotification)
+	}
 }
 
 def notifyWithColor()	{
-//	ifDebug("notifyWithColor", 'info')
-	if (state.colorNotifyTimes % 2)		{
+//    ifDebug("notifyWithColor", 'info')
+	if (state.colorNotifyTimes % 2)	{
 		announceSwitches.on()
 		announceSwitches.setColor(state.colorNotificationColor)
 	}
 	else
 		announceSwitches.off()
-
+	unschedule('notifyWithColor')
 	state.colorNotifyTimes = state.colorNotifyTimes - 1
-	if (state.colorNotifyTimes >= 0)
-		runIn(1, notifyWithColor)
-	else
+	if (state.colorNotifyTimes > 0)
+		runOnce(new Date(now() + 1000), notifyWithColor)
+	else	{
 		restoreAnnounceSwitches()
+		if (state.colorNotificationColorStack)
+			runOnce(new Date(now() + 5000), setupColorNotification)
+	}
 }
 
 private saveAnnounceSwitches()		{
@@ -4780,7 +4800,7 @@ private restoreAnnounceSwitches()	{
 		swt.setLevel(state.colorColorSave[(i)].level)
 		i = i + 1
 	}
-	runOnce(new Date(now() + 1000), setAnnounceSwitches)
+	runOnce(new Date(now() + 2500), setAnnounceSwitches)
 }
 
 def setAnnounceSwitches()	{
@@ -4789,7 +4809,6 @@ def setAnnounceSwitches()	{
 		swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"()
 		i = i + 1
 	}
-	scheduleNext()
 }
 
 private presenceActionArrival()		{

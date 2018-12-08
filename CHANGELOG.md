@@ -1,3 +1,11 @@
+Version: 0.99.2
+---------------
+
+DONE:   12/08/2018
+
+1) standardized color notification routine
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
 Version: 0.99.1
 ---------------
 
@@ -10,7 +18,7 @@ DONE:   12/01/2018
 2) added feature back for room engaged with music
 	- if using this feature remember to save settings for this room if its already been setup
 3) added recovery for recurring processing if those schedules get cancelled
-4) changed countdown timer display to 30 second interval because some users are impatient when are watching the countdown to make sure it works ;-)
+4) changed countdown timer display to 30 second interval because some users are impatient when watching the countdown to make sure it works ;-)
 5) fixed bug for contact sensor spoken announcement and hidden percentage change trigger for humidity rule value
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 

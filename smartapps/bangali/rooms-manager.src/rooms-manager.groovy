@@ -1117,7 +1117,7 @@ def notifyWithColor()	{
 	else	{
 		restoreAnnounceSwitches()
 		if (state.colorNotificationColorStack)
-			runOnce(new Date(now() + 3000), setupColorNotification)
+			runOnce(new Date(now() + 5000), setupColorNotification)
 	}
 }
 
@@ -1159,7 +1159,7 @@ private restoreAnnounceSwitches()	{
 		swt.setLevel(state.colorColorSave[(i)].level)
 		i = i + 1
 	}
-	runOnce(new Date(now() + 1500), setAnnounceSwitches)
+	runOnce(new Date(now() + 2500), setAnnounceSwitches)
 }
 
 def setAnnounceSwitches()	{
