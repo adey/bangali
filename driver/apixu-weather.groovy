@@ -34,9 +34,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.0.2"  }
+public static String version()      {  return "v4.0.3"  }
 
 /***********************************************************************************************************************
+*
+* Version: 4.0.3
+*   12/09/2018: added wind speed in MPS (meters per second)
 *
 * Version: 4.0.2
 *   10/28/2018: continue publishing lux even if apixu api call fails.
@@ -102,6 +105,7 @@ metadata    {
         attribute "visualWithText", "string"
         attribute "wind_mph", "string"
         attribute "wind_kph", "string"
+		attribute "wind_mps", "string"
         attribute "wind_degree", "string"
         attribute "wind_dir", "string"
 //        attribute "pressure_mb", "string"
@@ -231,6 +235,7 @@ def poll()      {
     sendEvent(name: "visualWithText", value: '<img src=' + imgName + '><br>' + obs.current.condition.text, isStateChange: true, displayed: true)
     sendEvent(name: "wind_mph", value: obs.current.wind_mph, unit: "MPH", isStateChange: true, displayed: true)
     sendEvent(name: "wind_kph", value: obs.current.wind_kph, unit: "KPH", isStateChange: true, displayed: true)
+	sendEvent(name: "wind_mps", value: ((obs.current.wind_kph / 3.6f).round(1)), unit: "MPS", isStateChange: true, displayed: true)
     sendEvent(name: "wind_degree", value: obs.current.wind_degree, unit: "DEGREE", isStateChange: true, displayed: true)
     sendEvent(name: "wind_dir", value: obs.current.wind_dir, isStateChange: true, displayed: true)
 //    sendEvent(name: "pressure_mb", value: obs.current.pressure_mb, unit: "MBAR")
