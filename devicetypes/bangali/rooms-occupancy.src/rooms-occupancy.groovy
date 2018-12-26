@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.1"  }
+public static String version()		{  return "v0.99.3"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }

@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.1"  }
+public static String version()		{  return "v0.99.3"  }
 
 import groovy.transform.Field
 
@@ -290,8 +290,10 @@ private varRuleString(thisRule, anonIt)	{
 	if (thisRule.fromTimeType && thisRule.toTimeType)	{
 		def rFT = (thisRule.fromTime ? format24hrTime(timeToday(thisRule.fromTime, location.timeZone)) : '')
 		def rTT = (thisRule.toTime ? format24hrTime(timeToday(thisRule.toTime, location.timeZone)) : '')
-		rD = (thisRule.fromTimeType == _timeTime ? "$rD From＝$rFT" : (thisRule.fromTimeType == _timeSunrise ? "$rD From＝Sunrise" + varRuleTimeOffset(thisRule.fromTimeOffset) : "$rD From＝Sunset" + varRuleTimeOffset(thisRule.fromTimeOffset)))
-		rD = (thisRule.toTimeType == _timeTime ? "$rD To＝$rTT" : (thisRule.toTimeType == _timeSunrise ? "$rD To＝Sunrise" + varRuleTimeOffset(thisRule.toTimeOffset) : "$rD To＝Sunset" + varRuleTimeOffset(thisRule.toTimeOffset)))
+		rD = (thisRule.fromTimeType == _timeTime ? "$rD From＝$rFT" :
+					(thisRule.fromTimeType == _timeSunrise ? "$rD From＝Sunrise" + varRuleTimeOffset(thisRule.fromTimeOffset) : "$rD From＝Sunset" + varRuleTimeOffset(thisRule.fromTimeOffset)))
+		rD = (thisRule.toTimeType == _timeTime ? "$rD To＝$rTT" :
+					(thisRule.toTimeType == _timeSunrise ? "$rD To＝Sunrise" + varRuleTimeOffset(thisRule.toTimeOffset) : "$rD To＝Sunset" + varRuleTimeOffset(thisRule.toTimeOffset)))
 	}
 	rD = rD + ' Type＝' + (thisRule.type == _HRule ? 'Humidity' : (thisRule.type == _TRule ? 'Temperature' : 'Execution'))
 	if (thisRule.type == _HRule)	{
@@ -330,7 +332,7 @@ private varRuleString(thisRule, anonIt)	{
 	return rD
 }
 
-private varRuleTimeOffset(offset, setings, allRules, childCreated, onlyHas, anonIt)		{  return String.format( " %+d", offset.toInteger())  }
+private varRuleTimeOffset(offset)		{  return String.format( " %+d", offset.toInteger())  }
 
 private varNightLightOn(nLO, setings, allRules, childCreated, onlyHas, anonIt)		{
 	if (!nLO)	return ''
@@ -430,7 +432,8 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 
 	["asleep settings:"],
 	["asleepSensor", "Asleep sensor:", null, true],
-	[["asleepTime", "Asleep time:", null, false], "varDate"],
+	[["asleepFromTime", "Asleep from time:", null, false], "varDate"],
+	[["asleepToTime", "Asleep to time:", null, false], "varDate"],
 	["asleepButtonType", "Asleep button type:", null, false, "or", "asleepButton"],
 	["asleepButton", "Button device:", null, true],
 	["buttonIsAsleep", "Button number:", null, false, "or", "asleepButton"],

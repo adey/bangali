@@ -1,9 +1,12 @@
-Version: 0.99.2
+Version: 0.99.3
 ---------------
 
-DONE:   12/08/2018
+DONE:   12/22/2018
 
 1) standardized color notification routine
+2) added asleep from and to times in asleep settings
+3) various bug fixes and optimizations
+- **REQUIRES SAVING ROOMS MANAGER AND ALL ROOMS CHILD APP SETTINGS AFTER UPDATING CODE. REMEMBER TO UPDATE DTH/DRIVER CODE ALSO.**
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
 Version: 0.99.1

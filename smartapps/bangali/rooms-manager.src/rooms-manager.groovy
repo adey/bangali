@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.1"  }
+public static String version()		{  return "v0.99.3"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -73,7 +73,19 @@ preferences	{
 def mainPage()	{
 	def appChildren = app.getChildApps().sort { it.label }
 	def hT = getHubType()
+	if (batteryCheckDevices)	batteryCheck([fromUI:true]);
 	dynamicPage(name: "mainPage", title: (hT != _SmartThings ? 'Installed Rooms' : ''), install: false, uninstall: true, submitOnChange: true, nextPage: "pageSpeakerSettings")	{
+		if ((batteryTime && state.batteryLowLevels) || (checkHealth && state.deviceConnectivity))
+			section(hT == _Hubitat ? '<FONT COLOR="cc3333">ALERTS:</FONT>' : 'ALERTS:') {
+				if (checkHealth && state.deviceConnectivity)	{
+					paragraph "DEVICES THAT HAVE NOT CONNECTED WITHIN LAST $eventHours HOURS:"
+					paragraph state.deviceConnectivity
+				}
+				if (batteryTime && state.batteryLowLevels)	{
+					paragraph "DEVICES WITH BATTERY LEVEL BELOW $batteryLevel%:"
+					paragraph state.batteryLowLevels
+				}
+			}
 		section() {
 			app(name: "rooms manager", appName: "rooms child app", namespace: "bangali", title: "New Room", multiple: true)
 		}
@@ -397,8 +409,10 @@ def pageBatteryAnnouncementSettings()	{
 		}
 		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Battery Devices to check");
-			if (batteryTime)
-				input "batteryCheckDevices", "capability.battery", title: "Check which battery devices?", required: false, multiple: true
+			if (batteryTime)	{
+				input "batteryCheckDevices", "capability.battery", title: "Check which battery devices?", required:false, multiple:true, submitOnChange:true
+				if (batteryCheckDevices)	paragraph (state.batteryLowLevels ?: state.batteryLevels);
+			}
 			else
 				paragraph "Check which battery devices?\nselect announce battery status time to set"
 		}
@@ -421,7 +435,7 @@ def pageDeviceConnectivitySettings()	{
 				paragraph "Device event within how many hours?"
 			}
 		}
-		section("")	{
+		section()	{
 			if (checkHealth && (playerDevice || announceSwitches))
 				input "healthEvery", "enum", title: "Spoken announcement: Every how many hours?", required: true, multiple: false, defaultValue: 0, options: [0:"No spoken announcement", 1:"1 hour", 2:"2 hours", 3:"3 hours", 6:"6 hours", 12:"12 hours", 24:"24 hours"]
 			else
@@ -438,6 +452,13 @@ def pageDeviceConnectivitySettings()	{
 			}
 		}
 		section()	{
+			if (hT == _Hubitat)		paragraph subHeaders("Devices to check");
+			if (checkHealth)
+				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: true, multiple: true
+			else
+				paragraph "Check which devices?\nselect device connectivity to set"
+		}
+		section()	{
 			if (hT == _Hubitat)		paragraph subHeaders("Health critical");
 			if (checkHealth && phoneNumber)
 				input "healthCriticalNotification", "bool", title: "Critical devices: Send SMS if connectivity check fails?", required: false, defaultValue: false, submitOnChange: true
@@ -447,13 +468,6 @@ def pageDeviceConnectivitySettings()	{
 				input "healthCriticalDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Critical devices: Which critical devices?", required: (!!healthCriticalNotification), multiple: true
 			else
 				paragraph "Critical devices: Which critical devices?${(!(checkHealth && phoneNumber) ? '' : "\nselect device connectivity to set" )}"
-		}
-		section()	{
-			if (hT == _Hubitat)		paragraph subHeaders("Devices to check");
-			if (checkHealth)
-				input "healthAddDevices", "capability.${(hT == _Hubitat ? '*' : 'sensor')}", title: "Check which devices?", required: true, multiple: true
-			else
-				paragraph "Check which devices?\nselect device connectivity to set"
 		}
 	}
 }
@@ -559,11 +573,11 @@ def initialize()	{
 def scheduleNext(data)		{
 	def nowTime = now()
 	if (data?.option)	{
-//log.debug data
-		if (data.option.contains('time'))		tellTime();
-		if (data.option.contains('battery'))	batteryCheck();
-		if (data.option.contains('health'))		checkDeviceHealth();
-		if (data.option.contains('git'))		githubUpdated();
+log.debug data
+		if (data.option.contains('time'))		runIn(0, tellTime);
+		if (data.option.contains('battery'))	runIn(0, batteryCheck);
+		if (data.option.contains('health'))		runIn(0, checkDeviceHealth);
+		if (data.option.contains('git'))		runIn(0, githubUpdated);
 	}
 	def nowDate = new Date(now())
 	def cHH = nowDate.format("HH", location.timeZone).toInteger()
@@ -577,7 +591,8 @@ def scheduleNext(data)		{
 	}
 	if (checkHealth)	{
 		def hMP = healthMinsPast.toInteger()
-		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (hMP > cMM ? cHH : (cHH == 23 ? 0 : cHH + 1)), hMP), location.timeZone), location.timeZone)
+		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", cHH, hMP), location.timeZone), location.timeZone)
+//		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (hMP > cMM ? cHH : (cHH == 23 ? 0 : cHH + 1)), hMP), location.timeZone), location.timeZone)
 		state.schedules << [type:'health', time:hTime, timeS:(hTime.format("HH:mm", location.timeZone))]
 	}
 	if (gitTime)	{
@@ -590,7 +605,9 @@ def scheduleNext(data)		{
 	state.schedules << [type:'time', time:tTime, timeS:(tTime.format("HH:mm", location.timeZone))]
 //log.debug state.schedules
 
-	def rTime = false, rTimeS, rOpts = []
+	def rTime = false
+	def rTimeS
+	def rOpts = []
 	for (def schedule : state.schedules)	{
 		if (!rTime)		{
 			rTime = schedule.time
@@ -612,7 +629,8 @@ def scheduleNext(data)		{
 //log.debug "rTime: $rTime | rTimeS: $rTimeS | rOpts : $rOpts"
 	if (rTime)	{
 		state.schedules << [type:'next', time:rTime, timeS:rTimeS, options:"$rOpts"]
-		runOnce(new Date(rTime.getTime() + 1000), scheduleNext, [data: [option: "$rOpts"]])
+log.debug state.schedules
+		runOnce(new Date(rTime.getTime() + new Random().nextInt(3000)), scheduleNext, [data: [option: "$rOpts"]])
 	}
 log.debug "perf scheduleNext: ${now() - nowTime} ms"
 }
@@ -1009,32 +1027,33 @@ def getCurrentState(childID)	{
 	return currentState
 }
 
-def batteryCheck()	{
+def batteryCheck(fromUI = [:])	{
 	ifDebug("batteryCheck", 'info')
 	def nowTime = now()
 	state.batteryLevels = ''
+	state.batteryLowLevels = ''
 
 	def bat
 	def batteryNames = ''
 	def batteryLow = 0
-	def cnt = 0
+	def cnt = batteryCheckDevices.size()
 	for (def bit : batteryCheckDevices)	{
-		cnt = cnt + 1
 		bat = bit.currentBattery
 		if (bat < batteryLevel)		{
 			batteryLow = batteryLow + 1
-			batteryNames = batteryNames + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
+			batteryNames = batteryNames + (batteryNames ? ', ' : '') + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}"
 		}
-		state.batteryLevels = state.batteryLevels + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}, "
+		state.batteryLevels = state.batteryLevels + (state.batteryLevels ? ', ' : '') + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}"
 	}
-	if (batteryNames)		batteryNames = addAnd(batteryNames);
-	if (state.batteryNames)	state.batteryNames = addAnd(state.batteryNames);
+	if (batteryNames)		{
+		batteryNames = addAnd(batteryNames)
+		state.batteryLowLevels = batteryNames
+	}
+	if (state.batteryLevels)	state.batteryLevels = addAnd(state.batteryLevels);
+	if (fromUI)		return;
 
-	if (announceSwitches && ((batteryLow == 0 && batteryOkColor) || (batteryLow > 0 && batteryLowColor)))	{
-		def color = convertRGBToHueSaturation((colorsRGB[(batteryLow > 0 ? batteryLowColor : batteryOkColor)][1]))
-////		state.colorNotificationColor = color
-		setupColorNotification(color)
-	}
+	if (announceSwitches && ((batteryLow == 0 && batteryOkColor) || (batteryLow > 0 && batteryLowColor)))
+		setupColorNotification(convertRGBToHueSaturation((colorsRGB[(batteryLow > 0 ? batteryLowColor : batteryOkColor)][1])))
 	state.lastBatteryUpdate = ( batteryNames?.trim() ? "the following battery devices are below $batteryLevel percent $batteryNames." : "no device battery below $batteryLevel percent.")
 	speakIt(state.lastBatteryUpdate);
 	if (batterySms && batteryLow > 0)		roomsSMS("Rooms Manager: $batteryLow ${(batteryLow > 1 ? 'batteries are' : 'battery is')} low.");
@@ -1117,7 +1136,7 @@ def notifyWithColor()	{
 	else	{
 		restoreAnnounceSwitches()
 		if (state.colorNotificationColorStack)
-			runOnce(new Date(now() + 5000), setupColorNotification)
+			runOnce(new Date(now() + (getHubType() == _SmartThings ? 500 : 5000)), setupColorNotification)
 	}
 }
 
@@ -1159,7 +1178,7 @@ private restoreAnnounceSwitches()	{
 		swt.setLevel(state.colorColorSave[(i)].level)
 		i = i + 1
 	}
-	runOnce(new Date(now() + 2500), setAnnounceSwitches)
+	runOnce(new Date(now() + (getHubType() == _SmartThings ? 250 : 2500)), setAnnounceSwitches)
 }
 
 def setAnnounceSwitches()	{
@@ -1248,16 +1267,15 @@ def checkDeviceHealth()	{
 	def hT = getHubType()
 
 	def timer = (hT == _SmartThings ? 10000l : 1000l)
-	def cnt = 0
+	def cnt = healthAddDevices.size()
 	for (def dit : healthAddDevices)		{
 		def nowTime2 = now() - nowTime
 		if (nowTime2 > timer)	break;
 		if (!state.connected.devices.contains(dit.id))	continue;
-		cnt = cnt + 1
 		def deviceEventFound = false
 		if (hT == _SmartThings)		{
 			def lastEvents
-			for (def x = 1; x < 3; x++)		{
+			for (def x = 1; x <= 3; x++)		{
 				def noOfEvents = Math.pow(5, x).toInteger()
 				lastEvents = dit.events(max: noOfEvents).findAll	{ it.eventSource == 'DEVICE' && it.date.after(cDT) }
 				if (lastEvents)	{
@@ -1296,10 +1314,11 @@ def checkDeviceHealth()	{
 			setupColorNotification(color)
 		}
 		if (_healthCheck.contains(healthEvery?.toInteger()))	{
-			ifDebug("_healthCheck: $_healthCheck | healthEvery: $healthEvery | state.healthHours: $state.healthHours")
+//			ifDebug("_healthCheck: $_healthCheck | healthEvery: $healthEvery | state.healthHours: $state.healthHours")
+			if ((new Date(now())).format("HH", location.timeZone).toInteger() == startHH)		state.healthHours = 0;
 			if (state.healthHours == 0 && state.deviceConnectivity)
 				speakIt(state.lastDeviceHealthUpdate)
-			state.healthHours = (state.healthHours == 0 ? healthEvery.toInteger() : state.healthHours - 1)
+			state.healthHours = (state.healthHours == 0 ? healthEvery.toInteger() : state.healthHours) - 1
 		}
 	}
 //log.debug "perf checkDeviceHealth: ${now() - nowTime} ms, checked $cnt devices"
