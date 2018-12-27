@@ -14,7 +14,8 @@
 *
 *  Author: bangali
 *
-*  2018-12-24	added option to use attribute value in device command
+*  2018-12-26   cleaned up settings bug
+*  2018-12-24	added option to use attribute value as first parameter in device command
 *  2018-10-30	display defaul room name in settings
 *  2018-10-26	change value type when retrieving from state
 *  2018-10-26	change device subscription for attribute
@@ -30,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v4.0.0"  }
+public static String version()		{  return "v4.0.1"  }
 
 definition		(
 	name: "WATO child app",
@@ -167,7 +168,7 @@ def wato()		{
 						}
 						else	{
 							input "devCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
-							app.removeSetting("devUnCParamAttrVal$i")
+							app.removeSetting("devCParamAttrVal$i")
 						}
 						i = i + 1
 					}
