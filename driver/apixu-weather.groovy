@@ -2,8 +2,9 @@
 *  Copyright 2018 bangali
 *
 *  Contributors:
-*       https://github.com/jebbett      code for new weather icons based on weather condition data.
+*       https://github.com/jebbett      code for new weather icons based on weather condition data
 *       https://www.deviantart.com/vclouds/art/VClouds-Weather-Icons-179152045     new weather icons courtesy of VClouds
+*		https://github.com/arnbme		code for mytile
 *
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License. You may obtain a copy of the License at:
@@ -34,12 +35,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.0.4"  }
+public static String version()      {  return "v4.1.0"  }
 
 /***********************************************************************************************************************
 *
-* Version: 4.0.4
-*   12/29/2018: added mytile (Arn Burkhoff)
+* Version: 4.1.0
+*   12/29/2018: merged mytile code
 *
 * Version: 4.0.3
 *   12/09/2018: added wind speed in MPS (meters per second)
@@ -282,27 +283,32 @@ def poll()      {
                             obs.forecast.forecastday[0].day.maxtemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
     sendEvent(name: "temperatureLowDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.mintemp_f :
                             obs.forecast.forecastday[0].day.mintemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
-	def mytext =obs.location.name + ', ' + obs.location.region
-	if (isFahrenheit)
-		{
-		mytext+='<br>' + "${Math.round(obs.current.temp_f)}" + '&deg;F ' + obs.current.humidity + '%'
-		mytext+='<br>' + localSunrise + ' <img style="height:1em" src=https:' + obs.current.condition.icon + '> ' + localSunset
-		if (wind_mytile == "0 mph ")
-			mytext+='<br> Wind is calm'
-		else
-			mytext+='<br>' + obs.current.wind_dir + ' ' + wind_mytile
-		mytext+='<br>' + obs.current.condition.text
-		}
-	else
-		{
-		mytext+='<br>' + obs.current.temp_c + '&deg;C ' + obs.current.humidity + '%'
-		mytext+='<br>' + localSunrise + ' <img style="height:1.5em" src=https:' + obs.current.condition.icon + '> ' + localSunset
-		if (wind_mytile == "0 kph ")
-			mytext+='<br> Wind is calm'
-		else
-			mytext+='<br>' + obs.current.wind_dir + ' ' + wind_mytile
-		mytext+='<br>' + obs.current.condition.text
-		}
+
+	def mytext = obs.location.name + ', ' + obs.location.region
+//	if (isFahrenheit)	{
+//		mytext += '<br>' + "${Math.round(obs.current.temp_f)}" + '&deg;F ' + obs.current.humidity + '%'
+//		mytext += '<br>' + localSunrise + ' <img style="height:1em" src=https:' + obs.current.condition.icon + '> ' + localSunset
+//		mytext += (wind_mytile == "0 mph " ? '<br> Wind is calm' : '<br>' + obs.current.wind_dir + ' ' + wind_mytile)
+//		if (wind_mytile == "0 mph ")
+//			mytext+='<br> Wind is calm'
+//		else
+//			mytext+='<br>' + obs.current.wind_dir + ' ' + wind_mytile
+//		mytext += '<br>' + obs.current.condition.text
+//	}
+//	else	{
+//		mytext += '<br>' + obs.current.temp_c + '&deg;C ' + obs.current.humidity + '%'
+//		mytext += '<br>' + localSunrise + ' <img style="height:1.5em" src=https:' + obs.current.condition.icon + '> ' + localSunset
+//		mytext += (wind_mytile == "0 kph " ? '<br> Wind is calm' : '<br>' + obs.current.wind_dir + ' ' + wind_mytile)
+//		if (wind_mytile == "0 kph ")
+//			mytext+='<br> Wind is calm'
+//		else
+//			mytext+='<br>' + obs.current.wind_dir + ' ' + wind_mytile
+//		mytext += '<br>' + obs.current.condition.text
+//	}
+	mytext += '<br>' + (isFahrenheit ? "${Math.round(obs.current.temp_f)}" + '&deg;F ' : obs.current.temp_c + '&deg;C ') + obs.current.humidity + '%'
+	mytext += '<br>' + localSunrise + ' <img style="height:1em" src=https:' + obs.current.condition.icon + '> ' + localSunset
+	mytext += (wind_mytile == (isFahrenheit ? "0 mph " : "0 kph ") ? '<br> Wind is calm' : '<br>' + obs.current.wind_dir + ' ' + wind_mytile)
+	mytext += '<br>' + obs.current.condition.text
 
     sendEvent(name: "mytile", value: mytext, isStateChange: true, displayed: true)
     return
