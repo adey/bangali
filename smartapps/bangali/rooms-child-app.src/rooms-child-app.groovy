@@ -4560,7 +4560,7 @@ log.debug "runTime: $runTime | opt: $opt"
 
 //	if (evtOK)	{
 //		def x = null
-		if (evt.option?.contains('sleep'))
+		if (evt.option && evt.option.contains('sleep'))
 			asleep()
 		else if (!evt.option || evt.option.contains('time') || evt.option.contains('process'))
 			checkAndTurnOnOffSwitchesC()
