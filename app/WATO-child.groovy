@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2018-12-30   added support to check for any changes to device attribute value
 *  2018-12-26   cleaned up settings bug
 *  2018-12-24	added option to use attribute value as first parameter in device command
 *  2018-10-30	display defaul room name in settings
@@ -31,7 +32,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v4.0.1"  }
+public static String version()		{  return "v4.1.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -129,6 +130,12 @@ def wato()		{
 
 	if (attrTyp == 'Text')		app.removeSetting("attrMath");
 	else						app.removeSetting("attrCase");
+	if (attrOp && attrOp == '⬆︎⬇︎')		{
+		app.removeSetting("attrTyp")
+		app.removeSetting("attrCase")
+		app.removeSetting("attrMath")
+		app.removeSetting("attrVal")
+	}
 	def lS = updLbl()
 
 	dynamicPage(name: "wato", title: "", install: true, uninstall: true)		{
@@ -142,16 +149,19 @@ def wato()		{
 			if (attrDev)
 				input "attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allAttrs
 			if (attr)
-				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:["<", "<=", "=", ">=", ">", "!=", "⬆︎", "⬇︎"]
-			if (attrOp)
+				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:[['<':"< (less than)"], ['<=':"<= (less than or equals to)"], ['=':"= (equals to)"], ['>=':">= {greater than or equals to}"], ['>':"> {greater than}"], ['!=':"!= {not equals to}"], ['⬆︎':"⬆︎ (rises above)"], ['⬇︎':"⬇︎ (falls below)"], ['⬆︎⬇︎':"⬆︎⬇︎ (changes)"]]
+			if (attrOp && attrOp != '⬆︎⬇︎')		{
 				input "attrTyp", "enum", title: "Type?", required:true, multiple:false, submitOnChange:true, options:(['⬆︎', '⬇︎'].contains(attrOp) ? ["Number", "Decimal"] : ["Text", "Number", "Decimal"])
-			if (attrTyp == 'Text')
-				input "attrCase", "bool", title: "Case sensitive?", required:true, multiple:false, defaultValue:true
-			else if (attrDevCount > 1)
-				input "attrMath", "enum", title: "Math?", required:true, multiple:false, options:["Avg", "Max", "Min", "Sum"]
-			if (attrTyp)	{
-				input "attrVal", "${attrTyp.toLowerCase()}", title: "Value?", required:true
-				if (attrDev && attr)		paragraph attrDev."current${attr.substring(0, 1).toUpperCase() + attr.substring(1)}".flatten().toString();
+				if (attrTyp)	{
+					if (attrTyp == 'Text')
+						input "attrCase", "bool", title: "Case sensitive?", required:true, multiple:false, defaultValue:true
+					else if (attrDevCount > 1)
+						input "attrMath", "enum", title: "Math?", required:true, multiple:false, options:["Avg", "Max", "Min", "Sum"]
+					input "attrVal", "${attrTyp.toLowerCase()}", title: "Value?", required:true
+					if (attrDev && attr)		paragraph attrDev."current${attr.substring(0, 1).toUpperCase() + attr.substring(1)}".flatten().toString();
+				}
+			}
+			if (attrTyp || (attrOp && attrOp == '⬆︎⬇︎'))	{
 				paragraph subHeaders('THEN this command', true)
 				input "dev", "capability.*", title: "Command on devices?", required:true, multiple:true, submitOnChange:true
 				input "devCmd", "enum", title: "Command on match?", required:true, multiple:false, submitOnChange:true, options:allCmds
@@ -216,7 +226,7 @@ def wato()		{
 private subHeaders(str, div = false, opt = false)	{
 	if (str.size() > 50)	str = str.substring(0, 50);
 	str = str.center(50)
-	def divider = (div ? "<hr width='75%' size='10' noshade>" : '');
+	def divider = (div ? "<hr width='100%' size='10' noshade>" : '');
 	if (opt)
 		return "$divider<div style='text-align:center;background-color:#f9f2ec;color:#999999;'>$str</div>"
 	else
@@ -238,7 +248,7 @@ private updLbl()	{
 	state.cParams = null
 	def cS = (state.cParam ? state.cParam.size() : 0)
 	for (def i = 1; i <= 10; i++)		{
-		if (settings["devCParam$i"] != null)
+		if (settings["devCParam$i"] != null || (i == 1 && settings["devCParamAttrVal$i"]))
 		 	if (i > cS)		app.removeSetting("devCParam$i");
 			else			state.cParams = i;
 		else
@@ -247,7 +257,7 @@ private updLbl()	{
 	state.unCParams = null
 	def uS = (state.unCParam ? state.unCParam.size() : 0)
 	for (def i = 1; i <= 10; i++)		{
-		if (settings["devUnCParam$i"] != null)
+		if (settings["devUnCParam$i"] != null || (i == 1 && settings["devUnCParamAttrVal$i"]))
 		 	if (i > uS)		app.removeSetting("devUnCParam$i");
 			else			state.unCParams = i;
 		else
@@ -276,7 +286,7 @@ private lblStr()	{
 	}
 	def l = null
 	if (attrDev && (devCmd || devUnCmd))	{
-		l = ((state.watoDisabled ? '<FONT COLOR="ff0000">DISABLED: </FONT>' : '') + 'WHEN ' + attrDev.displayName + ' ATTRIBUTE ' + (state.attrDevCount > 1 && attrMath ? "${attrMath.toLowerCase()}($attr)" : attr) + ' ' + attrOp + ' ' + (attrCase ? "${attrVal}.ignoreCase()" : attrVal) + (devCmd ? ' THEN ' + dev + ' : ' + devCmd + (c ? '(' + c + ')' : '') : '') + (devUnCmd ? ' OTHERWISE ' + (devCmd ? '' : dev + ' : ') + devUnCmd + (u ? '(' + u + ')' : '') : '') + (inModes || (fromTime && toTime) ? ' {' : '') + (inModes ? 'modes: ' + inModes + (fromTime && toTime ? ' & ' : ' ') : '') + (fromTime && toTime ? 'time: ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", fromTime)) + ' - ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", toTime)) : '') + (inModes || (fromTime && toTime) ? '}' : ''))
+		l = ((state.watoDisabled ? '<FONT COLOR="ff0000">DISABLED: </FONT>' : '') + 'WHEN ' + attrDev.displayName + ' ATTRIBUTE ' + (state.attrDevCount > 1 && attrMath ? "${attrMath.toLowerCase()}($attr)" : attr) + ' ' + attrOp + ' ' + (attrOp == '⬆︎⬇︎' ? '' : (attrCase ? "${attrVal}.ignoreCase()" : attrVal)) + (devCmd ? ' THEN ' + dev + ' : ' + devCmd + (c ? '(' + c + ')' : '') : '') + (devUnCmd ? ' OTHERWISE ' + (devCmd ? '' : dev + ' : ') + devUnCmd + (u ? '(' + u + ')' : '') : '') + (inModes || (fromTime && toTime) ? ' {' : '') + (inModes ? 'modes: ' + inModes + (fromTime && toTime ? ' & ' : ' ') : '') + (fromTime && toTime ? 'time: ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", fromTime)) + ' - ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", toTime)) : '') + (inModes || (fromTime && toTime) ? '}' : ''))
 		l = l.substring(0, (l.size() > 254 ? 254 : l.size()))
 	}
 	return l
@@ -287,7 +297,7 @@ private format24hrTime(tTF = new Date(now()), fmt = 'HH:mm')	{  return tTF.forma
 def initialize()	{  unsubscribe();	unschedule()  }
 
 def checkAttr(evt)	{
-log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
+log.info "\tcheckAttr: name = $evt.name | value = $evt.value"
 	if (state.watoDisabled)		return;
 	if (inModes && !inModes.contains(location.currentMode.toString()))		return;
 	if (fromTime && toTime)		{
@@ -301,11 +311,12 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 	def eV = checkVal()
 	if (!eV)		return;
 	def evtVal = setValType(eV)
+//log.debug "$evtVal | $state.prvAttrVal"
 	if (evtVal == null)		return;
 	def aV = (attrCase ? attrVal.toLowerCase() : attrVal)
 	def match = false
 	def noCmdRun = false
-	switch(attrOp) {
+	switch(attrOp.toString()) {
 		case "<":		if (evtVal < aV)		match = true;	break
 		case "<=":		if (evtVal <= aV)		match = true;	break
 		case "=":		if (evtVal == aV)		match = true;	break
@@ -327,6 +338,9 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 				else						noCmdRun = true;
 			else
 				if (prvAttrVal >= aV)		noCmdRun = true;
+			break
+		case "⬆︎⬇︎":
+			if (evtVal != state.prvAttrVal)		match = true;	break
 			break
 	}
 //log.debug "$eV $attrOp $aV | $dev | $devCmd $state.cParams | $devUnCmd $state.unCParams | $match"
@@ -356,11 +370,15 @@ log.debug "\tcheckAttr: name = $evt.name | value = $evt.value"
 
 private setValType(val)	{
 	def value
-	switch(attrTyp)		{
-		case "Text":	value = (attrCase ? val.toString().toLowerCase() : val.toString());		break
-		case "Number":	value = val as Integer;		break
-		case "Decimal":	value = val as BigDecimal;	break
-		default:		value = null;				break
+	if (attrOp && attrOp == '⬆︎⬇︎')
+		value = val
+	else	{
+		switch(attrTyp)		{
+			case "Text":	value = (attrCase ? val.toString().toLowerCase() : val.toString());		break
+			case "Number":	value = val as Integer;		break
+			case "Decimal":	value = val as BigDecimal;	break
+			default:		value = null;				break
+		}
 	}
 	return value
 }
