@@ -14,6 +14,8 @@
 *
 *  Author: bangali
 *
+*  2018-12-30   added support to select attribute value being compared or attribute valye from another device as first
+*					parameter for command on devices
 *  2018-12-30   added support to check for any changes to device attribute value
 *  2018-12-26   cleaned up settings bug
 *  2018-12-24	added option to use attribute value as first parameter in device command
@@ -32,7 +34,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v4.1.0"  }
+public static String version()		{  return "v4.5.0"  }
 
 definition		(
 	name: "WATO child app",
@@ -136,6 +138,13 @@ def wato()		{
 		app.removeSetting("attrMath")
 		app.removeSetting("attrVal")
 	}
+
+	def allCParamAttrs = [:], allUnCParamAttrs = [:]
+	if (devCParamTyp1Dev)
+		allCParamAttrs = devCParamTyp1Dev.supportedAttributes.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
+	if (devUnCParamTyp1Dev)
+		allUnCParamAttrs = devUnCParamTyp1Dev.supportedAttributes.unique{ it.name }.collectEntries{ [(it):"${it.name.capitalize()}"] }
+
 	def lS = updLbl()
 
 	dynamicPage(name: "wato", title: "", install: true, uninstall: true)		{
@@ -169,16 +178,24 @@ def wato()		{
 					def i = 1
 					for (def cP : state.cParam)	{
 						def pT = cP.toString().toLowerCase()
-						if (i == 1 && ['number', 'decimal'].contains(pT))	{
-							if (settings["devCParamAttrVal$i"])
-								paragraph "Command param $i ($pT)?\nset use attribute value to false to set"
-							else
-								input "devCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
-							input "devCParamAttrVal$i", "bool", title: "Use attribute value from device?", required:false, submitOnChange:true
+						if (i == 1)
+							input "devCParamTyp1", "enum", title: "Command param type?", required:true, submitOnChange:true, defaultValue:null, options:[[null:"Value"], ['A':"This attribute"], ['D':"Attribute from another device"]]
+						if (i == 1 && devCParamTyp1)	{
+							if (devCParamTyp1 == 'D')	{
+								input "devCParamTyp1Dev", "capability.*", title: "Attribute from which device?", required:true, submitOnChange:true
+								if (devCParamTyp1Dev)
+									input "devCParamTyp1Attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allCParamAttrs
+
+							}
+//							if (settings["devCParamAttrVal$i"])
+//								paragraph "Command param $i ($pT)?\nset use attribute value to false to set"
+//							else
+//								input "devCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
+//							input "devCParamAttrVal$i", "bool", title: "Use attribute value from device?", required:false, submitOnChange:true
 						}
 						else	{
 							input "devCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
-							app.removeSetting("devCParamAttrVal$i")
+//							app.removeSetting("devCParamAttrVal$i")
 						}
 						i = i + 1
 					}
@@ -191,16 +208,24 @@ def wato()		{
 					def i = 1
 					for (def cP : state.unCParam)	{
 						def pT = cP.toString().toLowerCase()
-						if (i == 1 && ['number', 'decimal'].contains(pT))	{
-							if (settings["devUnCParamAttrVal$i"])
-								paragraph "Command param $i ($pT)?\nset use attribute value to false to set"
-							else
-								input "devUnCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
-							input "devUnCParamAttrVal$i", "bool", title: "Use attribute value from device?", required:false, submitOnChange:true
+						if (i == 1)
+							input "devUnCParamTyp1", "enum", title: "Command param type?", required:true, submitOnChange:true, defaultValue:null, options:[[null:"Value"], ['A':"This attribute"], ['D':"Attribute from another device"]]
+						if (i == 1 && devUnCParamTyp1)	{
+							if (devUnCParamTyp1 == 'D')	{
+								input "devUnCParamTyp1Dev", "capability.*", title: "Attribute from which device?", required:true, submitOnChange:true
+								if (devUnCParamTyp1Dev)
+									input "devUnCParamTyp1Attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allUnCParamAttrs
+
+							}
+//							if (settings["devUnCParamAttrVal$i"])
+//								paragraph "Command param $i ($pT)?\nset use attribute value to false to set"
+//							else
+//								input "devUnCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
+//							input "devUnCParamAttrVal$i", "bool", title: "Use attribute value from device?", required:false, submitOnChange:true
 						}
 						else	{
 							input "devUnCParam$i", "$pT", title: "Command param $i ($pT)?", required:(i == 1 ? true : false)
-							app.removeSetting("devUnCParamAttrVal$i")
+//							app.removeSetting("devUnCParamAttrVal$i")
 						}
 						i = i + 1
 					}
@@ -248,7 +273,7 @@ private updLbl()	{
 	state.cParams = null
 	def cS = (state.cParam ? state.cParam.size() : 0)
 	for (def i = 1; i <= 10; i++)		{
-		if (settings["devCParam$i"] != null || (i == 1 && settings["devCParamAttrVal$i"]))
+		if (settings["devCParam$i"] != null || (i == 1 && devCParamTyp1))
 		 	if (i > cS)		app.removeSetting("devCParam$i");
 			else			state.cParams = i;
 		else
@@ -257,7 +282,7 @@ private updLbl()	{
 	state.unCParams = null
 	def uS = (state.unCParam ? state.unCParam.size() : 0)
 	for (def i = 1; i <= 10; i++)		{
-		if (settings["devUnCParam$i"] != null || (i == 1 && settings["devUnCParamAttrVal$i"]))
+		if (settings["devUnCParam$i"] != null || (i == 1 && devUnCParamTyp1))
 		 	if (i > uS)		app.removeSetting("devUnCParam$i");
 			else			state.unCParams = i;
 		else
@@ -272,15 +297,15 @@ private updLbl()	{
 private lblStr()	{
 	def c = ''
 	for (def i = 1; i <= (state.cParams ?: 0); i++)		{
-		if (settings["devCParam$i"] != null || (i == 1 && devCParamAttrVal1))
-			c = c + (c ? ', ' : '') + (i == 1 && devCParamAttrVal1 ? '#' : settings["devCParam$i"])
+		if (settings["devCParam$i"] != null || (i == 1 && devCParamTyp1))
+			c = c + (c ? ', ' : '') + (i == 1 && devCParamTyp1 ? (devCParamTyp1 == 'D' ? '[' + devCParamTyp1Dev.toString() + ']' + ' : ' + devCParamTyp1Attr : '#') : settings["devCParam$i"])
 		else
 			break
 	}
 	def u = ''
 	for (def i = 1; i <= (state.unCParams ?: 0); i++)		{
-		if (settings["devUnCParam$i"] != null || (i == 1 && devUnCParamAttrVal1))
-			u = u + (u ? ', ' : '') + (i == 1 && devUnCParamAttrVal1 ? '#' : settings["devUnCParam$i"])
+		if (settings["devUnCParam$i"] != null || (i == 1 && devUnCParamTyp1))
+			u = u + (u ? ', ' : '') + (i == 1 && devUnCParamTyp1 ? (devUnCParamTyp1 == 'D' ? '[' + devUnCParamTyp1Dev.toString() + ']' + ' : ' + devUnCParamTyp1Attr : '#') : settings["devUnCParam$i"])
 		else
 			break
 	}
@@ -349,18 +374,22 @@ log.info "\tcheckAttr: name = $evt.name | value = $evt.value"
 	def cmd = (match ? devCmd : devUnCmd)
 	if (!cmd)		return;
 
-	switch((match ? (state.cParams ?: 0) : (state.unCParams ?: 0)))	{
+	def paramCnt = (match ? (state.cParams ?: 0) : (state.unCParams ?: 0))
+	def param1Val
+	if (paramCnt > 0)
+		param1Val = (match ? (devCParamTyp1 == 'A' ? evtVal : (devCParamTyp1 == 'D' ? devCParamTyp1Dev."current${devCParamTyp1Attr.substring(0, 1).toUpperCase() + devCParamTyp1Attr.substring(1)}" : devCParam1)) : (devUnCParamTyp1 == 'A' ? evtVal : (devUnCParamTyp1 == 'D' ? devUnCParamTyp1Dev."current${devUnCParamTyp1Attr.substring(0, 1).toUpperCase() + devUnCParamTyp1Attr.substring(1)}" : devUnCParam1)))
+	switch(paramCnt)	{
 		case 0:
 			dev."$cmd"()
 			break
 		case 1:
-			dev."$cmd"(toMap((match ? (devCParamAttrVal1 ? evtVal : devCParam1) : (devUnCParamAttrVal1 ? evtVal : devUnCParam1))))
+			dev."$cmd"(toMap(param1Val))
 			break
 		case 2:
-			dev."$cmd"((match ? (devCParamAttrVal1 ? evtVal : devCParam1) : (devUnCParamAttrVal1 ? evtVal : devUnCParam1)), (match ? devCParam2 : devUnCParam2))
+			dev."$cmd"(param1Val, (match ? devCParam2 : devUnCParam2))
 			break
 		case 3:
-			dev."$cmd"((match ? (devCParamAttrVal1 ? evtVal : devCParam1) : (devUnCParamAttrVal1 ? evtVal : devUnCParam1)), (match ? devCParam2 : devUnCParam2), (match ? devCParam3 : devUnCParam3))
+			dev."$cmd"(param1Val, (match ? devCParam2 : devUnCParam2), (match ? devCParam3 : devUnCParam3))
 			break
 		default:
 			dev."$cmd"()
