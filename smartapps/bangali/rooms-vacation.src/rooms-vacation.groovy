@@ -88,7 +88,7 @@ def updated()		{
 		state.lastRun = now() - 1980000L
 		for (def vRD : state.vacaRoomDevices)
 			for (def i = 1; i <= 7; i++)
-				if (state.rSH[vRD.key]?."$i")		state.rSH[vRD.key]."$i" = state.rSH[vRD.key]."$i".sort{ it.key }
+				if (state?.rSH[vRD.key]?."$i")		state.rSH[vRD.key]."$i" = state.rSH[vRD.key]."$i".sort{ it.key }
 		replayRecover()
 		runEvery30Minutes(replayRecover)
 	}
