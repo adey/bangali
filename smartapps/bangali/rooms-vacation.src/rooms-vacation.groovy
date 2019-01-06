@@ -85,12 +85,16 @@ def updated()		{
 	if (hT == 'ST')		state.vacaDisabled = (vacaState ? false : true);
 	state.vacaRoomDevices = (vacaRooms ? parent.getRoomDevices(vacaRooms) : [:])
 	if (!state.vacaDisabled)	{
-		state.lastRun = now() - 1980000L
-		for (def vRD : state.vacaRoomDevices)
-			for (def i = 1; i <= 7; i++)
-				if (state?.rSH[vRD.key]?."$i")		state.rSH[vRD.key]."$i" = state.rSH[vRD.key]."$i".sort{ it.key }
-		replayRecover()
-		runEvery30Minutes(replayRecover)
+		if (state.rSH)		{
+			state.lastRun = now() - 1980000L
+			for (def vRD : state.vacaRoomDevices)
+				for (def i = 1; i <= 7; i++)
+					if (state?.rSH[vRD.key]?."$i")		state.rSH[vRD.key]."$i" = state.rSH[vRD.key]."$i".sort{ it.key }
+			replayRecover()
+			runEvery30Minutes(replayRecover)
+		}
+		else
+			log.error "rooms manager: rooms state history not found. vacation mode will not replay."
 	}
 	parent.triggerSubscribeToVaca()
 log.debug "perf updated: ${now() - nowTime} ms"
