@@ -1322,8 +1322,8 @@ def pageAsleepSettings()	{
 	def colorsList = colorsRGB.collect { [(it.key):it.value[1]] }
 	def aTO = null
 	if (asleepFromTime && asleepToTime)		{
-		fTime = timeToday(asleepFromTime, location.timeZone)
-		tTime = timeToday(asleepToTime, location.timeZone)
+		def fTime = timeToday(asleepFromTime, location.timeZone)
+		def tTime = timeToday(asleepToTime, location.timeZone)
 		def xT = timeTodayA(fTime, tTime, location.timeZone)
 		def iM = ((xT.getTime() - fTime.getTime()) % _SecondsInDay)
 		aTO = ((iM / 60000f).trunc(0)).toInteger()
@@ -3779,7 +3779,7 @@ def handleSwitches(oldState, newState, returnTimer = false, vacationMode = false
 	if (!vacationMode && !checkPauseModesAndDoW())		return;
 	def child = getChildDevice(getRoom())
 	if (oldState == vacant)		{
-		if (nightSwitches && nightTurnOn.contains('3'))		unschedule('nightSwitchesOff');
+		if (nightSwitches && nightTurnOn && nightTurnOn.contains('3'))		unschedule('nightSwitchesOff');
 		if (state.maintainRoomHumi && !state.humidity.previous)		state.humidity.previous = getAvgHumidity();
 	}
 	def timer = null
