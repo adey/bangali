@@ -35,9 +35,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.1.0"  }
+public static String version()      {  return "v4.3.0"  }
 
 /***********************************************************************************************************************
+*
+* Version: 4.3.0
+*   12/30/2018: removed isStateChange:true based on testing done by @nh.schottfam on hubitat format.
+*
+* Version: 4.2.0
+*   12/30/2018: deprecated localSunrise and localSunset attributes instead use local_sunrise and local_sunset respectively
 *
 * Version: 4.1.0
 *   12/29/2018: merged mytile code
@@ -138,8 +144,8 @@ metadata    {
         attribute "wind", "string"
         attribute "percentPrecip", "string"
 
-        attribute "localSunrise", "string"
-        attribute "localSunset", "string"
+//        attribute "localSunrise", "string"
+//        attribute "localSunset", "string"
 
         attribute "visualDayPlus1", "string"
         attribute "visualDayPlus1WithText", "string"
@@ -184,9 +190,10 @@ def poll()      {
         log.warn "No response from ApiXU API"
         return
     }
+log.debug obs
 
     def now = new Date().format('yyyy-MM-dd HH:mm', location.timeZone)
-    sendEvent(name: "lastXUupdate", value: now, isStateChange: true, displayed: true)
+    sendEvent(name: "lastXUupdate", value: now, displayed: true)
 
     def tZ = TimeZone.getTimeZone(obs.location.tz_id)
     state.tz_id = obs.location.tz_id
@@ -203,13 +210,13 @@ def poll()      {
     def twilight_end = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", sunriseAndSunset.results.civil_twilight_end, tZ)
 
     def localSunrise = sunriseTime.format("HH:mm", tZ)
-    sendEvent(name: "local_sunrise", value: localSunrise, descriptionText: "Sunrise today is at $localSunrise", isStateChange: true, displayed: true)
+    sendEvent(name: "local_sunrise", value: localSunrise, descriptionText: "Sunrise today is at $localSunrise", displayed: true)
     def localSunset = sunsetTime.format("HH:mm", tZ)
-    sendEvent(name: "local_sunset", value: localSunset, descriptionText: "Sunset today at is $localSunset", isStateChange: true, displayed: true)
+    sendEvent(name: "local_sunset", value: localSunset, descriptionText: "Sunset today at is $localSunset", displayed: true)
     def tB = twilight_begin.format("HH:mm", tZ)
-    sendEvent(name: "twilight_begin", value: tB, descriptionText: "Twilight begins today at $tB", isStateChange: true, displayed: true)
+    sendEvent(name: "twilight_begin", value: tB, descriptionText: "Twilight begins today at $tB", displayed: true)
     def tE = twilight_end.format("HH:mm", tZ)
-    sendEvent(name: "twilight_end", value: tE, descriptionText: "Twilight ends today at $tE", isStateChange: true, displayed: true)
+    sendEvent(name: "twilight_end", value: tE, descriptionText: "Twilight ends today at $tE", displayed: true)
 
     state.sunriseTime = sunriseTime.format("yyyy-MM-dd'T'HH:mm:ssXXX", tZ)
     state.sunsetTime = sunsetTime.format("yyyy-MM-dd'T'HH:mm:ssXXX", tZ)
@@ -217,72 +224,79 @@ def poll()      {
     state.twilight_begin = twilight_begin.format("yyyy-MM-dd'T'HH:mm:ssXXX", tZ)
     state.twilight_end = twilight_end.format("yyyy-MM-dd'T'HH:mm:ssXXX", tZ)
 
-    sendEvent(name: "name", value: obs.location.name, isStateChange: true, displayed: true)
-    sendEvent(name: "region", value: obs.location.region, isStateChange: true, displayed: true)
-    sendEvent(name: "country", value: obs.location.country, isStateChange: true, displayed: true)
-    sendEvent(name: "lat", value: obs.location.lat, isStateChange: true, displayed: true)
-    sendEvent(name: "lon", value: obs.location.lon, isStateChange: true, displayed: true)
-    sendEvent(name: "tz_id", value: obs.location.tz_id, isStateChange: true, displayed: true)
-    sendEvent(name: "localtime_epoch", value: obs.location.localtime_epoch, isStateChange: true, displayed: true)
-    sendEvent(name: "local_time", value: localTimeOnly, isStateChange: true, displayed: true)
-    sendEvent(name: "local_date", value: localDate, isStateChange: true, displayed: true)
-    sendEvent(name: "last_updated_epoch", value: obs.current.last_updated_epoch, isStateChange: true, displayed: true)
-    sendEvent(name: "last_updated", value: obs.current.last_updated, isStateChange: true, displayed: true)
+    sendEvent(name: "name", value: obs.location.name, displayed: true)
+    sendEvent(name: "region", value: obs.location.region, displayed: true)
+    sendEvent(name: "country", value: obs.location.country, displayed: true)
+    sendEvent(name: "lat", value: obs.location.lat, displayed: true)
+    sendEvent(name: "lon", value: obs.location.lon, displayed: true)
+    sendEvent(name: "tz_id", value: obs.location.tz_id, displayed: true)
+    sendEvent(name: "localtime_epoch", value: obs.location.localtime_epoch, displayed: true)
+    sendEvent(name: "local_time", value: localTimeOnly, displayed: true)
+    sendEvent(name: "local_date", value: localDate, displayed: true)
+    sendEvent(name: "last_updated_epoch", value: obs.current.last_updated_epoch, displayed: true)
+    sendEvent(name: "last_updated", value: obs.current.last_updated, displayed: true)
 //    sendEvent(name: "temp_c", value: obs.current.temp_c, unit: "C")
 //    sendEvent(name: "temp_f", value: obs.current.temp_f, unit: "F")
-    sendEvent(name: "temperature", value: (isFahrenheit ? obs.current.temp_f : obs.current.temp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
-    sendEvent(name: "is_day", value: obs.current.is_day, isStateChange: true, displayed: true)
-    sendEvent(name: "condition_text", value: obs.current.condition.text, isStateChange: true, displayed: true)
-    sendEvent(name: "condition_icon", value: '<img src=https:' + obs.current.condition.icon + '>', isStateChange: true, displayed: true)
-    sendEvent(name: "condition_icon_url", value: 'https:' + obs.current.condition.icon, isStateChange: true, displayed: true)
-    sendEvent(name: "condition_code", value: obs.current.condition.code, isStateChange: true, displayed: true)
+    sendEvent(name: "temperature", value: (isFahrenheit ? obs.current.temp_f : obs.current.temp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
+    sendEvent(name: "is_day", value: obs.current.is_day, displayed: true)
+    sendEvent(name: "condition_text", value: obs.current.condition.text, displayed: true)
+    sendEvent(name: "condition_icon", value: '<img src=https:' + obs.current.condition.icon + '>', displayed: true)
+    sendEvent(name: "condition_icon_url", value: 'https:' + obs.current.condition.icon, displayed: true)
+    sendEvent(name: "condition_code", value: obs.current.condition.code, displayed: true)
     def imgName = getImgName(obs.current.condition.code, obs.current.is_day)
-    sendEvent(name: "visual", value: '<img src=' + imgName + '>', isStateChange: true, displayed: true)
-    sendEvent(name: "visualWithText", value: '<img src=' + imgName + '><br>' + obs.current.condition.text, isStateChange: true, displayed: true)
-    sendEvent(name: "wind_mph", value: obs.current.wind_mph, unit: "MPH", isStateChange: true, displayed: true)
-    sendEvent(name: "wind_kph", value: obs.current.wind_kph, unit: "KPH", isStateChange: true, displayed: true)
-	sendEvent(name: "wind_mps", value: ((obs.current.wind_kph / 3.6f).round(1)), unit: "MPS", isStateChange: true, displayed: true)
-    sendEvent(name: "wind_degree", value: obs.current.wind_degree, unit: "DEGREE", isStateChange: true, displayed: true)
-    sendEvent(name: "wind_dir", value: obs.current.wind_dir, isStateChange: true, displayed: true)
+    sendEvent(name: "visual", value: '<img src=' + imgName + '>', displayed: true)
+    sendEvent(name: "visualWithText", value: '<img src=' + imgName + '><br>' + obs.current.condition.text, displayed: true)
+	if (isFahrenheit)	{
+	    sendEvent(name: "wind_mph", value: obs.current.wind_mph, unit: "MPH", displayed: true)
+		sendEvent(name: "wind_mps", value: ((obs.current.wind_kph / 3.6f).round(1)), unit: "MPS", displayed: true)
+	}
+	else
+    	sendEvent(name: "wind_kph", value: obs.current.wind_kph, unit: "KPH", displayed: true)
+    sendEvent(name: "wind_degree", value: obs.current.wind_degree, unit: "DEGREE", displayed: true)
+    sendEvent(name: "wind_dir", value: obs.current.wind_dir, displayed: true)
 //    sendEvent(name: "pressure_mb", value: obs.current.pressure_mb, unit: "MBAR")
 //    sendEvent(name: "pressure_in", value: obs.current.pressure_in, unit: "IN")
-    sendEvent(name: "pressure", value: (isFahrenheit ? obs.current.pressure_in : obs.current.pressure_mb), unit: "${(isFahrenheit ? 'IN' : 'MBAR')}", isStateChange: true, displayed: true)
-    sendEvent(name: "precip_mm", value: obs.current.precip_mm, unit: "MM", isStateChange: true, displayed: true)
-    sendEvent(name: "precip_in", value: obs.current.precip_in, unit: "IN", isStateChange: true, displayed: true)
-    sendEvent(name: "humidity", value: obs.current.humidity, unit: "%", isStateChange: true, displayed: true)
-    sendEvent(name: "cloud", value: obs.current.cloud, unit: "%", isStateChange: true, displayed: true)
-    sendEvent(name: "feelslike_c", value: obs.current.feelslike_c, unit: "C", isStateChange: true, displayed: true)
-    sendEvent(name: "feelslike_f", value: obs.current.feelslike_f, unit: "F", isStateChange: true, displayed: true)
-    sendEvent(name: "vis_km", value: obs.current.vis_km, unit: "KM", isStateChange: true, displayed: true)
-    sendEvent(name: "vis_miles", value: obs.current.vis_miles, unit: "MILES", isStateChange: true, displayed: true)
+    sendEvent(name: "pressure", value: (isFahrenheit ? obs.current.pressure_in : obs.current.pressure_mb), unit: "${(isFahrenheit ? 'IN' : 'MBAR')}", displayed: true)
+	if (isFarenheit)	{
+	    sendEvent(name: "precip_in", value: obs.current.precip_in, unit: "IN", displayed: true)
+		sendEvent(name: "feelslike_f", value: obs.current.feelslike_f, unit: "F", displayed: true)
+		sendEvent(name: "vis_miles", value: obs.current.vis_miles, unit: "MILES", displayed: true)
+	}
+	else	{
+		sendEvent(name: "precip_mm", value: obs.current.precip_mm, unit: "MM", displayed: true)
+		sendEvent(name: "feelslike_c", value: obs.current.feelslike_c, unit: "C", displayed: true)
+	    sendEvent(name: "vis_km", value: obs.current.vis_km, unit: "KM", displayed: true)
+	}
+    sendEvent(name: "humidity", value: obs.current.humidity, unit: "%", displayed: true)
+    sendEvent(name: "cloud", value: obs.current.cloud, unit: "%", displayed: true)
 
-    sendEvent(name: "condition_icon_only", value: obs.current.condition.icon.split("/")[-1], isStateChange: true, displayed: true)
-    sendEvent(name: "location", value: obs.location.name + ', ' + obs.location.region, isStateChange: true, displayed: true)
+    sendEvent(name: "condition_icon_only", value: obs.current.condition.icon.split("/")[-1], displayed: true)
+    sendEvent(name: "location", value: obs.location.name + ', ' + obs.location.region, displayed: true)
     state.condition_code = obs.current.condition.code
     state.cloud = obs.current.cloud
     updateLux()
 
 //    if (publishWU)      {
-        sendEvent(name: "city", value: (cityName ?: obs.location.name), isStateChange: true, displayed: true)
-        sendEvent(name: "weather", value: obs.current.condition.text, isStateChange: true, displayed: true)
-        sendEvent(name: "forecastIcon", value: getWUIconName(obs.current.condition.code, 1), isStateChange: true, displayed: true)
-        sendEvent(name: "feelsLike", value: (isFahrenheit ? obs.current.feelslike_f : obs.current.feelslike_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
-        sendEvent(name: "wind", value: (isFahrenheit ? obs.current.wind_mph : obs.current.wind_kph), unit: "${(isFahrenheit ? 'MPH' : 'KPH')}", isStateChange: true, displayed: true)
-        sendEvent(name: "percentPrecip", value: (isFahrenheit ? obs.current.precip_in : obs.current.precip_mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", isStateChange: true, displayed: true)
-        sendEvent(name: "localSunrise", value: localSunrise, isStateChange: true, displayed: true)
-        sendEvent(name: "localSunset", value: localSunset, isStateChange: true, displayed: true)
+        sendEvent(name: "city", value: (cityName ?: obs.location.name), displayed: true)
+        sendEvent(name: "weather", value: obs.current.condition.text, displayed: true)
+        sendEvent(name: "forecastIcon", value: getWUIconName(obs.current.condition.code, 1), displayed: true)
+        sendEvent(name: "feelsLike", value: (isFahrenheit ? obs.current.feelslike_f : obs.current.feelslike_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
+        sendEvent(name: "wind", value: (isFahrenheit ? obs.current.wind_mph : obs.current.wind_kph), unit: "${(isFahrenheit ? 'MPH' : 'KPH')}", displayed: true)
+        sendEvent(name: "percentPrecip", value: (isFahrenheit ? obs.current.precip_in : obs.current.precip_mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
+//        sendEvent(name: "localSunrise", value: localSunrise, displayed: true)
+//        sendEvent(name: "localSunset", value: localSunset, displayed: true)
 //    }
 
 	def wind_mytile=(isFahrenheit ? "${Math.round(obs.current.wind_mph)}" + " mph " : "${Math.round(obs.current.wind_kph)}" + " kph ")
-	sendEvent(name: "wind_mytile", value: wind_mytile, isStateChange: true, displayed: true)
+	sendEvent(name: "wind_mytile", value: wind_mytile, displayed: true)
 
     imgName = getImgName(obs.forecast.forecastday[0].day.condition.code, 1)
-    sendEvent(name: "visualDayPlus1", value: '<img src=' + imgName + '>', isStateChange: true, displayed: true)
-    sendEvent(name: "visualDayPlus1WithText", value: '<img src=' + imgName + '><br>' + obs.forecast.forecastday[0].day.condition.text, isStateChange: true, displayed: true)
+    sendEvent(name: "visualDayPlus1", value: '<img src=' + imgName + '>', displayed: true)
+    sendEvent(name: "visualDayPlus1WithText", value: '<img src=' + imgName + '><br>' + obs.forecast.forecastday[0].day.condition.text, displayed: true)
     sendEvent(name: "temperatureHighDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.maxtemp_f :
-                            obs.forecast.forecastday[0].day.maxtemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
+                            obs.forecast.forecastday[0].day.maxtemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
     sendEvent(name: "temperatureLowDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.mintemp_f :
-                            obs.forecast.forecastday[0].day.mintemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", isStateChange: true, displayed: true)
+                            obs.forecast.forecastday[0].day.mintemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
 
 	def mytext = obs.location.name + ', ' + obs.location.region
 //	if (isFahrenheit)	{
@@ -310,7 +324,7 @@ def poll()      {
 	mytext += (wind_mytile == (isFahrenheit ? "0 mph " : "0 kph ") ? '<br> Wind is calm' : '<br>' + obs.current.wind_dir + ' ' + wind_mytile)
 	mytext += '<br>' + obs.current.condition.text
 
-    sendEvent(name: "mytile", value: mytext, isStateChange: true, displayed: true)
+    sendEvent(name: "mytile", value: mytext, displayed: true)
     return
 }
 
@@ -354,8 +368,8 @@ def updateLux()     {
     def twilight_begin = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", state.twilight_begin, tZ)
     def twilight_end = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", state.twilight_end, tZ)
     def lux = estimateLux(localTime, sunriseTime, sunsetTime, noonTime, twilight_begin, twilight_end, state.condition_code, state.cloud, state.tz_id)
-    sendEvent(name: "illuminance", value: lux, unit: "lux", isStateChange: true, displayed: true)
-    sendEvent(name: "illuminated", value: String.format("%,d lux", lux), isStateChange: true, displayed: true)
+    sendEvent(name: "illuminance", value: lux, unit: "lux", displayed: true)
+    sendEvent(name: "illuminated", value: String.format("%,d lux", lux), displayed: true)
 }
 
 private estimateLux(localTime, sunriseTime, sunsetTime, noonTime, twilight_begin, twilight_end, condition_code, cloud, tz_id)     {
@@ -413,7 +427,7 @@ private estimateLux(localTime, sunriseTime, sunsetTime, noonTime, twilight_begin
 
     lux = (lux * cCF) as long
     log.debug "condition: $cC | condition text: $cCT | condition factor: $cCF | lux: $lux"
-    sendEvent(name: "cCF", value: cCF, isStateChange: true, displayed: true)
+    sendEvent(name: "cCF", value: cCF, displayed: true)
 
     return lux
 }
@@ -428,11 +442,11 @@ def updateClock()       {
     if (!tz_id)       return;
     def nowTime = new Date()
     def tZ = TimeZone.getTimeZone(state.tz_id)
-    sendEvent(name: "local_time", value: nowTime.format((state.clockSeconds ? "HH:mm" : "HH mm"), tZ), isStateChange: true, displayed: true)
+    sendEvent(name: "local_time", value: nowTime.format((state.clockSeconds ? "HH:mm" : "HH mm"), tZ), displayed: true)
     def localDate = nowTime.format("yyyy-MM-dd", tZ)
     if (localDate != state.localDate)
     {   state.localDate = localDate
-        sendEvent(name: "local_date", value: localDate, isStateChange: true, displayed: true)
+        sendEvent(name: "local_date", value: localDate, displayed: true)
     }
     state.clockSeconds = (state.clockSeconds ? false : true)
 }
