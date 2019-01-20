@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.3"  }
+public static String version()		{  return "v0.99.4"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -444,9 +444,9 @@ def updated()		{  initialize()  }
 
 def	initialize()	{
 	unschedule()
-	sendEvent(name: "numberOfButtons", value: 9, descriptionText: "set number of buttons to 9.", isStateChange: true, displayed: true)
+	sendEvent(name: "numberOfButtons", value: 9, descriptionText: "set number of buttons to 9.", displayed: true)
 	state.timer = 0
-	sendEvent(name: "countdown", value: '0s', descriptionText: "countdown timer: 0s", isStateChange: true, displayed: true)
+	sendEvent(name: "countdown", value: '0s', descriptionText: "countdown timer: 0s", displayed: true)
 	if (getHubType() == _SmartThings)		{
 		sendEvent(name: "DeviceWatch-DeviceStatus", value: "online")
 		sendEvent(name: "healthStatus", value: "online")
@@ -468,14 +468,21 @@ def on()	{
 		case 'asleep':		asleep();		break
 		default:							break
 	}
-	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", isStateChange: true, displayed: true)
+	switchOnOff(true)
+//	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", displayed: true)
 }
 
 def setOnStateC(e)		{  state.onState = (e ? e.toString() : 'occupied')  }
 
 def	off()		{
 	vacant()
-	sendEvent(name: "switch", value: "off", descriptionText: "$device.displayName is off", isStateChange: true, displayed: true)
+	switchOnOff(false)
+//	sendEvent(name: "switch", value: "off", descriptionText: "$device.displayName is off", displayed: true)
+}
+
+private switchOnOff(on)	{
+	def switchState = (on ? 'on' : 'off')
+	sendEvent(name: "switch", value: "$switchState", descriptionText: "$device.displayName is $switchState", displayed: true)
 }
 
 def push(buton)		{
@@ -489,9 +496,9 @@ def push(buton)		{
 		case 9:		engaged();		break
 		default:
 			if (hT != _Hubitat())
-				sendEvent(name: "button", value: "pushed", data: [buttonNumber: "$buton"], descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
+				sendEvent(name: "button", value: "pushed", data: [buttonNumber: "$buton"], descriptionText: "$device.displayName button $buton was pushed", displayed: true)
 			else
-				sendEvent(name: "pushableButton", value: buton, descriptionText: "$device.displayName button $buton was pushed", isStateChange: true, displayed: true)
+				sendEvent(name: "pushableButton", value: buton, descriptionText: "$device.displayName button $buton was pushed", displayed: true)
 			break
 	}
 }
@@ -500,23 +507,23 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-def occupied(hS = true, vM = false)			{  stateUpdateSetup('occupied', hS, vM)  }
+def occupied(hS = true, vM = false)			{  stateUpdateSetup('occupied', hS, vM); 		switchOnOff(true)  }
 
 def checking(hS = true, vM = false)			{  stateUpdateSetup('checking', hS, vM)  }
 
-def vacant(hS = true, vM = false)			{  stateUpdateSetup('vacant', hS, vM)  }
+def vacant(hS = true, vM = false)			{  stateUpdateSetup('vacant', hS, vM);			switchOnOff(false)  }
 
-def donotdisturb(hS = true, vM = false)		{  stateUpdateSetup('donotdisturb', hS, vM)  }
+def donotdisturb(hS = true, vM = false)		{  stateUpdateSetup('donotdisturb', hS, vM);	switchOnOff(false)  }
 
-def reserved(hS = true, vM = false)			{  stateUpdateSetup('reserved', hS, vM)  }
+def reserved(hS = true, vM = false)			{  stateUpdateSetup('reserved', hS, vM);		switchOnOff(false)  }
 
-def asleep(hS = true, vM = false)			{  stateUpdateSetup('asleep', hS, vM)  }
+def asleep(hS = true, vM = false)			{  stateUpdateSetup('asleep', hS, vM);			switchOnOff(true)  }
 
-def locked(hS = true, vM = false)			{  stateUpdateSetup('locked', hS, vM)  }
+def locked(hS = true, vM = false)			{  stateUpdateSetup('locked', hS, vM);			switchOnOff(false)  }
 
-def engaged(hS = true, vM = false)			{  stateUpdateSetup('engaged', hS, vM)  }
+def engaged(hS = true, vM = false)			{  stateUpdateSetup('engaged', hS, vM);			switchOnOff(true)  }
 
-def kaput(hS = true, vM = false)			{  stateUpdateSetup('kaput', hS, vM)  }
+def kaput(hS = true, vM = false)			{  stateUpdateSetup('kaput', hS, vM);			switchOnOff(false)  }
 
 private stateUpdateSetup(rSt, hS, vM)	{
 	runIn(0, stateUpdate, [data: [newState:rSt, handleSwitches:hS, vacationMode:vM]])
@@ -541,21 +548,21 @@ def updateOccupancy(oldOcc, newOcc) 	{
 		ifDebug("Missing or invalid parameter room occupancy: $newOcc")
 		return
 	}
-	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", isStateChange: true, displayed: true)
+	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", displayed: true)
 	if (hT == _Hubitat())		{
 		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${newOcc?.capitalize()}State.png"
-		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $newOcc icon small", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$device.displayName $newOcc icon medium", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$device.displayName $newOcc icon large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$device.displayName $newOcc icon extra large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$device.displayName $newOcc icon extra extra large", isStateChange: true, displayed: true)
-		sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$device.displayName $newOcc icon URL", isStateChange: true, displayed: true)
+		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $newOcc icon small", displayed: true)
+		sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$device.displayName $newOcc icon medium", displayed: true)
+		sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$device.displayName $newOcc icon large", displayed: true)
+		sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$device.displayName $newOcc icon extra large", displayed: true)
+		sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$device.displayName $newOcc icon extra extra large", displayed: true)
+		sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$device.displayName $newOcc icon URL", displayed: true)
 	}
 	def button = buttonMap[newOcc]
 	if (hT == _SmartThings())
-		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.")
 	else
-		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.", isStateChange: true)
+		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.")
 
 	updateRoomStatusMsg()
 }
@@ -564,11 +571,11 @@ private updateRoomStatusMsg()		{
 	def formatter = new java.text.SimpleDateFormat("EEE, MMM d yyyy @ h:mm:ss a z")
 	formatter.setTimeZone(location.timeZone)
 	state.statusMsg = formatter.format(now())
-	sendEvent(name: "status", value: state.statusMsg, isStateChange: true, displayed: false)
+	sendEvent(name: "status", value: state.statusMsg, displayed: false)
 }
 
 private	resetTile(occupancy)	{
-	sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", isStateChange: true, displayed: false)
+	sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", displayed: false)
 }
 
 def turnSwitchesAllOn()		{
@@ -615,9 +622,9 @@ def timerNext()		{
 	int timerUpdate = (state.timerLeft > 30 ? 30 : (state.timerLeft < 5 ? state.timerLeft : 5))
 	def timerInd = (state.timerLeft > 3600 ? (state.timerLeft / 3600f).round(1) + 'h' : (state.timerLeft > 60 ? (state.timerLeft / 60f).round(1) + 'm' : state.timerLeft + 's')).replace(".0","")
 	if (getHubType() != _Hubitat())
-		sendEvent(name: "timer", value: (timerInd ?: '--'), isStateChange: true, displayed: false)
+		sendEvent(name: "timer", value: (timerInd ?: '--'), displayed: false)
 	else
-		sendEvent(name: "countdown", value: timerInd, descriptionText: "countdown timer: $timerInd", isStateChange: true, displayed: true)
+		sendEvent(name: "countdown", value: timerInd, descriptionText: "countdown timer: $timerInd", displayed: true)
 	state.timerLeft = state.timerLeft - timerUpdate
 	(state.timerLeft > 0 ? runIn(timerUpdate, timerNext) : unschedule('timerNext'))
 }
@@ -635,15 +642,15 @@ def updateMotionInd(motionOn)		{
 		case 1:		vV = 'active';		dD = "indicate motion active";		break
 		case 0:		vV = 'inactive';	dD = "indicate motion inactive";	break
 	}
-	sendEvent(name: 'motionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'motionInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateLuxInd(lux)		{
-	sendEvent(name: 'luxInd', value: (lux == -1 ? '--' : (lux <= 100 ? lux : formatNumber(lux))), descriptionText: (lux == -1 ? "indicate no lux sensor" : "indicate lux value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'luxInd', value: (lux == -1 ? '--' : (lux <= 100 ? lux : formatNumber(lux))), descriptionText: (lux == -1 ? "indicate no lux sensor" : "indicate lux value"), displayed: false)
 }
 
 def updateHumidityInd(humidity)		{
-	sendEvent(name: 'humidityInd', value: (humidity == -1 ? '--' : humidity.toString() + '%'), descriptionText: (humidity == -1 ? "indicate no humidity sensor" : "indicate humidity value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'humidityInd', value: (humidity == -1 ? '--' : humidity.toString() + '%'), descriptionText: (humidity == -1 ? "indicate no humidity sensor" : "indicate humidity value"), displayed: false)
 }
 def updateContactInd(contactClosed)		{
 	def vV = 'none'
@@ -652,7 +659,7 @@ def updateContactInd(contactClosed)		{
 		case 1:		vV = 'closed';	dD = "indicate contact closed";		break
 		case 0:		vV = 'open';	dD = "indicate contact open";		break
 	}
-	sendEvent(name: 'contactInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'contactInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateContactRTIndC(contactStatus)		{
@@ -662,7 +669,7 @@ def updateContactRTIndC(contactStatus)		{
 		case 1:		vV = 'closed';	dD = "indicate contact closed";		break
 		case 0:		vV = 'open';	dD = "indicate contact open";		break
 	}
-	sendEvent(name: 'contactRTInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'contactRTInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateSwitchInd(switchOn)		{
@@ -672,7 +679,7 @@ def updateSwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate at least one switch in room is on";	break
 		case 0:		vV = 'off';	dD = "indicate all switches in room is off";		break
 	}
-	sendEvent(name: 'switchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'switchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updatePresenceInd(presencePresent)		{
@@ -682,7 +689,7 @@ def updatePresenceInd(presencePresent)		{
 		case 1:		vV = 'present';	dD = "indicate presence present";		break
 		case 0:		vV = 'absent';	dD = "indicate presence not present";	break
 	}
-	sendEvent(name: 'presenceInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'presenceInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updatePresenceActionInd(presenceAction)		{
@@ -694,15 +701,15 @@ def updatePresenceActionInd(presenceAction)		{
 		case '3':		vV = 'Both';		dD = "indicate both arrival and depature action with presence";		break
 		case '4':		vV = 'Neither';		dD = "indicate no action with with present";						break
 	}
-	sendEvent(name: 'presenceActionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'presenceActionInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updatePresenceEngagedInd(presenceEngaged)		{
-	sendEvent(name: 'presenceEngagedInd', value: (presenceEngaged == -1 ? '--' : presenceEngaged), descriptionText: (presenceEngaged == -1 ? "indicate no presence sensor" : "indicate if presence action continuous"), isStateChange: true, displayed: false)
+	sendEvent(name: 'presenceEngagedInd', value: (presenceEngaged == -1 ? '--' : presenceEngaged), descriptionText: (presenceEngaged == -1 ? "indicate no presence sensor" : "indicate if presence action continuous"), displayed: false)
 }
 
 def updateBusyEngagedInd(busyEngaged)		{
-	sendEvent(name: 'busyEngagedInd', value: (busyEngaged == -1 ? '--' : "$busyEngaged\ntraffic"), descriptionText: (busyEngaged == -1 ? "indicate no presence sensor" : "indicate traffic check"), isStateChange: true, displayed: false)
+	sendEvent(name: 'busyEngagedInd', value: (busyEngaged == -1 ? '--' : "$busyEngaged\ntraffic"), descriptionText: (busyEngaged == -1 ? "indicate no presence sensor" : "indicate traffic check"), displayed: false)
 }
 
 def updateDoWInd(dow)		{
@@ -719,21 +726,21 @@ def updateDoWInd(dow)		{
 		case '9':	vV = 'S & S';		break
 		default:	vV = 'Everyday';	break
 	}
-	sendEvent(name: 'dowInd', value: vV, descriptionText: "indicate run on only these days of the week: $vV", isStateChange: true, displayed: false)
+	sendEvent(name: 'dowInd', value: vV, descriptionText: "indicate run on only these days of the week: $vV", displayed: false)
 }
 
 def updateTimeInd(timeFromTo)		{
-	sendEvent(name: 'timeInd', value: timeFromTo, descriptionText: "indicate time from to", isStateChange: true, displayed: false)
+	sendEvent(name: 'timeInd', value: timeFromTo, descriptionText: "indicate time from to", displayed: false)
 }
 
 def updateTemperatureInd(temp)		{
 	def tS = (location.temperatureScale ?: 'F')
-	sendEvent(name: 'temperatureInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'temperatureInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"), displayed: false)
 }
 
 def updateOutTempIndC(temp)		{
 	def tS = (location.temperatureScale ?: 'F')
-	sendEvent(name: 'outTempInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'outTempInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"), displayed: false)
 }
 
 def updateVentIndC(vent)		{
@@ -743,8 +750,8 @@ def updateVentIndC(vent)		{
 		case 0:		vL = 'closed';		dD = "indicate vents closed";	break
 		default:	vL = 'open';		dD = "indicate vent open";		break
 	}
-//	sendEvent(name: 'ventInd', value: (vL == 'open' ? formatNumber(vent) : vL), descriptionText: dD, isStateChange: true, displayed: false)
-	sendEvent(name: 'ventInd', value: vL, descriptionText: dD, isStateChange: true, displayed: false)
+//	sendEvent(name: 'ventInd', value: (vL == 'open' ? formatNumber(vent) : vL), descriptionText: dD, displayed: false)
+	sendEvent(name: 'ventInd', value: vL, descriptionText: dD, displayed: false)
 }
 
 def updateMaintainIndC(maintainRoomTemp, turnOn, temperature, coolTemp, heatTemp, outTempSensor, outTemp, autoAdjustWithOutdoor)		{
@@ -769,7 +776,7 @@ def updateMaintainIndC(maintainRoomTemp, turnOn, temperature, coolTemp, heatTemp
 		temp = -1
 	if (temp != 999)	{
 		def tS = (location.temperatureScale ?: 'F')
-		sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"), isStateChange: true, displayed: false)
+		sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"), displayed: false)
 	}
 }
 
@@ -799,11 +806,11 @@ def updateThermostatIndC(currentPresence, maintainRoomTemp, useThermostat, curre
 		case 4:		vV = 'cooling';		dD = "indicate thermostat cooling";		break
 		case 5:		vV = 'heating';		dD = "indicate thermostat heating";		break
 	}
-	sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateThermoOverrideIndC(thermoOverride)		{
-	sendEvent(name: 'thermoOverrideInd', value: thermoOverride, descriptionText: "indicate thermo override minutes", isStateChange: true, displayed: false)
+	sendEvent(name: 'thermoOverrideInd', value: thermoOverride, descriptionText: "indicate thermo override minutes", displayed: false)
 }
 
 def updateFanIndC(fan)		{
@@ -815,32 +822,32 @@ def updateFanIndC(fan)		{
 		case 2:		vV = 'medium';	dD = "indicate fan on at medium speed";	break
 		case 3:		vV = 'high';	dD = "indicate fan on at high speed";	break
 	}
-	sendEvent(name: 'fanInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'fanInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateRulesInd(rules)		{
-	sendEvent(name: 'rulesInd', value: (rules == -1 ? '0' : rules), descriptionText: (rules == -1 ? "indicate no rules" : "indicate rules count"), isStateChange: true, displayed: false)
+	sendEvent(name: 'rulesInd', value: (rules == -1 ? '0' : rules), descriptionText: (rules == -1 ? "indicate no rules" : "indicate rules count"), displayed: false)
 }
 
 def updateLastRuleInd(rule)		{
-	sendEvent(name: 'lastRuleInd', value: (rule == -1 ? '--' : rule), descriptionText: (rule == -1 ? "indicate no rule executed" : "indicate rule number last executed"), isStateChange: true, displayed: false)
+	sendEvent(name: 'lastRuleInd', value: (rule == -1 ? '--' : rule), descriptionText: (rule == -1 ? "indicate no rule executed" : "indicate rule number last executed"), displayed: false)
 }
 
 def updatePauseInd(pMode)		{
-	sendEvent(name: 'pauseInd', value: (pMode == -1 ? '--' : pMode), descriptionText: (pMode == -1 ? "indicate no pause modes" : "indicate pause modes"), isStateChange: true, displayed: false)
+	sendEvent(name: 'pauseInd', value: (pMode == -1 ? '--' : pMode), descriptionText: (pMode == -1 ? "indicate no pause modes" : "indicate pause modes"), displayed: false)
 }
 
 def updatePowerInd(power)		{
-	sendEvent(name: 'powerInd', value: (power == -1 ? '--' : (power <= 100 ? power : formatNumber(power))), descriptionText: (power == -1 ? "indicate no power sensor" : "indicate power value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'powerInd', value: (power == -1 ? '--' : (power <= 100 ? power : formatNumber(power))), descriptionText: (power == -1 ? "indicate no power sensor" : "indicate power value"), displayed: false)
 }
 
 def updateEWattsInd(eWatts)		{
-	sendEvent(name: 'eWattsInd', value: (eWatts == -1 ? '--' : (eWatts <= 100 ? eWatts : formatNumber(eWatts))), descriptionText: (eWatts == -1 ? "indicate no engaged watts" : "indicate engaged watts value"), isStateChange: true, displayed: false)
+	sendEvent(name: 'eWattsInd', value: (eWatts == -1 ? '--' : (eWatts <= 100 ? eWatts : formatNumber(eWatts))), descriptionText: (eWatts == -1 ? "indicate no engaged watts" : "indicate engaged watts value"), displayed: false)
 }
 
 def updateAWattsInd(aWatts)		{
 	sendEvent(name: 'aWattsInd', value: (aWatts == -1 ? '--' : (aWatts <= 100 ? aWatts : formatNumber(aWatts))),
-				descriptionText: (aWatts == -1 ? "indicate no asleep watts" : "indicate asleep watts value"), isStateChange: true, displayed: false)
+				descriptionText: (aWatts == -1 ? "indicate no asleep watts" : "indicate asleep watts value"), displayed: false)
 }
 
 def updateESwitchInd(switchOn)		{
@@ -850,14 +857,14 @@ def updateESwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate engaged switch is on";	break
 		case 0:		vV = 'off';	dD = "indicate engaged switch is off";	break
 	}
-	sendEvent(name: 'eSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'eSwitchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateTimersInd(noMotion, dimTimer, noMotionEngaged, noMotionAsleep)		{
-	sendEvent(name: 'noMotionInd', value: (noMotion ? formatNumber(noMotion) : '--'), descriptionText: (noMotion ? "indicate motion timer for occupied state" : "indicate no motion timer for occupied state"), isStateChange: true, displayed: false)
-	sendEvent(name: 'dimTimerInd', value: (dimTimer ? formatNumber(dimTimer) : '--'), descriptionText: (dimTimer ? "indicate timer for checking state" : "indicate no timer for checking state"), isStateChange: true, displayed: false)
-	sendEvent(name: 'noMotionEngagedInd', value: (noMotionEngaged ? formatNumber(noMotionEngaged) : '--'), descriptionText: (noMotionEngaged ? "indicate motion timer for engaged state" : "indicate no motion timer for engaged state"), isStateChange: true, displayed: false)
-	sendEvent(name: 'noMotionAsleepInd', value: (noMotionAsleep ? formatNumber(noMotionAsleep) : '--'), descriptionText: (noMotionAsleep ? "indicate motion timer for asleep state" : "indicate no motion timer for asleep state"), isStateChange: true, displayed: false)
+	sendEvent(name: 'noMotionInd', value: (noMotion ? formatNumber(noMotion) : '--'), descriptionText: (noMotion ? "indicate motion timer for occupied state" : "indicate no motion timer for occupied state"), displayed: false)
+	sendEvent(name: 'dimTimerInd', value: (dimTimer ? formatNumber(dimTimer) : '--'), descriptionText: (dimTimer ? "indicate timer for checking state" : "indicate no timer for checking state"), displayed: false)
+	sendEvent(name: 'noMotionEngagedInd', value: (noMotionEngaged ? formatNumber(noMotionEngaged) : '--'), descriptionText: (noMotionEngaged ? "indicate motion timer for engaged state" : "indicate no motion timer for engaged state"), displayed: false)
+	sendEvent(name: 'noMotionAsleepInd', value: (noMotionAsleep ? formatNumber(noMotionAsleep) : '--'), descriptionText: (noMotionAsleep ? "indicate motion timer for asleep state" : "indicate no motion timer for asleep state"), displayed: false)
 }
 
 def updateOSwitchInd(switchOn)		{
@@ -867,7 +874,7 @@ def updateOSwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate at least one occupied switch is on";		break
 		case 0:		vV = 'off';	dD = "indicate all occupied switches is off";			break
 	}
-	sendEvent(name: 'oSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'oSwitchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateASwitchInd(switchOn)		{
@@ -877,7 +884,7 @@ def updateASwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate at least one asleep switch is on";	break
 		case 0:		vV = 'off';	dD = "indicate all asleep switches are off";		break
 	}
-	sendEvent(name: 'aSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'aSwitchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateNSwitchInd(switchOn)		{
@@ -887,7 +894,7 @@ def updateNSwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate at least one night switch is on";	break
 		case 0:		vV = 'off';	dD = "indicate all night switches are off";			break
 	}
-	sendEvent(name: 'nSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'nSwitchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateLSwitchInd(switchOn)		{
@@ -897,23 +904,23 @@ def updateLSwitchInd(switchOn)		{
 		case 1:		vV = 'on';	dD = "indicate locked switch is on";	break
 		case 0:		vV = 'off';	dD = "indicate locked switch is off";	break
 	}
-	sendEvent(name: 'lSwitchInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'lSwitchInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 def updateTurnAllOffInd(turnOff)		{
-	sendEvent(name: 'turnAllOffInd', value: turnOff, descriptionText: "indicate if all switches should be turned off when no rules match", isStateChange: true, displayed: false)
+	sendEvent(name: 'turnAllOffInd', value: turnOff, descriptionText: "indicate if all switches should be turned off when no rules match", displayed: false)
 }
 
 def updateDimByLevelInd(dimBy, dimTo)		{
-	sendEvent(name: 'dimByLevelInd', value: (dimBy == -1 && dimTo == -1 ? '-- / --' : "${(dimBy == -1 ? '--' : dimBy + '%')} /\n${(dimTo == -1 ? '--' : dimTo + '% ')}"), descriptionText: (dimBy == -1 && dimTo == -1 ? "indicate no dimming" : "indicate dimming by / to level"), isStateChange: true, displayed: false)
+	sendEvent(name: 'dimByLevelInd', value: (dimBy == -1 && dimTo == -1 ? '-- / --' : "${(dimBy == -1 ? '--' : dimBy + '%')} /\n${(dimTo == -1 ? '--' : dimTo + '% ')}"), descriptionText: (dimBy == -1 && dimTo == -1 ? "indicate no dimming" : "indicate dimming by / to level"), displayed: false)
 }
 
 def updateAdjRoomsInd(aRooms)		{
-	sendEvent(name: 'aRoomInd', value: (aRooms == -1 ? '--' : aRooms + '\nrooms'), descriptionText: (aRooms == -1 ? "indicate no adjacent rooms" : "indicate how many adjacent rooms"), isStateChange: true, displayed: false)
+	sendEvent(name: 'aRoomInd', value: (aRooms == -1 ? '--' : aRooms + '\nrooms'), descriptionText: (aRooms == -1 ? "indicate no adjacent rooms" : "indicate how many adjacent rooms"), displayed: false)
 }
 
 def updateWSSInd(wSS)		{
-	sendEvent(name: 'wSSInd', value: (wSS == -1 ? '--' : wSS), descriptionText: (wSS == -1 ? "indicate no window shades" : "indicate window shade position"), isStateChange: true, displayed: false)
+	sendEvent(name: 'wSSInd', value: (wSS == -1 ? '--' : wSS), descriptionText: (wSS == -1 ? "indicate no window shades" : "indicate window shade position"), displayed: false)
 }
 
 def updateAdjMotionInd(motionOn)		{
@@ -923,7 +930,7 @@ def updateAdjMotionInd(motionOn)		{
 		case 1:		vV = 'active';		dD = "indicate adjacent motion active";		break
 		case 0:		vV = 'inactive';	dD = "indicate adjacent motion inactive";	break
 	}
-	sendEvent(name: 'aMotionInd', value: vV, descriptionText: dD, isStateChange: true, displayed: false)
+	sendEvent(name: 'aMotionInd', value: vV, descriptionText: dD, displayed: false)
 }
 
 private formatNumber(number)	{

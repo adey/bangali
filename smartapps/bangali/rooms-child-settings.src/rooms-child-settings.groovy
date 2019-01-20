@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.3"  }
+public static String version()		{  return "v0.99.4"  }
 
 import groovy.transform.Field
 

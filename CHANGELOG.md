@@ -1,3 +1,13 @@
+Version: 0.99.4
+---------------
+
+DONE:   1/05/2018
+
+1) added support for multiple power meters
+2) added command optimization at the app level
+3) added setting room occupancy device on / off so it can be used in the rules
+4) other small fixes
+
 Version: 0.99.3
 ---------------
 
