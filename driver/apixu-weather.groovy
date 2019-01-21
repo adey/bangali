@@ -35,9 +35,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v4.3.0"  }
+public static String version()      {  return "v4.3.1"  }
 
 /***********************************************************************************************************************
+*
+* Version: 4.3.1
+*   1/20/2019: change icon size for mytile attribute.
 *
 * Version: 4.3.0
 *   12/30/2018: removed isStateChange:true based on testing done by @nh.schottfam on hubitat format.
@@ -290,9 +293,9 @@ log.debug obs
 	def wind_mytile=(isFahrenheit ? "${Math.round(obs.current.wind_mph)}" + " mph " : "${Math.round(obs.current.wind_kph)}" + " kph ")
 	sendEvent(name: "wind_mytile", value: wind_mytile, displayed: true)
 
-    imgName = getImgName(obs.forecast.forecastday[0].day.condition.code, 1)
-    sendEvent(name: "visualDayPlus1", value: '<img src=' + imgName + '>', displayed: true)
-    sendEvent(name: "visualDayPlus1WithText", value: '<img src=' + imgName + '><br>' + obs.forecast.forecastday[0].day.condition.text, displayed: true)
+    def imgNamePlus1 = getImgName(obs.forecast.forecastday[0].day.condition.code, 1)
+    sendEvent(name: "visualDayPlus1", value: '<img src=' + imgNamePlus1 + '>', displayed: true)
+    sendEvent(name: "visualDayPlus1WithText", value: '<img src=' + imgNamePlus1 + '><br>' + obs.forecast.forecastday[0].day.condition.text, displayed: true)
     sendEvent(name: "temperatureHighDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.maxtemp_f :
                             obs.forecast.forecastday[0].day.maxtemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
     sendEvent(name: "temperatureLowDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.mintemp_f :
@@ -320,7 +323,7 @@ log.debug obs
 //		mytext += '<br>' + obs.current.condition.text
 //	}
 	mytext += '<br>' + (isFahrenheit ? "${Math.round(obs.current.temp_f)}" + '&deg;F ' : obs.current.temp_c + '&deg;C ') + obs.current.humidity + '%'
-	mytext += '<br>' + localSunrise + ' <img style="height:1em" src=https:' + obs.current.condition.icon + '> ' + localSunset
+	mytext += '<br>' + localSunrise + ' <img style="height:2em" src=' + imgName + '> ' + localSunset
 	mytext += (wind_mytile == (isFahrenheit ? "0 mph " : "0 kph ") ? '<br> Wind is calm' : '<br>' + obs.current.wind_dir + ' ' + wind_mytile)
 	mytext += '<br>' + obs.current.condition.text
 
