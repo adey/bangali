@@ -154,7 +154,7 @@ log.debug "evt.value: $evt.value | evt.device.name: $evt.device.name"
 	def nowTime = now()
 	def dNI = evt.device.deviceNetworkId.toString()
 //	state.remove('rSH');
-	if (state.vacaRoomDevices.containsKey(dNI))		{
+	if (state.vacaRoomDevices?.containsKey(dNI))		{
 		def dow = getDoW().toString()
 		def nowDate = new Date(nowTime)
 		int hhMM = ((nowDate.format("HH", location.timeZone).toInteger() * 60) + nowDate.format("mm", location.timeZone).toInteger())
