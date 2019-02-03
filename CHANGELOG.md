@@ -1,3 +1,12 @@
+Version: 0.99.5
+---------------
+
+DONE:   1/17/2018
+
+1) exposed command optimization setting in general settings
+2) check switches on is now any on instead of all on
+3) room vacant check bug fix
+
 Version: 0.99.4
 ---------------
 

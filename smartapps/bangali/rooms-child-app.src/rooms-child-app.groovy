@@ -38,7 +38,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.4"  }
+public static String version()		{  return "v0.99.5"  }
 boolean isDebug()					{  return debugLogging  }
 
 import groovy.transform.Field
@@ -1782,6 +1782,9 @@ def pageGeneralSettings()	{
 			else
 				inputBRDS('allSwitchesOff', 'Turn OFF?', false, true)
 		}
+		section("Optimize device commands based on device state?", hideable: false)		{
+			inputBRDS('cmdOpt', 'Command optimization?', true, false)
+		}
 		if (state.hT == _Hubitat)
 			section("When switching off lights dim to off?", hideable: false)		{
 				inputERMSDO('dimOver', 'Dim over seconds?', false, false, false, [], [[[]:"No dimming"], [3:"3 seconds"], [5:"5 seconds"], [10:"10 seconds"], [15:"15 seconds"], [30:"30 seconds"], [45:"45 seconds"], [60:"60 seconds"], [90:"90 seconds"]])
@@ -2753,7 +2756,7 @@ def	buttonPushedEventHandler(evt)	{
 		if (!buttonOnlySetsEngaged)
 ///			child."${(resetEngagedDirectly ? vacant : checking)}"();
 //			"${(resetEngagedDirectly ? vacant : checking)}"()
-			roomVacant(true)
+			roomVacant()
 	}
 	else
 		engaged();
@@ -2881,7 +2884,7 @@ def	contactOpenEventHandler(evt)	{
 		if (isRoomEngaged())
 			contactEngaged(true)
 		else if (!contactSensorNotTriggersEngaged && (!contactSensorOutsideDoor || !cV.contains(open)))
-			roomVacant(true)
+			roomVacant()
 	}
 	else if (rSt == asleep)	{
 		if (resetAsleepWithContact)		{
@@ -3775,17 +3778,21 @@ def powerStaysBelowLocked()		{
 
 def roomVacant(forceVacant = false)		{
 	ifDebug("roomVacant", 'info')
-	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-	def motionActive = ((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active)))
-	def newState = null
-	if (!forceVacant && ['engaged', 'occupied', 'checking', 'vacant'].contains(rSt) && motionActive)
-		newState = (isRoomEngaged() ? engaged : occupied)
-	else
-		if ((rSt == engaged && resetEngagedDirectly) || rSt == checking)
-			newState = vacant
+	def newState
+	if (!forceVacant)	{
+		def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
+		def motionActive = ((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active)))
+		if (['engaged', 'occupied', 'checking', 'vacant', 'asleep'].contains(rSt) && motionActive)
+			newState = (isRoomEngaged() ? engaged : occupied)
 		else
-			newState = (state.dimTimer ? checking : vacant)
-	if (newState)		"$newState"();
+			if ((rSt == engaged && resetEngagedDirectly) || rSt == checking)
+				newState = vacant
+			else
+				newState = (state.dimTimer ? checking : vacant)
+	}
+	else
+		newState = vacant
+	"$newState"();
 }
 
 def roomAwake()		{
@@ -3956,7 +3963,7 @@ private processRules(pRSt = null, switchesOnly = false, vacationMode = false)	{
 			def humidity = getAvgHumidity()
 			if (humidity < thisRule.fromHumidity || humidity > thisRule.toHumidity)		continue;
 		}
-		if (thisRule.checkOn && thisRule.checkOn.currentSwitch.contains(off))		continue;
+		if (thisRule.checkOn && !thisRule.checkOn.currentSwitch.contains(on))		continue;
 		if (thisRule.checkOff && thisRule.checkOff.currentSwitch.contains(on))		continue;
 		if (state.timeCheck && (thisRule.fromTimeType && (thisRule.fromTimeType != _timeTime || thisRule.fromTime)) &&
 			(thisRule.toTimeType && (thisRule.toTimeType != _timeTime || thisRule.toTime)))		{
@@ -4367,17 +4374,18 @@ def switches2Off()	{
 	if (state.holidayLights)		return;
 	def switches = whichSwitchesAreOn(true)
 	for (def swt : switches)	{
-		if (swt.currentSwitch == on)	{
-			if (state.hT == _SmartThings || swt.currentLevel == 0 || !state.switchesHasLevel[(swt.getId())])	{
-				if (!cmdOpt || swt.currentSwitch == on)		swt.off();
-			}
-			else	{
-				if (dimOver)
-					swt.setLevel(0, dimOver.toInteger())
-				else
-					if (!cmdOpt || swt.currentSwitch == on)		swt.off();
-			}
+		def cS = swt.currentSwitch
+//		if (cS == on)	{
+		if (state.hT == _SmartThings || swt.currentLevel == 0 || !state.switchesHasLevel[(swt.getId())])	{
+			if (!cmdOpt || cS == on)		swt.off();
 		}
+		else	{
+			if (dimOver)
+				swt.setLevel(0, dimOver.toInteger())
+			else
+				if (!cmdOpt || cS == on)		swt.off();
+		}
+//		}
 	}
 }
 
@@ -4481,7 +4489,7 @@ def childUninstalled()		{  ifDebug("uninstalled room device ${app.label}")  }
 private convertRGBToHueSaturation(setColorTo)	{
 	def str = setColorTo.replaceAll("\\s","").toLowerCase()
 	def rgb = (colorsRGB[str][0] ?: colorsRGB['white'][0])
-//    ifDebug("convertRGBToHueSaturation: $str | $rgb")
+//log.debug "convertRGBToHueSaturation: $str | $rgb"
 	float r = rgb[0] / 255
 	float g = rgb[1] / 255
 	float b = rgb[2] / 255
@@ -4493,7 +4501,7 @@ private convertRGBToHueSaturation(setColorTo)	{
 		h = s = 0 // achromatic
 	else    {
 		float d = max - min
-		s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+		s = (l > 0.5 ? d / (2 - max - min) : d / (max + min))
 		switch (max)	{
 			case r:    h = (g - b) / d + (g < b ? 6 : 0);  break
 			case g:    h = (b - r) / d + 2;                break
@@ -4501,6 +4509,7 @@ private convertRGBToHueSaturation(setColorTo)	{
 		}
 		h /= 6
 	}
+//log.debug "hue: $h | sat: $s | lvl: $l"
 	return [hue: Math.round(h * 100), saturation: Math.round(s * 100), level: Math.round(l * 100)]
 }
 
@@ -4594,15 +4603,15 @@ def scheduleFromToTimes(evt = [:])	{
 	}
 
 	def opt = [];	if (process)  opt << 'process';		if (time)  opt << 'time';		if (sleep)  opt << 'sleep';
-log.debug "runTime: $runTime | opt: $opt"
+//log.debug "runTime: $runTime | opt: $opt"
 	runOnce(new Date(runTime.getTime() + new Random().nextInt(3000)), scheduleFromToTimes, [data: [option: opt]])
 //	runOnce(runTime, scheduleFromToTimes, [data: [option: opt]])
 
 //	if (evtOK)	{
 //		def x = null
-		if (evt.option && evt.option.contains('sleep'))
+		if (evt?.option && evt.option.contains('sleep'))
 			asleep()
-		else if (!evt.option || evt.option.contains('time') || evt.option.contains('process'))
+		else if (!evt?.option || evt.option.contains('time') || evt.option.contains('process'))
 			checkAndTurnOnOffSwitchesC()
 //		else if (evt.option?.contains('time'))
 //			x = processRules()
