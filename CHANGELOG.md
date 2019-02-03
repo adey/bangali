@@ -1,7 +1,7 @@
 Version: 0.99.5
 ---------------
 
-DONE:   1/17/2018
+DONE:   1/17/2019
 
 1) exposed command optimization setting in general settings
 2) check switches on is now any on instead of all on
