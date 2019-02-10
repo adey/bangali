@@ -586,12 +586,14 @@ log.debug data
 	state.schedules = []
 	if (batteryTime)	{
 		def x = timeToday(batteryTime, location.timeZone)
-		def bTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", x.format("HH", location.timeZone).toInteger(), x.format("mm", location.timeZone).toInteger()), location.timeZone), location.timeZone)
+//		def bTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", x.format("HH", location.timeZone).toInteger(), x.format("mm", location.timeZone).toInteger()), location.timeZone), location.timeZone)
+		def bTime = timeToday(String.format("%02d:%02d", x.format("HH", location.timeZone).toInteger(), x.format("mm", location.timeZone).toInteger()), location.timeZone)
 		state.schedules << [type:'battery', time:bTime, timeS:(bTime.format("HH:mm", location.timeZone))]
 	}
 	if (checkHealth)	{
 		def hMP = healthMinsPast.toInteger()
-		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", cHH, hMP), location.timeZone), location.timeZone)
+//		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", cHH, hMP), location.timeZone), location.timeZone)
+		def hTime = timeToday(String.format("%02d:%02d", cHH, hMP), location.timeZone)
 //		def hTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", (hMP > cMM ? cHH : (cHH == 23 ? 0 : cHH + 1)), hMP), location.timeZone), location.timeZone)
 		state.schedules << [type:'health', time:hTime, timeS:(hTime.format("HH:mm", location.timeZone))]
 	}
@@ -608,7 +610,9 @@ log.debug data
 	def rTime = false
 	def rTimeS
 	def rOpts = []
+	def nD = new Date(now() + (30 * 1000L))
 	for (def schedule : state.schedules)	{
+		if (schedule.time.before(nD))	continue;
 		if (!rTime)		{
 			rTime = schedule.time
 			rTimeS = schedule.timeS

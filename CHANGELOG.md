@@ -1,6 +1,10 @@
 Version: 0.99.5
 ---------------
 
+DONE:   2/10/2019
+
+1) bug fix for battery and health check times
+
 DONE:   1/17/2019
 
 1) exposed command optimization setting in general settings
