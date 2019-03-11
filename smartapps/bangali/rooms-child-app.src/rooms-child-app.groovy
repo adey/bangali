@@ -4609,9 +4609,9 @@ def scheduleFromToTimes(evt = [:])	{
 
 //	if (evtOK)	{
 //		def x = null
-		if (evt?.option && evt.option.contains('sleep'))
+		if (evt && evt?.option && evt.option.contains('sleep'))
 			asleep()
-		else if (!evt?.option || evt.option.contains('time') || evt.option.contains('process'))
+		else if (!evt || !evt?.option || evt.option.contains('time') || evt.option.contains('process'))
 			checkAndTurnOnOffSwitchesC()
 //		else if (evt.option?.contains('time'))
 //			x = processRules()
