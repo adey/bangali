@@ -35,12 +35,9 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v5.0.1"  }
+public static String version()      {  return "v5.0.0"  }
 
 /***********************************************************************************************************************
-*
-* Version: 5.0.1
-*	3/24/2019: fix typo
 *
 * Version: 5.0.0
 *	3/10/2019: allow selection of which attributes to publish
@@ -272,7 +269,7 @@ def poll()      {
 //    sendEventPublish(name: "pressure_mb", value: obs.current.pressure_mb, unit: "MBAR")
 //    sendEventPublish(name: "pressure_in", value: obs.current.pressure_in, unit: "IN")
     sendEventPublish(name: "pressure", value: (isFahrenheit ? obs.current.pressure_in : obs.current.pressure_mb), unit: "${(isFahrenheit ? 'IN' : 'MBAR')}", displayed: true)
-	if (isFahrenheit)	{
+	if (isFarenheit)	{
 	    sendEventPublish(name: "precip_in", value: obs.current.precip_in, unit: "IN", displayed: true)
 		sendEventPublish(name: "feelslike_f", value: obs.current.feelslike_f, unit: "F", displayed: true)
 		sendEventPublish(name: "vis_miles", value: obs.current.vis_miles, unit: "MILES", displayed: true)
