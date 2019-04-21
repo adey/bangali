@@ -35,9 +35,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v5.0.1"  }
+public static String version()      {  return "v5.0.2"  }
 
 /***********************************************************************************************************************
+*
+* Version: 5.0.2
+*	4/20/2019: allow selection for publishing feelsLike and wind attribuets
 *
 * Version: 5.0.1
 *	3/24/2019: revert typo
@@ -624,6 +627,7 @@ private getImgName(wCode, is_day)       {
 	condition_text:		'Condition text',
 	weather:			'Condition text',
 	country:			'Country',
+	feelslike:			'Feels like (in default unit)',
 	feelslike_c:		'Feels like °C',
 	feelslike_f:		'Feels like °F',
 	forecastIcon:		'Forecast icon',
@@ -662,6 +666,7 @@ private getImgName(wCode, is_day)       {
 	visualDayPlus1:			'Visual weather day +1',
 	visualDayPlus1WithText:	'Visual weather day +1 with text',
 	visualWithText:		'Visual weather with text',
+	wind:				'Wind (in default unit)',
 	wind_degree:		'Wind Degree',
 	wind_kph:			'Wind KPH',
 	wind_mph:			'Wind MPH',
