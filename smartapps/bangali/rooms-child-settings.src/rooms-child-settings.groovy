@@ -416,7 +416,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["resetEngagedDirectly", "Reset no checking:"],
 	["engagedOverrides", "Engaged overrides:", null, false],
 
-	["checked settings:"],
+	["checking settings:"],
 	["dimTimer", "Dim timer:", " seconds"],
 	["dimByLevel", "By level:", "%", false, "or", "dimTimer"],
 	["dimToLevel", "To level:", "%", false, "or", "dimTimer"],
@@ -448,6 +448,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["powerToTimeOffset", "Time to offset:", null, false, "and", "powerDevice", "powerValueAsleep", "powerToTimeType", "powerToTime"],
 	["powerTriggerFromVacant", "From vacant:", null, false, "and", "powerDevice", "powerValueAsleep"],
 	["powerStays", "Stays below:", " seconds", false, "and", "powerDevice", "powerValueAsleep"],
+	["asleepMode", "Asleep mode:", null, false],
 	["noAsleep", "Asleep timeout:"],
 	["resetAsleepDirectly", "Reset no checking:"],
 	["resetAsleepWithContact", "Reset sleep state:", " minutes", false, "or", "contactSensor"],

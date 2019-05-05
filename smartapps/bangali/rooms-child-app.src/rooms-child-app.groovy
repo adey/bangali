@@ -1364,6 +1364,7 @@ def pageAsleepSettings()	{
 				paragraph pAS3
 				paragraph pAS4
 			}
+			input "asleepMode", "mode", title: "ASLEEP/AWAKE with location mode change from/to?", required: false, multiple: false
 			if (asleepFromTime && asleepToTime)
 				inputNRDRS("noAsleep", "Timeout ASLEEP after how many minutes?", true, aTO, "$aTO..$aTO")
 			else
@@ -1871,6 +1872,7 @@ private updateRoom()	{
 	log.info "updateRoom $app.label"
 	if (debugLogging)		state.debugOffTime = now() + _SecondsInDay;
 	boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
+	state.prvMode = location.currentMode.toString()
 	subscribe(location, "mode", modeEventHandler)
 	state.motionTraffic = 0
 	state.noMotion = ((noMotionOccupied && noMotionOccupied >= 5) ? noMotionOccupied : null)
@@ -2507,11 +2509,14 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 
 def	modeEventHandler(evt)	{
 	ifDebug("modeEventHandler", 'info')
-	if (state.dayOfWeek && !(checkRunDay()))	return;
-	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-	if (awayModes && awayModes.contains(evt.value))				roomVacant(true);
-	else if (pauseModes && pauseModes.contains(evt.value))		unscheduleAll("mode handler");
-	else if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
+	if (!state.dayOfWeek || checkRunDay())		{
+		def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
+		if (awayModes && awayModes.contains(evt.value))				roomVacant(true);
+		else if (pauseModes && pauseModes.contains(evt.value))		unscheduleAll("mode handler");
+		else if (asleepMode && (asleepMode.contains(evt.value) || asleepMode.contains(state.prvMode)))		asleepEventHandler([:]);
+		else if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
+	}
+	state.prvMode = location.currentMode.toString()
 }
 
 def	motionActiveEventHandler(evt)	{
@@ -4977,6 +4982,7 @@ def	asleepEventHandler(evt)	{
 private isRoomAsleep()		{
 	if (asleepSwitch && asleepSwitch.currentSwitch.contains('on'))	return true;
 	if (asleepSensor && asleepSensor.currentSleeping.contains('sleeping'))	return true;
+	if (asleepMode && asleepMode.contains(location.currentMode.toString()))	return true;
 	if (powerDevice && powerValueAsleep && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) >= powerValueAsleep)	return true;
 	return false
 }

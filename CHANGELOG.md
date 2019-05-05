@@ -1,3 +1,10 @@
+Version: 0.99.6
+---------------
+
+DONE:   5/5/2019
+
+1) added mode trigger for asleep state
+
 Version: 0.99.5
 ---------------
 

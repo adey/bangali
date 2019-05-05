@@ -1346,8 +1346,10 @@ def setRoomState(childID)	{
 private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $app.label: " + msg  }
 
 private convertRGBToHueSaturation(setColorTo)	{
-	def str = setColorTo.replaceAll("\\s","").toLowerCase()
-	def rgb = (colorsRGB[str][0] ?: colorsRGB['white'][0])
+	def str, rgb
+	if (setColorTo)
+		str = setColorTo.replaceAll("\\s","").toLowerCase()
+	rgb = (colorsRGB[str][0] ?: colorsRGB['white'][0])
 	ifDebug("$str | $rgb")
 	float r = rgb[0] / 255
 	float g = rgb[1] / 255
