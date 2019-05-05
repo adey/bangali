@@ -35,9 +35,12 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v5.0.2"  }
+public static String version()      {  return "v5.0.5"  }
 
 /***********************************************************************************************************************
+*
+* Version: 5.0.5
+*	5/4/2019: fixed typos for feelsLike* and added condition code for day plus 1 forecasted data.
 *
 * Version: 5.0.2
 *	4/20/2019: allow selection for publishing feelsLike and wind attribuets
@@ -138,8 +141,8 @@ metadata    {
         attribute "precip_mm", "string"
         attribute "precip_in", "string"
         attribute "cloud", "string"
-        attribute "feelslike_c", "string"
-        attribute "feelslike_f", "string"
+        attribute "feelsLike_c", "string"
+        attribute "feelsLike_f", "string"
         attribute "vis_km", "string"
         attribute "vis_miles", "string"
 
@@ -162,6 +165,7 @@ metadata    {
         attribute "localSunrise", "string"
         attribute "localSunset", "string"
 
+		attribute "condition_codeDayPlus1", "string"
         attribute "visualDayPlus1", "string"
         attribute "visualDayPlus1WithText", "string"
         attribute "temperatureLowDayPlus1", "string"
@@ -277,12 +281,12 @@ def poll()      {
     sendEventPublish(name: "pressure", value: (isFahrenheit ? obs.current.pressure_in : obs.current.pressure_mb), unit: "${(isFahrenheit ? 'IN' : 'MBAR')}", displayed: true)
 	if (isFahrenheit)	{
 	    sendEventPublish(name: "precip_in", value: obs.current.precip_in, unit: "IN", displayed: true)
-		sendEventPublish(name: "feelslike_f", value: obs.current.feelslike_f, unit: "F", displayed: true)
+		sendEventPublish(name: "feelsLike_f", value: obs.current.feelslike_f, unit: "F", displayed: true)
 		sendEventPublish(name: "vis_miles", value: obs.current.vis_miles, unit: "MILES", displayed: true)
 	}
 	else	{
 		sendEventPublish(name: "precip_mm", value: obs.current.precip_mm, unit: "MM", displayed: true)
-		sendEventPublish(name: "feelslike_c", value: obs.current.feelslike_c, unit: "C", displayed: true)
+		sendEventPublish(name: "feelsLike_c", value: obs.current.feelslike_c, unit: "C", displayed: true)
 	    sendEventPublish(name: "vis_km", value: obs.current.vis_km, unit: "KM", displayed: true)
 	}
     sendEventPublish(name: "humidity", value: obs.current.humidity, unit: "%", displayed: true)
@@ -308,6 +312,7 @@ def poll()      {
 	def wind_mytile=(isFahrenheit ? "${Math.round(obs.current.wind_mph)}" + " mph " : "${Math.round(obs.current.wind_kph)}" + " kph ")
 	sendEventPublish(name: "wind_mytile", value: wind_mytile, displayed: true)
 
+	sendEventPublish(name: "condition_codeDayPlus1", value: obs.forecast.forecastday[0].day.condition.code, displayed: true)
     def imgNamePlus1 = getImgName(obs.forecast.forecastday[0].day.condition.code, 1)
     sendEventPublish(name: "visualDayPlus1", value: '<img src=' + imgNamePlus1 + '>', displayed: true)
     sendEventPublish(name: "visualDayPlus1WithText", value: '<img src=' + imgNamePlus1 + '><br>' + obs.forecast.forecastday[0].day.condition.text, displayed: true)
@@ -627,9 +632,9 @@ private getImgName(wCode, is_day)       {
 	condition_text:		'Condition text',
 	weather:			'Condition text',
 	country:			'Country',
-	feelslike:			'Feels like (in default unit)',
-	feelslike_c:		'Feels like °C',
-	feelslike_f:		'Feels like °F',
+	feelsLike:			'Feels like (in default unit)',
+	feelsLike_c:		'Feels like °C',
+	feelsLike_f:		'Feels like °F',
 	forecastIcon:		'Forecast icon',
 	humidity:			'Humidity',
 	illuminance:		'Illuminance',
@@ -663,6 +668,7 @@ private getImgName(wCode, is_day)       {
 	vis_km:				'Visibility KM',
 	vis_miles:			'Visibility miles',
 	visual:				'Visual weather',
+	condition_codeDayPlus1:	'Condition code day +1',
 	visualDayPlus1:			'Visual weather day +1',
 	visualDayPlus1WithText:	'Visual weather day +1 with text',
 	visualWithText:		'Visual weather with text',
