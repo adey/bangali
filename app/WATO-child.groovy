@@ -14,7 +14,8 @@
 *
 *  Author: bangali
 *
-*  2018-01-23   added support for executing RM rule action for both match and unmatched attribute.
+*  2019-05-11   added support for logging received event
+*  2019-01-23   added support for executing RM rule action for both match and unmatched attribute
 *  2018-12-30   added support to select attribute value being compared or attribute valye from another device as first
 *					parameter for command on devices
 *  2018-12-30   added support to check for any changes to device attribute value
@@ -35,7 +36,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v5.0.0"  }
+public static String version()		{  return "v5.1.0"  }
 
 import hubitat.helper.RMUtils
 
@@ -266,6 +267,10 @@ def wato()		{
 			input "fromTime", "time", title: "From Time?", required:(toTime ? true : false), defaultValue:null, submitOnChange:true
 			input "toTime", "time", title: "To Time?", required:(fromTime ? true : false), defaultValue:null, submitOnChange:true
 		}
+		section("")		{
+			paragraph subHeaders('Logging', true, true)
+			input "log", "bool", title: "Log received event values?", required:false, defaultValue:false
+		}
 	}
 }
 
@@ -289,6 +294,8 @@ def updated()		{
 		state.prvAttrVal = checkVal()
 	}
 }
+
+def initialize()	{  unsubscribe();	unschedule()  }
 
 private updLbl()	{
 	state.cParams = null
@@ -351,10 +358,8 @@ private lblStr()	{
 
 private format24hrTime(tTF = new Date(now()), fmt = 'HH:mm')	{  return tTF.format(fmt, location.timeZone)  }
 
-def initialize()	{  unsubscribe();	unschedule()  }
-
 def checkAttr(evt)	{
-//log.info "\tcheckAttr: name = $evt.name | value = $evt.value"
+	if (log)		log.info "\tcheckAttr: name = $evt.name | value = $evt.value | source = $evt.source";
 	if (state.watoDisabled)		return;
 	if (inModes && !inModes.contains(location.currentMode.toString()))		return;
 	if (fromTime && toTime)		{
