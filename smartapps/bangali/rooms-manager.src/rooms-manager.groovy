@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.5"  }
+public static String version()		{  return "v0.99.6"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field

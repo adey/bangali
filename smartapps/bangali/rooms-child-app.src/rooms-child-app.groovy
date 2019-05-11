@@ -38,7 +38,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.5"  }
+public static String version()		{  return "v0.99.6"  }
 boolean isDebug()					{  return debugLogging  }
 
 import groovy.transform.Field
