@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2019-05-12   added support for contains
 *  2019-05-11   added support for logging received event
 *  2019-01-23   added support for executing RM rule action for both match and unmatched attribute
 *  2018-12-30   added support to select attribute value being compared or attribute valye from another device as first
@@ -36,7 +37,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v5.1.0"  }
+public static String version()		{  return "v5.2.0"  }
 
 import hubitat.helper.RMUtils
 
@@ -164,7 +165,7 @@ def wato()		{
 			if (attrDev)
 				input "attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allAttrs
 			if (attr)
-				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:[['<':"< (less than)"], ['<=':"<= (less than or equals to)"], ['=':"= (equals to)"], ['>=':">= {greater than or equals to}"], ['>':"> {greater than}"], ['!=':"!= {not equals to}"], ['⬆︎':"⬆︎ (rises above)"], ['⬇︎':"⬇︎ (falls below)"], ['⬆︎⬇︎':"⬆︎⬇︎ (changes)"]]
+				input "attrOp", "enum", title: "Operator?", required:true, multiple:false, submitOnChange:true, options:[['<':"< (less than)"], ['<=':"<= (less than or equals to)"], ['=':"= (equals to)"], ['>=':">= {greater than or equals to}"], ['>':"> {greater than}"], ['!=':"!= {not equals to}"], ['⬆︎':"⬆︎ (rises above)"], ['⬇︎':"⬇︎ (falls below)"], ['⬆︎⬇︎':"⬆︎⬇︎ (changes)"], ['⊃':"⊃ (contains)"]]
 			if (attrOp && attrOp != '⬆︎⬇︎')		{
 				input "attrTyp", "enum", title: "Type?", required:true, multiple:false, submitOnChange:true, options:(['⬆︎', '⬇︎'].contains(attrOp) ? ["Number", "Decimal"] : ["Text", "Number", "Decimal"])
 				if (attrTyp)	{
@@ -404,6 +405,9 @@ def checkAttr(evt)	{
 			break
 		case "⬆︎⬇︎":
 			if (evtVal != state.prvAttrVal)		match = true;
+			break
+		case "⊃":
+			if (evtVal.toString().contains(aV.toString()))		match = true;
 			break
 	}
 //log.debug "$eV $attrOp $aV | $dev | $devCmd $state.cParams | $devUnCmd $state.unCParams | $match"
