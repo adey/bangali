@@ -35,12 +35,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()      {  return "v5.0.5"  }
+public static String version()      {  return "v5.1.0"  }
 
 /***********************************************************************************************************************
 *
+* Version: 5.1.0
+*	5/18/2019: added precipication forecast data from day - 2 to day + 2
+*
 * Version: 5.0.5
-*	5/4/2019: fixed typos for feelsLike* and added condition code for day plus 1 forecasted data.
+*	5/4/2019: fixed typos for feelsLike* and added condition code for day plus 1 forecasted data
 *
 * Version: 5.0.2
 *	4/20/2019: allow selection for publishing feelsLike and wind attribuets
@@ -140,6 +143,13 @@ metadata    {
 //        attribute "pressure_in", "string"
         attribute "precip_mm", "string"
         attribute "precip_in", "string"
+
+		attribute "precipDayMinus2", "string"
+		attribute "precipDayMinus1", "string"
+		attribute "precipDay0", "string"
+		attribute "precipDayPlus1", "string"
+		attribute "precipDayPlus2", "string"
+
         attribute "cloud", "string"
         attribute "feelsLike_c", "string"
         attribute "feelsLike_f", "string"
@@ -195,6 +205,8 @@ metadata    {
 def updated()   {
 	unschedule()
     state.tz_id = null
+	state.localDate = null
+	state.forecastPrecip = [date: null, precipDayMinus2:[in:999.9, mm:999.9], precipDayMinus1:[in:999.9, mm:999.9], precipDay0:[in:999.9, mm:999.9], precipDayPlus1:[in:999.9, mm:999.9], precipDayPlus2:[in:999.9, mm:999.9]]
     state.clockSeconds = true
     poll()
     "runEvery${pollEvery}Minutes"(poll)
@@ -321,6 +333,8 @@ def poll()      {
     sendEventPublish(name: "temperatureLowDayPlus1", value: (isFahrenheit ? obs.forecast.forecastday[0].day.mintemp_f :
                             obs.forecast.forecastday[0].day.mintemp_c), unit: "${(isFahrenheit ? 'F' : 'C')}", displayed: true)
 
+	forecastPrecip(obs.forecast)
+
 	def mytext = obs.location.name + ', ' + obs.location.region
 //	if (isFahrenheit)	{
 //		mytext += '<br>' + "${Math.round(obs.current.temp_f)}" + '&deg;F ' + obs.current.humidity + '%'
@@ -349,6 +363,29 @@ def poll()      {
 
     sendEventPublish(name: "mytile", value: mytext, displayed: true)
     return
+}
+
+private forecastPrecip(forecast)	{
+	if (!state.tz_id)       return;
+    def nowTime = new Date()
+    def tZ = TimeZone.getTimeZone(state.tz_id)
+    def localDate = nowTime.format("yyyy-MM-dd", tZ)
+    if (localDate == state.forecastPrecip.date)		return;
+
+	state.forecastPrecip.date = localDate
+	state.forecastPrecip.precipDayMinus2 = state.forecastPrecip.precipDayMinus1
+	state.forecastPrecip.precipDayMinus1 = state.forecastPrecip.precipDay0
+	state.forecastPrecip.precipDay0 = state.forecastPrecip.precipDayPlus1
+	state.forecastPrecip.precipDayPlus1.mm = forecast.forecastday[0].day.totalprecip_mm
+	state.forecastPrecip.precipDayPlus1.in = forecast.forecastday[0].day.totalprecip_in
+	state.forecastPrecip.precipDayPlus2.mm = forecast.forecastday[1].day.totalprecip_mm
+	state.forecastPrecip.precipDayPlus2.in = forecast.forecastday[1].day.totalprecip_in
+
+	sendEventPublish(name: "precipDayMinus2", value: (isFahrenheit ? state.forecastPrecip.precipDayMinus2.in : state.forecastPrecip.precipDayMinus2.mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
+	sendEventPublish(name: "precipDayMinus1", value: (isFahrenheit ? state.forecastPrecip.precipDayMinus1.in : state.forecastPrecip.precipDayMinus1.mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
+	sendEventPublish(name: "precipDay0", value: (isFahrenheit ? state.forecastPrecip.precipDay0.in : state.forecastPrecip.precipDay0.mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
+	sendEventPublish(name: "precipDayPlus1", value: (isFahrenheit ? state.forecastPrecip.precipDayPlus1.in : state.forecastPrecip.precipDayPlus1.mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
+	sendEventPublish(name: "precipDayPlus2", value: (isFahrenheit ? state.forecastPrecip.precipDayPlus2.in : state.forecastPrecip.precipDayPlus2.mm), unit: "${(isFahrenheit ? 'IN' : 'MM')}", displayed: true)
 }
 
 def refresh()       { poll() }
@@ -658,8 +695,13 @@ private getImgName(wCode, is_day)       {
 	last_updated:		'Last updated',
 	last_updated_epoch:	'Last updated epoch',
 	mytile:				'Mytile for dashboard',
-	precip_in:			'Precipitation Inches',
 	precip_mm:			'Precipitation MM',
+	precip_in:			'Precipitation Inches',
+	precipDayMinus2:	'Precipitation Day - 2',
+	precipDayMinus1:	'Precipitation Day - 1',
+	precipDay0:			'Precipitation Day - 0',
+	precipDayPlus1:		'Precipitation Day + 1',
+	precipDayPlus2:		'Precipitation Day + 2',
 	percentPrecip:		'Percent precipitation',
 	pressure:			'Pressure',
 	temperature:		'Temperature',
