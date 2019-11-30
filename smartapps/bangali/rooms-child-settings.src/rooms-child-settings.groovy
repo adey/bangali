@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.6"  }
+public static String version()		{  return "v1.0.0"  }
 
 import groovy.transform.Field
 
@@ -279,7 +279,9 @@ private varRuleString(thisRule, anonIt)	{
 	rD = (thisRule.state ? "$rD State＝$thisRule.state" : "$rD")
 	rD = (thisRule.dayOfWeek ? "$rD Days of Week＝$thisRule.dayOfWeek" : "$rD")
 	rD = (thisRule.luxThreshold != null ? "$rD Lux＝$thisRule.luxThreshold" : "$rD")
+	rD = (thisRule?.luxCheck ? "$rD Lux Greater Than＝$thisRule.luxCheck" : "$rD")
 	rD = (thisRule.powerThreshold ? "$rD Power＝$thisRule.powerThreshold" : "$rD")
+	rD = (thisRule?.powerCheck ? "$rD Power Less Than＝$thisRule.powerCheck" : "$rD")
 	rD = (thisRule.presence ? "$rD Presence＝${(anonIt ? thisRule.presence.size() : thisRule.presence)}" : "$rD")
 	rD = (thisRule.checkOn ? "$rD Check ON＝${(anonIt ? thisRule.checkOn.size() : thisRule.checkOn)}" : "$rD")
 	rD = (thisRule.checkOff ? "$rD Check OFF＝${(anonIt ? thisRule.checkOff.size() : thisRule.checkOff)}" : "$rD")
@@ -406,9 +408,11 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["powerToTimeOffset", "Time to offset:", null, false, "and", "powerDevice", "powerValueEngaged", "powerToTimeType", "powerToTime"],
 	["powerTriggerFromVacant", "From vacant:", null, false, "and", "powerDevice", "powerValueEngaged"],
 	["powerTriggerFromOccupied", "From occupied:", null, false, "and", "powerDevice", "powerValueEngaged"],
-	["powerStays", "Stays below:", " seconds", false, "and", "powerDevice", "powerValueEngaged"],
+	["powerStaysAbove", "Stays above for:", " seconds", false, "and", "powerDevice", "powerValueEngaged"],
+	["powerStays", "Stays below for:", " seconds", false, "and", "powerDevice", "powerValueEngaged"],
 	["resetEngagedWithContact", "Reset engaged state:", " minutes", false, "and", "contactSensor", "powerValueEngaged"],
 	["contactSensor", "Contact sensors:", null, true],
+	["contactEngagedRequiresMotion", "Contact motion:", null, false, "and", "contactSensor", "motionSensors"],
 	["contactSensorOutsideDoor", "Outside door:", null, false, "or", "contactSensor"],
 	["contactSensorNotTriggersEngaged", "Only sets:", null, false, "or", "contactSensor"],
 	["noMotionEngaged", "Require motion:", " seconds"],
@@ -447,7 +451,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["powerToTime", "Time to:", null, false, "and", "powerDevice", "powerValueAsleep", "powerToTimeType"],
 	["powerToTimeOffset", "Time to offset:", null, false, "and", "powerDevice", "powerValueAsleep", "powerToTimeType", "powerToTime"],
 	["powerTriggerFromVacant", "From vacant:", null, false, "and", "powerDevice", "powerValueAsleep"],
-	["powerStays", "Stays below:", " seconds", false, "and", "powerDevice", "powerValueAsleep"],
+	["powerStays", "Stays below for:", " seconds", false, "and", "powerDevice", "powerValueAsleep"],
 	["asleepMode", "Asleep mode:", null, false],
 	["noAsleep", "Asleep timeout:"],
 	["resetAsleepDirectly", "Reset no checking:"],
@@ -476,7 +480,7 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["powerToTime", "Time to:", null, false, "and", "powerDevice", "powerValueLocked", "powerToTimeType"],
 	["powerToTimeOffset", "Time to offset:", null, false, "and", "powerDevice", "powerValueLocked", "powerToTimeType", "powerToTime"],
 	["powerTriggerFromVacant", "From vacant:", null, false, "and", "powerDevice", "powerValueLocked"],
-	["powerStays", "Stays below:", " seconds", false, "and", "powerDevice", "powerValueLocked"],
+	["powerStays", "Stays below for:", " seconds", false, "and", "powerDevice", "powerValueLocked"],
 	["lockedContact", "Locked contact:", null, true],
 	["lockedContactCmd", "Contact closes:", null, false, "and", "lockedContact"],
 	["lockedTurnOff", "Turn off switches:", null, false],
@@ -513,7 +517,8 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["roomCoolSwitch", "AC switch:", null, true, "and", "maintainRoomTemp", "!useThermostat"],
 	["roomHeatSwitch", "Heater switch:", null, true, "and", "maintainRoomTemp", "!useThermostat"],
 	["checkPresence", "Check presence:", null, false, "and", "maintainRoomTemp", "personsPresence"],
-	["contactSensorsRT", "Contacts closed:", null, true, "and", "maintainRoomTemp", "personsPresence"],
+	["contactSensorsRTCheck", "Contacts check cool:", null, true, "and", "maintainRoomTemp", "contactSensorsRT"],
+	["contactSensorsRTCheckHeat", "Contacts check heat:", null, true, "and", "maintainRoomTemp", "contactSensorsRT"],
 	["thermoOverride", "Thermostat override:", null, true, "and", "maintainRoomTemp"],
 	["outTempSensor", "Outdoor Temperature:", null, true],
 	["autoAdjustWithOutdoor", "Adjust with outdoor:", null, false, "and", "outTempSensor"],

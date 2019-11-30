@@ -38,7 +38,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.6"  }
+public static String version()		{  return "v1.0.0"  }
 boolean isDebug()					{  return debugLogging  }
 
 import groovy.transform.Field
@@ -273,7 +273,7 @@ def roomName()	{
 }
 
 private addImage(url)	{
-	return (state.hT == _Hubitat ? "<img src=$url height=$_ImgSize width=$_ImgSize>  " : '')
+	return (state.hT == _Hubitat ? "<img src=$url height=$_ImgSize width=$_ImgSize>  " : '')
 }
 
 private gitURL(imgName)	{
@@ -358,7 +358,8 @@ def pageOtherDevicesSettings()	{
 	if (ht == _Hubitat && roomButton && !roomButtonType)		app.updateSetting("roomButtonType", [type:"enum", value:"$pushAButton"]);
 	def pODS1 = 'Use which motion event for timeout?'
 	def pODS2 = 'Rotate thru which room states?'
-	def pODS3 = 'Contact sensor on outside door?'
+	def pODS3 = 'Inside door require motion after door closed to set ENGAGED?'
+	def pODS4 = 'Contact sensor on outside door?'
 	dynamicPage(name: "pageOtherDevicesSettings", title:"Room Sensors", install:false, uninstall:false)	{
 		section("MOTION SENSORS:", hideable:false)	{
 			inputDRMS('motionSensors', 'motionSensor', 'Room motion sensors?', false, true, true)
@@ -411,10 +412,28 @@ def pageOtherDevicesSettings()	{
 		}
 		section("ROOM DOOR SENSORS:", hideable:false)	{
 			inputDRMS('contactSensor', 'contactSensor', 'Contact sensors?', false, true, true)
+			if (contactSensor && motionSensors)
+//				if (!contactSensorOutsideDoor)
+					inputBRDS('contactEngagedRequiresMotion', pODS3, false, false)
+//				else	{
+//					app.updateSetting('contactEngagedRequiresMotion', [type: 'bool', value: false])
+//					paragraph pODS3 + '\ncannot be set for outside door'
+//				}
+			else	{
+				app.updateSetting('contactEngagedRequiresMotion', [type: 'bool', value: false])
+				paragraph pODS3 + '\nselect contact sensor and motion sensor to set'
+			}
 			if (contactSensor)
-				inputBRDS('contactSensorOutsideDoor', pODS3, false, false)
-			else
-				paragraph pODS3 + '\nselect contact sensor to set'
+//				if (!contactEngagedRequiresMotion)
+					inputBRDS('contactSensorOutsideDoor', pODS4, false, false)
+//				else	{
+//					app.updateSetting('contactSensorOutsideDoor', [type: 'bool', value: false])
+//					paragraph pODS4 + '\nreset requires motion to set'
+//				}
+			else	{
+				app.updateSetting('contactSensorOutsideDoor', [type: 'bool', value: false])
+				paragraph pODS4 + '\nselect contact sensor to set'
+			}
 		}
 		section("ROOM WINDOW SENSORS:", hideable:false)	{
 			inputDRMS('contactSensorsRT', 'contactSensor', 'Window sensors?', false, true)
@@ -575,6 +594,7 @@ def pageEngagedSettings()	{
 	def pES4 = 'Power time range?'
 	def pES5 = 'Power value triggers ENGAGED from VACANT?'
 	def pES6 = 'Power value triggers ENGAGED from OCCUPIED?'
+	def pES61 = 'Power stays above for how many seconds to set ENGAGED?'
 	def pES7 = 'Power stays below for how many seconds to reset ENGAGED?'
 	def pES8 = 'When room is busy?'
 	def pES9 = 'Repeated motion triggers busy check?'
@@ -630,6 +650,7 @@ def pageEngagedSettings()	{
 				href "pagePowerTime", title:pES4, description:"${(powerFromTimeType || powerToTimeType ? (powerFromTimeType == _timeTime ? "$powerFromTimeHHmm" : (powerFromTimeType == _timeSunrise ? "Sunrise" : "Sunset") + (powerFromTimeOffset ? " $powerFromTimeOffset" : "")) + ' : ' + (powerToTimeType == _timeTime ? "$powerToTimeHHmm" : (powerToTimeType == _timeSunrise ? "Sunrise" : "Sunset") + (powerToTimeOffset ? " $powerToTimeOffset" : "")) : 'Add power time range')}"
 				inputBRDS('powerTriggerFromVacant', pES5, false, true)
 				inputBRDS('powerTriggerFromOccupied', pES6, false, true)
+				inputNRDRS('powerStaysAbove', pES61, (powerValueEngaged ? true : false), 0, "0..300")
 				inputNRDRS('powerStays', pES7, (powerValueEngaged ? true : false), 30, "30..999")
 			}
 			else		{
@@ -886,7 +907,9 @@ def pageRules()	{
 						ruleDesc = (thisRule.state ? "$ruleDesc State=$thisRule.state" : "$ruleDesc")
 						if (!thisRule.type || thisRule.type == _ERule)	{
 							ruleDesc = (thisRule.luxThreshold != null ? "$ruleDesc Lux=$thisRule.luxThreshold" : "$ruleDesc")
+							ruleDesc = (thisRule.luxCheck ? "$ruleDesc Lux Check=$thisRule.luxCheck" : "$ruleDesc")
 							ruleDesc = (thisRule.powerThreshold ? "$ruleDesc Power=$thisRule.powerThreshold" : "$ruleDesc")
+							ruleDesc = (thisRule.powerCheck ? "$ruleDesc Power Check=$thisRule.powerCheck" : "$ruleDesc")
 							ruleDesc = (thisRule.presence ? "$ruleDesc Presence=$thisRule.presence" : "$ruleDesc")
 							ruleDesc = (thisRule.checkOn ? "$ruleDesc Check ON=$thisRule.checkOn" : "$ruleDesc")
 							ruleDesc = (thisRule.checkOff ? "$ruleDesc Check OFF=$thisRule.checkOff" : "$ruleDesc")
@@ -968,7 +991,9 @@ def pageRule(params)	{
 	boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 	def roomPresenceSensors = personsPresence.collect{ [(it.id): "${it.displayName}"] }
 	def pR1 = 'What lux value?'
+	def pR1x1 = 'Lux comparison?'
 	def pR2 = 'What power value?'
+	def pR2x1 = 'Power comparison?'
 	def pR3 = 'Which presence sensors present?'
 	def pR4 = 'What humidity range? (condition)'
 	def pR5 = 'Cool to what temperature?'
@@ -991,14 +1016,28 @@ def pageRule(params)	{
 			input "mode$ruleNo", "mode", title: "Which mode?", required: false, multiple: true
 			inputERMSDO("dayOfWeek$ruleNo", 'Which days of the week?', false, true, false, null, [[null:"All Days of Week"], [8:"Monday to Friday"], [9:"Saturday & Sunday"], [2:"Monday"], [3:"Tuesday"], [4:"Wednesday"], [5:"Thursday"], [6:"Friday"], [7:"Saturday"], [1:"Sunday"]])
 			if (!ruleType || ruleType == _ERule)	{
-				if (luxSensor)
-					inputNRDRS("luxThreshold$ruleNo", pR1, false, null, "0..*")
-				else
+				if (luxSensor)		{
+					inputNRDRS("luxThreshold$ruleNo", pR1, false, null, "0..*", true)
+					if (settings["luxThreshold$ruleNo"])
+						inputERMSDO("luxCheck$ruleNo", pR1x1, true, false, false, false, [[false:"Less than or equals to"], [true:"Greater than"]])
+					else
+						paragraph pR1x1
+				}
+				else	{
 					paragraph pR1 + '\nset lux sensors in main settings to select'
-				if (powerDevice)
-					inputNRDRS("powerThreshold$ruleNo", pR2, false, null, "1..*")
-				else
+					paragraph pR1x1
+				}
+				if (powerDevice)	{
+					inputNRDRS("powerThreshold$ruleNo", pR2, false, null, "1..*", true)
+					if (settings["powerThreshold$ruleNo"])
+						inputERMSDO("powerCheck$ruleNo", pR2x1, true, false, false, false, [[false:"Greater than or equals to"], [true:"Less than"]])
+					else
+						paragraph pR2x1
+				}
+				else	{
 					paragraph pR2 + '\nset power meter in main settings to select'
+					paragraph pR2x1
+				}
 				if (personsPresence && !presenceActionContinuous)
 					inputERMSDO("presenceCheck$ruleNo", pR3, false, false, false, null, roomPresenceSensors)
 				else
@@ -1506,7 +1545,8 @@ def pageRoomTemperature()	{
 	def pRT4 = 'Room vents?'
 	def pRT5 = 'Delay vents off by minutes?'
 	def pRT6 = 'Fan switch?'
-	def pRT7 = 'Check windows closed?'
+	def pRT7 = 'Check windows closed before cooling?'
+	def pRT8 = 'Check windows closed before heating?'
 	dynamicPage(name: "pageRoomTemperature", title: "Temperature Settings", install: false, uninstall: false)	{
 		if (validThermostat)	{
 			section("Maintain room temperature:", hideable: false)		{
@@ -1530,10 +1570,14 @@ def pageRoomTemperature()	{
 						inputBRDS('checkPresence', pRT2, true, false)
 					else
 						paragraph pRT2 + '\nselect presence sensors to set'
-					if (contactSensorsRT)
-						input "contactSensorsRTCheck", "bool", title:pRT7, required:true, defaultValue:false
-					else
+					if (contactSensorsRT)	{
+						inputBRDS("contactSensorsRTCheck", pRT7, true, false)
+						inputBRDS("contactSensorsRTCheckHeat", pRT8, true, false)
+					}
+					else	{
 						paragraph pRT7 + '\nselect window contact sensors to set'
+						paragraph pRT8
+					}
 //					inputDRMS('contactSensorsRT', 'contactSensor', 'Check windows closed?', false, true)
 					inputNRDRS('thermoOverride', "Allow thermostat or switch override for how many minutes?", true, 0, "1..30")
 					paragraph "Remember to setup temperature rules for room cooling and/or heating."
@@ -1769,7 +1813,7 @@ def pageGeneralSettings()	{
 			input "awayModes", "mode", title: "Away modes to set Room to VACANT?", required: false, multiple: true
 			input "pauseModes", "mode", title: "Modes in which to pause automation?", required: false, multiple: true
 		}
-		section("Run on which days of the week?\n(when blank runs on all days.)", hideable: false)		{
+		section("Run on which days of the week?\n(when blank runs on all days)", hideable: false)		{
 			inputERMSDO('dayOfWeek', 'Which days of the week?', false, true, false, null, [[null:"All Days of Week"], [8:"Monday to Friday"], [9:"Saturday & Sunday"], [2:"Monday"], [3:"Tuesday"], [4:"Wednesday"], [5:"Thursday"], [6:"Friday"], [7:"Saturday"], [1:"Sunday"]])
 		}
 		section("Temperature Scale", hideable: false)		{
@@ -1786,10 +1830,14 @@ def pageGeneralSettings()	{
 		section("Optimize device commands based on device state?", hideable: false)		{
 			inputBRDS('cmdOpt', 'Command optimization?', true, false)
 		}
-		if (state.hT == _Hubitat)
+		if (state.hT == _Hubitat)		{
 			section("When switching off lights dim to off?", hideable: false)		{
 				inputERMSDO('dimOver', 'Dim over seconds?', false, false, false, [], [[[]:"No dimming"], [3:"3 seconds"], [5:"5 seconds"], [10:"10 seconds"], [15:"15 seconds"], [30:"30 seconds"], [45:"45 seconds"], [60:"60 seconds"], [90:"90 seconds"]])
 			}
+			section("Publish Occupancy Icons to use with Dashboard?", hideable: false)		{
+				inputBRDS('pubOccIcons', 'Publish?', false, false)
+			}
+		}
 		if (!hideAdvanced)	{
 			section("Process execution rules only on state change?", hideable: false)		{
 				inputBRDS('onlyOnStateChange', 'Only on state change?', false, false)
@@ -1865,11 +1913,11 @@ def updated()	{
 
 ///	child."${(isRoomEngaged() ? engaged : vacant)}"()
 	"${(isRoomEngaged() ? engaged : vacant)}"()
-log.debug "\tperf updated: ${now() - nowTime} ms"
+log.debug "\t$app.label updated: ${now() - nowTime} ms"
 }
 
 private updateRoom()	{
-	log.info "updateRoom $app.label"
+log.info "updateRoom $app.label"
 	if (debugLogging)		state.debugOffTime = now() + _SecondsInDay;
 	boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
 	state.prvMode = location.currentMode.toString()
@@ -1900,7 +1948,7 @@ private updateRoom()	{
 	state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer as Integer : 5)
 	state.dimByLevel = ((state.dimTimer && dimByLevel) ? dimByLevel : null)
 	state.dimToLevel = ((state.dimTimer && dimToLevel) ? dimToLevel : null)
-	if (engagedSwitch)		subscribe(engagedSwitch, "switch", engagedSwitchEventHandler)
+	if (engagedSwitch)		subscribe(engagedSwitch, "switch", engagedSwitchEventHandler);
 	if (contactSensor)	{
 		subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.closed" : "contact.open"), contactOpenEventHandler)
 		subscribe(contactSensor, (contactSensorOutsideDoor ? "contact.open" : "contact.closed"), contactClosedEventHandler)
@@ -1960,6 +2008,7 @@ private updateRoom()	{
 	}
 	else
 		state.previousPower = null
+	state.powerLastMins = [:]
 	if (asleepSensor)		subscribe(asleepSensor, "sleeping", asleepEventHandler);
 	if (asleepButton)
 		subscribe(asleepButton, (state.hT == _Hubitat ? "${heCapToAttrMap[asleepButtonType]}.$buttonIsAsleep" : 'button'), buttonPushedAsleepEventHandler)
@@ -2028,7 +2077,7 @@ private updateRoom()	{
 	updateSwitchAttributesToStateAndSubscribe()
 
 	if (humiditySensor)		{
-		subscribe(humiditySensor, "humidity", humidityEventHandler,  [filterEvents:false])
+		subscribe(humiditySensor, "humidity", humidityEventHandler, [filterEvents:false])
 		state.previousHumidity = getAvgHumidity()
 	}
 	else
@@ -2045,8 +2094,11 @@ private updateRoom()	{
 	}
 	state.humidity = [dehumidifierTurnedOn:false, humidifierTurnedOn:false, override:false, offAt:false, offIn:false, forceOffIn:false, lastState:null, lastStateAt:0, hour:99, previous:false, lastRule:null, minsInState:0, lastReading:0]
 	humidityTimer()
-	if (state.hT == _SmartThings)
+	if (state.hT == _SmartThings)	{
 		subscribe(location, "askAlexaMQ", askAlexaMQHandler)
+//		app.removeSetting("echoAccessCode");
+//		app.updateSetting("echoAccessCode", [type: "text", value: ""]);
+	}
 	else		{
 		state.askAlexaMQ = []
 		if (echoAccessCode)		app.updateSetting("echoAccessCode", [type: "text", value: "${encrypt(settings['echoAccessCode'])}"]);
@@ -2059,11 +2111,52 @@ private updateRoom()	{
 	state.toUpdateTimeouts = false
 	if (state.hT != _Hubitat)		updateIndicators();
 	state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + new Random().nextInt(60)) % 60)
-	subscribe(location, "sunrise", scheduleFromToTimes)
-	subscribe(location, "sunset", scheduleFromToTimes)
-	runIn(0, scheduleFromToTimes)
+	subscribe(location, "sunrise", runEvery5)
+	subscribe(location, "sunset", runEvery5)
+	runEvery5Minutes(runEvery5)
+	state.runEvery5 = now()
+//	state.nextScheduleFromToTimes = null
+//	state.lastScheduleFromToTimes = 0
+	runIn(0, runEvery5)
 //	runIn(2, processCoolHeat)
 //	processHumidity()
+}
+
+def runEvery5()		{
+	scheduleRunEvery5()
+//	def nowDate = new Date(nowTime)
+//	def doM = nowDate.getAt(Calendar.DAY_OF_MONTH)
+//	if (state.dayOfMonth != doM)	{
+//		state.dayOfMonth = doM
+	state.scheduled.isExecuting = false
+	if (asleepFromTime && !state.scheduled.timers["asleep"])		{
+		def aTime = timeToday(asleepFromTime, location.timeZone).getTime()
+		def nowTime = now()
+		if (aTime > nowTime && !state.scheduled.timers["asleep"])		{
+////log.debug "nowTime: $nowTime | aTime: $aTime"
+			addSchedule("asleep", ((aTime - nowTime) / 1000).toInteger(), true)
+		}
+	}
+//	}
+
+///	def executed = false
+//	if (!state.nextScheduleFromToTimes || ((nowTime - state.nextScheduleFromToTimes) > 300000) || ((nowTime - (state.lastScheduleFromToTimes ?: 0)) > 300000))
+///	executed = scheduleFromToTimes()
+	scheduleFromToTimes()
+
+///	if (!executed)		executeScheduled();
+	executeScheduled()
+}
+
+private scheduleRunEvery5()		{
+	def nowTime = now()
+	if ((nowTime - (state?.runEvery5 ?: 0)) > 450000)		{
+		subscribe(location, "sunrise", runEvery5)
+		subscribe(location, "sunset", runEvery5)
+		runEvery5Minutes(runEvery5)
+//		unsubscribe("scheduleFromToTimes")
+	}
+	state.runEvery5 = nowTime
 }
 
 def updateRoomAdjMS(adjMotionSensors)	{
@@ -2100,6 +2193,7 @@ def	initialize()	{
 	state.colorNotificationColorStack = []
 	state.hasGetLastActivity = false
 	state.roomDevices = [:]
+	state.scheduled = ['isScheduled':false, 'toRun':'', 'timers':[:]];
 }
 
 def askAlexaMQHandler(evt)	{
@@ -2111,7 +2205,8 @@ def askAlexaMQHandler(evt)	{
 
 private deleteRules()	{
 	if (state.hT != _Hubitat || !rulesToDelete)		return;
-	def ruleVars = ['name', 'disabled', 'state', 'mode', 'dayOfWeek', 'luxThreshold', 'powerThreshold', 'presenceCheck', 'checkOn', 'checkOff', 'fromHumidity', 'toHumidity', 'fromDate', 'toDate', 'fromTimeType', 'fromTime', 'fromTimeOffset', 'toTimeType', 'toTime', 'toTimeOffset', 'type', 'coolTemp', 'heatTemp', 'tempRange', 'fanOnTemp', 'fanSpeedIncTemp', 'device', 'cmds', 'piston', 'actions', 'switchesOn', 'setLevelTo', 'setColorTo', 'setColorTemperatureTo', 'switchesOff', 'noMotion', 'noMotionEngaged', 'dimTimer', 'noMotionAsleep']
+
+	def ruleVars = ['name', 'disabled', 'state', 'mode', 'dayOfWeek', 'luxThreshold', 'luxCheck', 'powerThreshold', 'powerCheck', 'presenceCheck', 'checkOn', 'checkOff', 'fromHumidity', 'toHumidity', 'fromDate', 'toDate', 'fromTimeType', 'fromTime', 'fromTimeOffset', 'toTimeType', 'toTime', 'toTimeOffset', 'type', 'coolTemp', 'heatTemp', 'tempRange', 'fanOnTemp', 'fanSpeedIncTemp', 'device', 'cmds', 'piston', 'actions', 'switchesOn', 'setLevelTo', 'setColorTo', 'setColorTemperatureTo', 'switchesOff', 'noMotion', 'noMotionEngaged', 'dimTimer', 'noMotionAsleep']
 	rulesToDelete.each	{ i ->
 		ruleVars.each	{ app.removeSetting("$it$i") }
 	}
@@ -2119,80 +2214,190 @@ private deleteRules()	{
 	updateRulesToState()
 }
 
-private occupied()		{  hSs(occupied)  }
-
-private checking()		{  hSs(checking); runIn(0, scheduleFromToTimes)  }
-
-private vacant()		{  hSs(vacant); runIn(0, scheduleFromToTimes)  }
-
-private asleep()		{  hSs(asleep); runIn(0, scheduleFromToTimes)  }
-
-private locked()		{  hSs(locked); runIn(0, scheduleFromToTimes)  }
-
-private engaged()		{  hSs(engaged)  }
-
-private hSs(nSt)	{
-	ifDebug("hSs: $nSt", 'info')
-	def child = getChildDevice(getRoom())
-	if (child)		{
-		handleSwitches(child.currentValue(occupancy), nSt)
-		child."$nSt"(false)
-	}
+def occupied(vM = false)	{
+	cSs(occupied, vM);		switchOnOff(true)
 }
+
+def checking(vM = false)	{
+	cSs(checking, vM)
+}
+
+def vacant(vM = false)		{
+	cSs(vacant, vM);		switchOnOff(false)
+}
+
+def donotdisturb(vM = false)	{
+	cSs(donotdisturb, vM);	switchOnOff(false)
+}
+
+def reserved(vM = false)	{
+	cSs(reserved, vM);		switchOnOff(false)
+}
+
+def asleep(vM = false)		{
+	cSs(asleep, vM);		switchOnOff(true)
+}
+
+def locked(vM = false)		{
+	cSs(locked, vM);		switchOnOff(false)
+}
+
+def engaged(vM = false)		{
+	cSs(engaged, vM);		switchOnOff(true)
+}
+
+def kaput(vM = false)		{
+	cSs(kaput, vM);		switchOnOff(false)
+}
+
+private switchOnOff(on)	{
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def switchState = (on ? 'on' : 'off')
+	child.sendEvent(name: "switch", value: "$switchState", descriptionText: "$child.displayName is $switchState", displayed: true)
+}
+
+private cSs(nSt, vM)	{
+	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
+	handleSwitches(rSt, nSt, vM)
+	updateOccupancy(nSt)
+}
+
+def updateOccupancy(newOcc) 	{
+	newOcc = newOcc?.toLowerCase()
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
+	if (!newOcc || !(buttonMap.containsKey(newOcc)))	{
+		ifDebug("Missing or invalid parameter room occupancy: $newOcc")
+		return
+	}
+
+	child.sendEvent(name: "occupancy", value: newOcc, descriptionText: "$child.displayName changed to $newOcc", displayed: true)
+
+	if (state.hT == _Hubitat && pubOccIcons)		{
+		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${newOcc?.capitalize()}State.png"
+		child.sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$child.displayName $newOcc icon small", displayed: true)
+		child.sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$child.displayName $newOcc icon medium", displayed: true)
+		child.sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$child.displayName $newOcc icon large", displayed: true)
+		child.sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$child.displayName $newOcc icon extra large", displayed: true)
+		child.sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$child.displayName $newOcc icon extra extra large", displayed: true)
+		child.sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$child.displayName $newOcc icon URL", displayed: true)
+	}
+
+	def button = buttonMap[newOcc]
+	if (state.hT == _SmartThings)
+		child.sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$child.displayName button $button was pushed.")
+	else
+		child.sendEvent(name:"pushed", value:button, descriptionText: "$child.displayName button $button was pushed.")
+
+	child.sendEvent(name: newOcc, value: newOcc, descriptionText: "$child.displayName reset tile $newOcc", displayed: true)
+
+	def formatter = new java.text.SimpleDateFormat("EEE, MMM d yyyy @ h:mm:ss a z")
+	formatter.setTimeZone(location.timeZone)
+	state.statusMsg = formatter.format(now())
+	child.sendEvent(name: "status", value: state.statusMsg, displayed: true)
+}
+
 
 def updateIndicators()	{
 	ifDebug("updateIndicators", 'info')
 	def child = getChildDevice(getRoom())
-	def ind
-	ind = 0
-	if (motionSensors || accelSensors)		{
-	 	if (motionSensors && motionSensors.currentMotion.contains('active'))		ind = 1;
-		if (accelSensors && accelSensors.currentMotion.contains('active'))			ind = 1;
-	}
-	else
-		ind = -1
-	child.updateMotionInd(ind)
-	child.updateLuxInd(getAvgLux())
-	child.updateHumidityInd(getAvgHumidity())
-	child.updateContactInd((contactSensor ? (contactSensor.currentContact.contains('closed') ? 1 : 0) : -1))
-	child.updateSwitchInd(isAnySwitchOn())
-	child.updatePresenceInd((personsPresence ? (personsPresence.currentPresence.contains(present) ? 1 : 0) : -1))
-	child.updatePresenceActionInd((personsPresence ? presenceAction : -1))
-	child.updateDoWInd((dayOfWeek ?: -1))
-	child.updateTemperatureInd(getAvgTemperature())
-	child.updateRulesInd((state.rules ? state.rules.size() : -1))
-	child.updateLastRuleInd(-1)
-//	child.updatePowerInd((powerDevice ? getIntfromStr((String) powerDevice.currentPower.max()) : -1))
+	if (!child)		return;
+
+	def ind = -1
+	if (motionSensors || accelSensors)
+	 	if (motionSensors && motionSensors.currentMotion.contains('active'))
+			ind = 1
+		else if (accelSensors && accelSensors.currentMotion.contains('active'))
+			ind = 1
+		else
+			ind = 0
+	updateMotionInd(ind)
+	updateLuxInd(getAvgLux())
+	updateHumidityInd(getAvgHumidity())
+	updateContactInd((contactSensor ? (contactSensor.currentContact.contains('closed') ? 1 : 0) : -1), false)
+	updatePresenceInd((personsPresence ? (personsPresence.currentPresence.contains(present) ? 1 : 0) : -1))
+	updatePresenceActionInd((personsPresence ? presenceAction : -1))
+	updateDoWInd((dayOfWeek ?: -1))
+	updateTemperatureInd(getAvgTemperature())
+	updateRulesInd((state.rules ? state.rules.size() : -1))
+	updateLastRuleInd(-1)
+
 	def power = (powerDevice ? getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) : -1)
-	child.sendEvent(name: 'powerInd', value: (power == -1 ? '--' : (power <= 100 ? power : formatNumber(power))), descriptionText: (power == -1 ? "indicate no power sensor" : "indicate power value"))
+	updatePowerInd(power)
+
 	if (pauseModes)	{
 		ind = ''
 		for (def mod : pauseModes)		{ ind = ind + (ind.size() > 0 ? ', ' : '') + mod }
 	}
 	else
 		ind = -1
-	child.updatePauseInd(ind)
-	child.updateESwitchInd(isAnyESwitchOn())
-	child.updateOSwitchInd(isAnyOSwitchOn())
-	child.updateASwitchInd(isAnyASwitchOn())
-	child.updateNSwitchInd(isAnyNSwitchOn())
-	child.updatePresenceEngagedInd((personsPresence ? (presenceActionContinuous ? 'Yes' : 'No') : -1))
-	child.updateBusyEngagedInd((busyCheck ? (busyCheck == lightTraffic ? 'Light' : (busyCheck == mediumTraffic ? 'Medium' : 'Heavy')) : -1))
-	child.updateLSwitchInd(isAnyLSwitchOn())
+	child.sendEvent(name: 'pauseInd', value: (ind == -1 ? '--' : ind), descriptionText: (ind == -1 ? "indicate no pause modes" : "indicate pause modes"))
+
+	for (def x : ['', 'A', 'E', 'L', 'N', 'O'])		{
+		updateSwitchInd("isAny${x}SwitchOn"(), x)
+	}
+
+	updatePresenceEngagedInd((personsPresence ? (presenceActionContinuous ? 'Yes' : 'No') : -1))
+	updateBusyEngagedInd((busyCheck ? (busyCheck == lightTraffic ? 'Light' : (busyCheck == mediumTraffic ? 'Medium' : 'Heavy')) : -1))
 	updateTimeouts()
-	child.updateTurnAllOffInd(allSwitchesOff ? 'Yes' : 'No')
-	child.updateDimByLevelInd((state.dimByLevel ?: -1), (state.dimToLevel ?: -1))
-	child.updateEWattsInd(powerValueEngaged ?: -1)
-	child.updateAWattsInd(powerValueAsleep ?: -1)
-	child.updateContactRTIndC((contactSensorsRT ? (contactSensorsRT.currentContact.contains('closed') ? 1 : 0) : -1))
-	child.updateAdjRoomsInd((adjRooms ? adjRooms.size() : -1))
-	child.updateAdjMotionInd(-1)
+
+	child.sendEvent(name: 'turnAllOffInd', value: (allSwitchesOff ? 'Yes' : 'No'), descriptionText: "indicate if all switches should be turned off when no rules match")
+
+	def dimBy = (state.dimByLevel ?: -1)
+	def dimTo = (state.dimToLevel ?: -1)
+	child.sendEvent(name: 'dimByLevelInd', value: (dimBy == -1 && dimTo == -1 ? '-- / --' : "${(dimBy == -1 ? '--' : dimBy + '%')} /\n${(dimTo == -1 ? '--' : dimTo + '% ')}"), descriptionText: (dimBy == -1 && dimTo == -1 ? "indicate no dimming" : "indicate dimming by / to level"))
+
+	updateWattsInd(powerValueEngaged ?: -1, 'E')
+	updateWattsInd(powerValueAsleep ?: -1, 'A')
+	updateContactInd((contactSensorsRT ? (contactSensorsRT.currentContact.contains('closed') ? 1 : 0) : -1), true)
+
+	def aRooms = (adjRooms ? adjRooms.size() : -1)
+	child.sendEvent(name: 'aRoomInd', value: (aRooms == -1 ? '--' : aRooms + '\nrooms'), descriptionText: (aRooms == -1 ? "indicate no adjacent rooms" : "indicate how many adjacent rooms"))
+
+	updateAdjMotionInd(-1)
 	updateThermostatIndP()
 	updateThermoOverrideIndP()
 	updateFanIndP()
-	child.setupAlarmC()
 	updateOutTempIndP()
-	updateVentIndP()
+	updateVentIndP([])
+}
+
+private updateSwitchInd(switchOn, switchType)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def sN = ''
+	switch(switchType) {
+		case 'A':	sN = 'asleep ';		break
+		case 'E':	sN = 'engaged ';	break
+		case 'L':	sN = 'locked ';		break
+		case 'N':	sN = 'night ';		break
+		case 'O':	sN = 'occupied ';	break
+		default:	break
+	}
+	def vV = '--'
+	def dD = "indicate no $sN switch"
+	switch(switchOn)	{
+		case 1:		vV = 'on';	dD = "indicate $sN switch is on";	break
+		case 0:		vV = 'off';	dD = "indicate $sN switch is off";	break
+	}
+	def ind = "${switchType}SwitchInd"
+	ind = ind[0].toLowerCase() + ind.substring(1)
+	child.sendEvent(name: ind, value: vV, descriptionText: dD)
+}
+
+private updateTemperatureInd(temp)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def tS = (location.temperatureScale ?: 'F')
+	child.sendEvent(name: 'temperatureInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"))
 }
 
 private getAvgLux()	{
@@ -2201,7 +2406,7 @@ private getAvgLux()	{
 	def luxes = luxSensor.currentIlluminance
 	def lux = 0.0f
 	for (def lx : luxes)	lux = lux + lx;
-	return (lux / countLuxSensors).round(1)
+	return (lux / countLuxSensors).round(0).toInteger()
 }
 
 private getAvgTemperature()	{
@@ -2214,8 +2419,157 @@ private getAvgTemperature()	{
 }
 
 def updateOutTempIndP(evt = null)	{
-	if (state.hT != _Hubitat)
-		getChildDevice(getRoom())?.updateOutTempIndC((outTempSensor ? outTempSensor.currentTemperature : -1))
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def tS = (location.temperatureScale ?: 'F')
+	def temp = (outTempSensor ? outTempSensor.currentTemperature : -1)
+	child.sendEvent(name: 'outTempInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no temperature sensor" : "indicate temperature value"))
+}
+
+private updatePresenceActionInd(presenceAction)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def vV = '--'
+	def dD = "indicate no presence sensor"
+	switch(presenceAction)	{
+		case '1':		vV = 'Arrival';		dD = "indicate arrival action when present";						break
+		case '2':		vV = 'Departure';	dD = "indicate departure action when not present";					break
+		case '3':		vV = 'Both';		dD = "indicate both arrival and depature action with presence";		break
+		case '4':		vV = 'Neither';		dD = "indicate no action with with present";						break
+	}
+	child.sendEvent(name: 'presenceActionInd', value: vV, descriptionText: dD)
+}
+
+private updatePresenceInd(presencePresent)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def vV = 'none'
+	def dD = "indicate no presence sensor"
+	switch(presencePresent)		{
+		case 1:		vV = 'present';	dD = "indicate presence present";		break
+		case 0:		vV = 'absent';	dD = "indicate presence not present";	break
+	}
+	child.sendEvent(name: 'presenceInd', value: vV, descriptionText: dD)
+}
+
+private updateDoWInd(dow)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def		vV
+	switch(dow)	{
+		case '1':	vV = 'Monday';		break
+		case '2':	vV = 'Tuesday';		break
+		case '3':	vV = 'Wednesday';	break
+		case '4':	vV = 'Thursday';	break
+		case '5':	vV = 'Friday';		break
+		case '6':	vV = 'Saturday';	break
+		case '7':	vV = 'Sunday';		break
+		case '8':	vV = 'M - F';		break
+		case '9':	vV = 'S & S';		break
+		default:	vV = 'Everyday';	break
+	}
+	child.sendEvent(name: 'dowInd', value: vV, descriptionText: "indicate run on only these days of the week: $vV")
+}
+
+private updateRulesInd(rules)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'rulesInd', value: (rules == -1 ? '0' : rules), descriptionText: (rules == -1 ? "indicate no rules" : "indicate rules count"))
+}
+
+private updatePowerInd(power)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'powerInd', value: (power == -1 ? '--' : (power <= 100 ? power : formatNumber(power))), descriptionText: (power == -1 ? "indicate no power sensor" : "indicate power value"))
+}
+
+private updateWattsInd(watts, wType)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def dD = (wType = 'E' ? 'engaged' : 'asleep')
+	child.sendEvent(name: (wType = 'E' ? 'eWattsInd' : 'aWattsInd'), value: (watts == -1 ? '--' : (watts <= 100 ? watts : formatNumber(watts))), descriptionText: (watts == -1 ? "indicate no $dD watts" : "indicate $dD watts value"))
+}
+
+private updateLastRuleInd(rule)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'lastRuleInd', value: (rule == -1 ? '--' : rule), descriptionText: (rule == -1 ? "indicate no rule executed" : "indicate rule number last executed"))
+}
+
+private updateLuxInd(lux)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'luxInd', value: (lux == -1 ? '--' : (lux <= 100 ? lux : formatNumber(lux))), descriptionText: (lux == -1 ? "indicate no lux sensor" : "indicate lux value"))
+}
+
+private updateHumidityInd(humidity)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'humidityInd', value: (humidity == -1 ? '--' : humidity.toString() + '%'), descriptionText: (humidity == -1 ? "indicate no humidity sensor" : "indicate humidity value"))
+}
+
+private updateContactInd(contactClosed, window)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def vV = 'none'
+	def dD = "indicate no contact sensor"
+	switch(contactClosed)	{
+		case 1:		vV = 'closed';	dD = "indicate contact closed";		break
+		case 0:		vV = 'open';	dD = "indicate contact open";		break
+	}
+	child.sendEvent(name: (window ? 'contactRTInd' : 'contactInd'), value: vV, descriptionText: dD)
+}
+
+private updatePresenceEngagedInd(presenceEngaged)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'presenceEngagedInd', value: (presenceEngaged == -1 ? '--' : presenceEngaged), descriptionText: (presenceEngaged == -1 ? "indicate no presence sensor" : "indicate if presence action continuous"))
+}
+
+private updateBusyEngagedInd(busyEngaged)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	child.sendEvent(name: 'busyEngagedInd', value: (busyEngaged == -1 ? '--' : "$busyEngaged\ntraffic"), descriptionText: (busyEngaged == -1 ? "indicate no presence sensor" : "indicate traffic check"))
+}
+
+private updateAdjMotionInd(motionOn)		{
+	if (state.hT == _Hubitat)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def vV = 'none'
+	def dD = "indicate no adjacent motion sensor"
+	switch(motionOn)	{
+		case 1:		vV = 'active';		dD = "indicate adjacent motion active";		break
+		case 0:		vV = 'inactive';	dD = "indicate adjacent motion inactive";	break
+	}
+	child.sendEvent(name: 'aMotionInd', value: vV, descriptionText: dD)
 }
 
 private getAvgHumidity()	{
@@ -2234,7 +2588,7 @@ private isAnySwitchOn()	{
 		def thisRule = getNextRule(ruleNo, _ERule)
 		if (thisRule.ruleNo == 'EOR')	break;
 		i = thisRule.ruleNo as Integer
-		if (thisRule.switchesOn && thisRule.switchesOn.currentSwitch.contains('on'))	{
+		if (thisRule.switchesOn?.currentSwitch?.contains('on'))		{
 			ind = 1
 			break
 		}
@@ -2281,6 +2635,7 @@ def updateRulesToState()	{
 			state.maxRuleNo = i
 			if (!state.rules)		state.rules = [:];
 			state.rules << ["$ruleNo":[isRule:true]]
+
 			if (!thisRule.type || thisRule.type == _ERule)		{
 				state.execute = true
 				if (thisRule.state && thisRule.state.contains('vacant'))		state.vacant = true;
@@ -2288,9 +2643,10 @@ def updateRulesToState()	{
 			}
 			else if (thisRule.type == _TRule)	state.maintainRoomTemp = true;
 			else if (thisRule.type == _HRule)	state.maintainRoomHumi = true;
+
 			if (thisRule.level == 'AL')			state.ruleHasAL = true;
 			else if (thisRule.level?.startsWith('HL'))		state.ruleHasHL = true;
-//			if (thisRule.fromTimeType && thisRule.toTimeType)		state.timeCheck = true;
+
 			if ((thisRule.fromTimeType && (thisRule.fromTimeType != _timeTime || thisRule.fromTime)) &&
 				(thisRule.toTimeType && (thisRule.toTimeType != _timeTime || thisRule.toTime)))
 				state.timeCheck = true
@@ -2388,7 +2744,8 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 	def ruleMode = settings["mode$ruleNo"]
 	def ruleState = settings["state$ruleNo"]
 	def ruleDayOfWeek = []
-	if (settings["dayOfWeek$ruleNo"])	{
+
+	if (settings["dayOfWeek$ruleNo"])
 		for (def dOW : settings["dayOfWeek$ruleNo"])
 			switch(dOW)		{
 				case '1':	case '2':   case '3':   case '4':   case '5':   case '6':   case '7':
@@ -2400,13 +2757,12 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 				case '9':
 					ruleDayOfWeek = ruleDayOfWeek + [6,7]
 					break
-	//			default:	ruleDayOfWeek = null;							break;
 			}
-	}
-//	else
-//		ruleDayOfWeek = null
+
 	def ruleLuxThreshold = settings["luxThreshold$ruleNo"]
+	def ruleLuxCheck = settings["luxCheck$ruleNo"]
 	def rulePowerThreshold = settings["powerThreshold$ruleNo"]
+	def rulePowerCheck = settings["powerCheck$ruleNo"]
 	def rulePresenceCheck = settings["presenceCheck$ruleNo"]
 	def ruleCheckOn = settings["checkOn$ruleNo"]
 	def ruleCheckOff = settings["checkOff$ruleNo"]
@@ -2462,7 +2818,7 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 				ret = null
 			else
 				ret = [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
-						luxThreshold:ruleLuxThreshold, powerThreshold:rulePowerThreshold, presence:rulePresenceCheck,
+						luxThreshold:ruleLuxThreshold, luxCheck:ruleLuxCheck, powerThreshold:rulePowerThreshold, powerCheck:rulePowerCheck, presence:rulePresenceCheck,
 						checkOn:ruleCheckOn, checkOff:ruleCheckOff,
 						fromHumidity:ruleFromHumidity, toHumidity:ruleToHumidity,
 						fromDate:ruleFromDate, toDate:ruleToDate,
@@ -2491,7 +2847,7 @@ private getRule(ruleNo, ruleTypeP = '*', checkState = true, getConditionsOnly = 
 				ret = null
 			else
 				ret = [ruleNo:ruleNo, type:ruleType, name:ruleName, disabled:ruleDisabled, mode:ruleMode, state:ruleState, dayOfWeek:ruleDayOfWeek,
-						luxThreshold:ruleLuxThreshold, powerThreshold:rulePowerThreshold, presence:rulePresenceCheck,
+						luxThreshold:ruleLuxThreshold, luxCheck:ruleLuxCheck, powerThreshold:rulePowerThreshold, powerCheck:rulePowerCheck, presence:rulePresenceCheck,
 						checkOn:ruleCheckOn, checkOff:ruleCheckOff,
 						fromHumidity:ruleFromHumidity, toHumidity:ruleToHumidity,
 						fromDate:ruleFromDate, toDate:ruleToDate,
@@ -2517,24 +2873,25 @@ def	modeEventHandler(evt)	{
 		else if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
 	}
 	state.prvMode = location.currentMode.toString()
+	scheduleRunEvery5()
 }
 
 def	motionActiveEventHandler(evt)	{
 	def nowTime = now()
 	ifDebug("motionActiveEventHandler", 'info')
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateMotionInd(1);
+	updateMotionInd(1)
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (evt.name == 'motion')		{
 		if (rSt == vacant && triggerMotionSensors && !triggerMotionSensors.contains(evt.deviceId.toString()))	return;
 		if (rSt == asleep)		{
 			if (nightMotionSensors && !nightMotionSensors.contains(evt.deviceId.toString()))	return;
-			if (nightSwitches && nightTurnOn.contains('1'))	{
+			if (nightSwitches && nightTurnOn.contains('1'))		{
 				dimNightLights()
 				if (state.noMotionAsleep && whichNoMotion != lastMotionInactive)	{
-					updateChildTimer(state.noMotionAsleep)
-					runIn(state.noMotionAsleep, nightSwitchesOff)
+					addSchedule("nightSwitchesOff", state.noMotionAsleep, state.scheduled.isExecuting)
 				}
 			}
 			return
@@ -2543,19 +2900,28 @@ def	motionActiveEventHandler(evt)	{
 	unscheduleAll("motion active handler")
 	def motionActive = (evt.name == 'motion' ? whichNoMotion == lastMotionActive : true)
 	if (rSt == engaged)		{
-		if (state.noMotionEngaged)		{  refreshEngagedTimer(); checkContactStaysOpen()  }
+		if (state.noMotionEngaged)		{
+			refreshEngagedTimer()
+			checkContactStaysOpen()
+		}
 		return
 	}
 	if (state.busyCheck && repeatedMotion && rSt == occupied)	{
 		state.motionTraffic = state.motionTraffic + 1
-		if (state.motionTraffic >= state.busyCheck)		state.isBusy = true;
+		if (state.motionTraffic >= state.busyCheck)
+			state.isBusy = true
 	}
 	if (state.isBusy && ['occupied', 'checking', 'vacant'].contains(rSt))	{
 		turnOffIsBusy(); engaged(); return
 	}
 	if (['checking', 'vacant'].contains(rSt))	{
+//		if (rSt == checking && state.stateStack[1]['state'] == asleep)	{
+//			removeSchedule("resetAsleep", state.scheduled.isExecuting)
+//		}
+//		else
 		if (isRoomEngaged())	{
-			engaged(); checkContactStaysOpen();
+			engaged()
+			checkContactStaysOpen()
 		}
 		else	{
 			if (powerDevice)	{
@@ -2571,78 +2937,76 @@ def	motionActiveEventHandler(evt)	{
 				occupied()
 		}
 	}
-	else if (motionActive && rSt == occupied && state.noMotion)
-		refreshOccupiedTimer()
-//log.debug "\tperf motionActiveEventHandler: ${now() - nowTime} ms"
+	else if (rSt == occupied)	{
+		if (isRoomEngaged())		{
+			engaged()
+			checkContactStaysOpen()
+		}
+		else if (motionActive && state.noMotion)
+			refreshOccupiedTimer()
+	}
 }
 
 private checkContactStaysOpen()		{
-	if (contactSensor)		{
-		def cV = contactSensor.currentContact.contains(open)
-		if (resetEngagedWithContact && ((!contactSensorOutsideDoor && cV) || (contactSensorOutsideDoor && !cV)))	{
-			updateChildTimer((resetEngagedWithContact as Integer) * 60)
-			runIn((resetEngagedWithContact as Integer) * 60, resetEngaged)
-		}
+	if (!contactSensor)		return;
+
+	def cV = contactSensor.currentContact.contains(open)
+	if (resetEngagedWithContact && ((!contactSensorOutsideDoor && cV) || (contactSensorOutsideDoor && !cV)))
+		addSchedule("resetEngaged", (resetEngagedWithContact as Integer) * 60, state.scheduled.isExecuting)
+}
+
+def	motionInactiveEventHandler(evt)		{
+	def nowTime = now()
+	ifDebug("motionInactiveEventHandler", 'info')
+	updateMotionInd(((evt.name == 'motion' ? motionSensors.currentMotion : accelSensors.currentAcceleration).contains(active) ? 1 : 0))
+	if (!checkPauseModesAndDoW())		return;
+	def child = getChildDevice(getRoom())
+	def rSt = child?.currentValue(occupancy)
+	def motionInactive = (evt.name == 'motion' ? !motionSensors.currentMotion.contains(active) && whichNoMotion == lastMotionInactive : !accelSensors.currentAcceleration.contains(active))
+
+	if (rSt == engaged)		{
+		if (motionInactive && state.noMotionEngaged)
+			refreshEngagedTimer()
+	}
+	else if (rSt == occupied)	{
+		if (motionInactive && state.noMotion)
+			refreshOccupiedTimer()
+	}
+	else if (rSt == asleep && nightSwitches && nightTurnOn.contains('1'))		{
+		if (!nightMotionSensors || nightMotionSensors.contains(evt.deviceId.toString()))
+			if (motionInactive)
+				addSchedule("nightSwitchesOff", (state.noMotionAsleep ?: 1), state.scheduled.isExecuting)
 	}
 }
 
-def	motionInactiveEventHandler(evt)	{
-	def nowTime = now()
-	ifDebug("motionInactiveEventHandler", 'info')
+private updateMotionInd(motionOn)		{
+	if (state.hT == _Hubitat)		return;
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)
-		child.updateMotionInd((evt.name == 'motion' ? motionSensors.currentMotion : accelSensors.currentAcceleration).contains(active) ? 1 : 0)
-	if (!checkPauseModesAndDoW())		return;
-	def rSt = child?.currentValue(occupancy)
-	def motionInactive = (evt.name == 'motion' ? !motionSensors.currentMotion.contains(active) && whichNoMotion == lastMotionInactive : !accelSensors.currentAcceleration.contains(active))
-	if (rSt == engaged)	{
-		if (motionInactive && state.noMotionEngaged)		refreshEngagedTimer();
+	if (!child)		return;
+
+	def vV = 'none'
+	def dD = "indicate no motion sensor"
+	switch(motionOn)	{
+		case 1:		vV = 'active';		dD = "indicate motion active";		break
+		case 0:		vV = 'inactive';	dD = "indicate motion inactive";	break
 	}
-	else if (rSt == occupied)	{
-		if (motionInactive && state.noMotion)		refreshOccupiedTimer();
-	}
-	else if (rSt == asleep && nightSwitches && nightTurnOn.contains('1'))	{
-		if (!nightMotionSensors || nightMotionSensors.contains(evt.deviceId.toString()))	{
-			if (motionInactive)	{
-				if (state.noMotionAsleep)		updateChildTimer(state.noMotionAsleep);
-				runIn((state.noMotionAsleep ?: 1), nightSwitchesOff)
-			}
-		}
-	}
-//log.debug "\tperf motionInactiveEventHandler: ${now() - nowTime} ms"
+	child.sendEvent(name: 'motionInd', value: vV, descriptionText: dD)
 }
 
 def adjMotionActiveEventHandler(evt)	{
 	ifDebug("adjMotionActiveEventHandler", 'info')
-//log.debug "adjMotionActiveEventHandler: trigger device: $evt.device"
 	if (!state.adjMotionSensorsID || !state.adjMotionSensorsID.contains(evt.device.id.toString()))	return;
-	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateAdjMotionInd(1);
+	updateAdjMotionInd(1)
 	if (!checkPauseModesAndDoW())	return;
+
+	def child = getChildDevice(getRoom())
 	def rSt = child?.currentValue(occupancy)
-	if (adjRoomsMotion && rSt == occupied)	{
-//log.debug "adjMotionActiveEventHandler: motion sensors: $motionSensors"
+	if (adjRoomsMotion && rSt == occupied)		{
 		def mV = motionSensors?.currentMotion.contains(active)
 		def mD = (state.hasGetLastActivity ? motionSensors?.getLastActivity().max() : null)
 		if (!(mV && (!mD || mD > evt.date)))		checking();
 		return
 	}
-/*
-	if (adjRoomsPathway && rSt == vacant)
-		for (def adj : adjRooms)		{
-			def lastStateDate = parent.getLastStateDate(adj)
-			if (lastStateDate['state'])		{
-				def evtDate = evt.date.getTime()
-				def lsDate = lastStateDate['date']
-				def dateDiff = (evtDate - lsDate) + 0
-				if (lastStateDate['state'] == vacant)	{
-//					processRules(occupied)
-					checking()
-					return
-				}
-			}
-		}
-*/
 	if (adjRoomsPathway && rSt == vacant)
 		for (def adj : adjRooms)		{
 			def currentState = parent.getCurrentState(adj)
@@ -2655,8 +3019,9 @@ def adjMotionActiveEventHandler(evt)	{
 
 def adjMotionInactiveEventHandler(evt)	{
 	ifDebug("adjMotionInactiveEventHandler", 'info')
-	if (!state.adjMotionSensorsID || !state.adjMotionSensorsID.contains(evt.device.id.toString()))	return;
-	if (state.hT != _Hubitat)	getChildDevice(getRoom())?.updateAdjMotionInd(0);
+	if (!state.adjMotionSensorsID || !state.adjMotionSensorsID.contains(evt.device.id.toString()))
+		return
+	updateAdjMotionInd(0)
 }
 
 def	roomButtonPushedEventHandler(evt)	{
@@ -2675,8 +3040,7 @@ def	roomButtonPushedEventHandler(evt)	{
 			}
 		}
 		ifDebug("buttonForRoom: $buttonForRoom")
-//        if (!eD || (buttonForRoom && eD['buttonNumber'] && eD['buttonNumber'] != buttonForRoom as Integer))	return;
-		if (!buttonForRoom)	return;
+		if (!buttonForRoom)		return;
 	}
 	def child = getChildDevice(getRoom())
 	def rSt = child?.currentValue(occupancy)
@@ -2687,7 +3051,8 @@ def	roomButtonPushedEventHandler(evt)	{
 			nRSt = btn
 			nextState = false
 		}
-		if (btn == rSt)		nextState = true;
+		if (btn == rSt)
+			nextState = true
 	}
 	"$nRSt"()
 }
@@ -2712,36 +3077,41 @@ def	buttonPushedOccupiedEventHandler(evt)	{
 
 def occupiedSwitchEventHandler(evt)	{
 	ifDebug("occupiedSwitchEventHandler", 'info')
+	updateSwitchInd(isAnyOSwitchOn(), 'O')
+
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateOSwitchInd(isAnyOSwitchOn());
 	def rSt = child?.currentValue(occupancy)
 	if (!checkPauseModesAndDoW() || (rSt == locked && lockedOverrides) || (rSt == asleep && asleepOverrides) ||
 		(rSt == engaged && engagedOverrides) || !['vacant','occupied','checking', 'engaged'].contains(rSt))
 		return
 	def isOccupied = isRoomOccupied()
 	if (['vacant', 'checking'].contains(rSt))	{
-		if (isOccupied)		occupied();		else if (isRoomEngaged())	engaged();
+		if (isOccupied)
+			occupied()
+		else if (isRoomEngaged())
+			engaged()
 	}
 	else if (rSt == occupied)
-		if (isOccupied)		(state.noMotion ? refreshOccupiedTimer() : unscheduleAll("occupiedSwitchEventHandler"));
-		else				roomVacant();
+		(isOccupied ? (state.noMotion ? refreshOccupiedTimer() : unscheduleAll("occupiedSwitchEventHandler")) : roomVacant())
 }
 
 private isRoomOccupied()	{
 	if (occSwitches && occSwitches.currentSwitch.contains(on))		return true;
 	if ((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active)))
-		return true;
-	return false
+		return true
+	else
+		return false
 }
 
 def	switchEventHandler(evt)		{
 	ifDebug("switchOnEventHandler", 'info')
-	if (state.hT != _Hubitat)	getChildDevice(getRoom()).updateSwitchInd(isAnySwitchOn());
+	updateSwitchInd(isAnySwitchOn(), '');
 }
 
 def	buttonPushedEventHandler(evt)	{
 	ifDebug("buttonPushedEventHandler", 'info')
 	if (!checkPauseModesAndDoW())	return;
+
 	if (state.hT == _SmartThings)	{
 		if (!evt.data)	return;
 		def eD = new groovy.json.JsonSlurper().parseText(evt.data)
@@ -2750,14 +3120,7 @@ def	buttonPushedEventHandler(evt)	{
 	}
 	def child = getChildDevice(getRoom())
 	def rSt = child?.currentValue(occupancy)
-/*    if (child?.currentValue(occupancy) == engaged)
-		child.generateEvent((resetEngagedDirectly ? vacant : checking))
-	else
-		child.engaged()
-*/
-//    ifDebug("buttonPushedEventHandler: ${child.currentValue(occupancy)}")
-//    child.generateEvent((child?.currentValue(occupancy) != engaged ? engaged : (resetEngagedDirectly ? vacant : checking)))
-	if (rSt == engaged)	{
+	if (rSt == engaged)		{
 		if (!buttonOnlySetsEngaged)
 ///			child."${(resetEngagedDirectly ? vacant : checking)}"();
 //			"${(resetEngagedDirectly ? vacant : checking)}"()
@@ -2765,13 +3128,12 @@ def	buttonPushedEventHandler(evt)	{
 	}
 	else
 		engaged();
-//        child.generateEvent(motionSensors?.currentMotion.contains(active) && whichNoMotion != lastMotionActive ? occupied : checking)
-///		child.engaged()
 }
 
 def	buttonPushedVacantEventHandler(evt)	{
 	ifDebug("buttonPushedVacantEventHandler", 'info')
 	if (!checkPauseModesAndDoW())	return;
+
 	if (state.hT == _SmartThings)	{
 		if (!evt.data)	return;
 		def eD = new groovy.json.JsonSlurper().parseText(evt.data)
@@ -2806,6 +3168,7 @@ def	buttonPushedAsleepEventHandler(evt)		{
 def	anotherRoomEngagedButtonPushedEventHandler(evt)		{
 	ifDebug("anotherRoomEngagedButtonPushedEventHandler", 'info')
 	if (!checkPauseModesAndDoW())	return;
+
 	if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains(present))	return;
 	if (state.hT == _SmartThings)	{
 		if (!evt.data)	return;
@@ -2821,8 +3184,10 @@ def	presenceEventHandler(evt)		{
 	def departed = (evt.value == 'not present' ? true : false)
 	if (departed && personsPresence.currentPresence.contains(present))		return;
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updatePresenceInd(0);
+	updatePresenceInd(0)
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
+
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides || rSt == asleep && asleepOverrides)		return;
 	if (departed)	{
@@ -2833,13 +3198,15 @@ def	presenceEventHandler(evt)		{
 	else
 		if (presenceActionArrival() && ['occupied', 'checking', 'vacant'].contains(rSt))		engaged();
 	processCoolHeat()
+	processHumidity()
 }
 
 def	engagedSwitchEventHandler(evt)	{
 	ifDebug("engagedSwitchEventHandler", 'info')
-	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateESwitchInd(isAnyESwitchOn());
+	updateSwitchInd(isAnyESwitchOn(), 'E');
 	if (!checkPauseModesAndDoW())	return;
+
+	def child = getChildDevice(getRoom())
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides || rSt == asleep && asleepOverrides)		return;
 	if (isRoomEngaged())			(rSt != engaged ? engaged() : refreshEngagedTimer());
@@ -2847,33 +3214,43 @@ def	engagedSwitchEventHandler(evt)	{
 }
 
 private isRoomEngaged()		{
-	if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains(present))	return true;
-	if (powerDevice && powerValueEngaged && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) >= powerValueEngaged)	return true;
-	if (musicDevice && musicEngaged && musicDevice.currentStatus == 'playing')	return true;
+	if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains(present))		return true;
+/* add check to look back at power value for powerStaysAbove for is engaged check with power */
 	if (engagedSwitch && engagedSwitch.currentSwitch.contains('on'))	return true;
 	if (contactSensor && !contactSensorNotTriggersEngaged)	{
 		def cV = contactSensor.currentContact.contains(open)
 		if ((!contactSensorOutsideDoor && !cV) || (contactSensorOutsideDoor && cV))	return true;
 	}
+	if (powerDevice && powerValueEngaged)		{
+		def currentPower = (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)
+		if (getIntfromStr((String) currentPower) >= powerValueEngaged)		{
+			if (powerStaysAbove && state.powerLastMins)		{
+				def nowTime = now()
+				def backTime = nowTime - (powerStaysAbove * 1000l)
+				def foundValue = false
+				for (def pwr : state.powerLastMins)
+					if (Long.valueOf(pwr.key) >= backTime && pwr.value.toInteger() < powerValueEngaged.toInteger())	{
+						foundValue = true
+						break
+					}
+				if (!foundValue)		return true;
+			}
+			else
+				return true
+		}
+	}
+	if (musicDevice && musicEngaged && musicDevice.currentStatus == 'playing')	return true;
 	return false
 }
 
-private refreshOccupiedTimer(returnTimer = false)	{
-	def timer = null
-	if (state.noMotion)		{
-		(returnTimer ? timer = state.noMotion : updateChildTimer(state.noMotion))
-		runIn(state.noMotion, roomVacant)
-	}
-	return timer
+private refreshOccupiedTimer()	{
+	if (state.noMotion)
+		addSchedule("roomVacant", state.noMotion, state.scheduled.isExecuting)
 }
 
-private refreshEngagedTimer(returnTimer = false)	{
-	def timer = null
-	if (state.noMotionEngaged && (!presenceActionContinuous || !personsPresence.currentPresence.contains(present)))		{
-		(returnTimer ? timer = state.noMotionEngaged : updateChildTimer(state.noMotionEngaged))
-		runIn(state.noMotionEngaged, roomVacant)
-	}
-	return timer
+private refreshEngagedTimer()	{
+	if (state.noMotionEngaged && (!presenceActionContinuous || !personsPresence.currentPresence.contains(present)))
+		addSchedule("roomVacant", state.noMotionEngaged, state.scheduled.isExecuting)
 }
 
 def	contactOpenEventHandler(evt)	{
@@ -2881,28 +3258,33 @@ def	contactOpenEventHandler(evt)	{
 	def cV = (contactSensor ? contactSensor.currentContact : '')
 	contactAnnounce(evt.device, cV, (contactSensorOutsideDoor ? false : true))
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateContactInd(contactSensorOutsideDoor ? (cV.contains(open) ? 0 : 1) : 0);
+	updateContactInd(contactSensorOutsideDoor ? (cV.contains(open) ? 0 : 1) : 0, false)
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides || rSt == asleep && asleepOverrides)		return;
 	if (rSt == engaged)		{
-		if (isRoomEngaged())
+		if (contactEngagedRequiresMotion)
+			checking()
+		else if (isRoomEngaged())
 			contactEngaged(true)
 		else if (!contactSensorNotTriggersEngaged && (!contactSensorOutsideDoor || !cV.contains(open)))
 			roomVacant()
 	}
 	else if (rSt == asleep)	{
 		if (resetAsleepWithContact)		{
-			updateChildTimer((resetAsleepWithContact as Integer) * 60)
-			runIn((resetAsleepWithContact as Integer) * 60, resetAsleep)
+//			def rAwC = (resetAsleepWithContact as Integer) * 60
+			addSchedule("resetAsleep", ((resetAsleepWithContact as Integer) * 60), state.scheduled.isExecuting)
 		}
 	}
 	else if (rSt == vacant)		{
-		if (hasOccupiedDevice())	roomVacant();
+		if (hasOccupiedDevice())
+			roomVacant()
 	}
 	else if (rSt == occupied)	{
 		def motionActive = ((!motionSensors || (whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active))) || (!accelSensors || accelSensors.currentAcceleration.contains(active)))
-		if (!motionActive)		checking();
+		if (!motionActive || contactEngagedRequiresMotion)
+			checking()
 	}
 }
 
@@ -2911,32 +3293,35 @@ def	contactClosedEventHandler(evt)	{
 	def cV = (contactSensor ? contactSensor.currentContact : '')
 	contactAnnounce(evt.device, cV, (contactSensorOutsideDoor ? true : false))
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateContactInd(contactSensorOutsideDoor ? 0 : (cV.contains(open) ? 0 : 1));
+	updateContactInd(contactSensorOutsideDoor ? 0 : (cV.contains(open) ? 0 : 1), false)
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides || rSt == asleep && asleepOverrides)		return;
 	if (rSt == engaged)		{
-		if (isRoomEngaged())
+		if (contactEngagedRequiresMotion)
+			checking()
+		else if (isRoomEngaged())
 			contactEngaged(false)
 		else if (!contactSensorNotTriggersEngaged)
 			refreshEngagedTimer()
 	}
 	else if (rSt == asleep)		{
-		if (resetAsleepWithContact && !cV.contains(open))	{
-			unschedule('resetAsleep')
-			restoreTimer(asleep)
-		}
+//log.debug "resetAsleepWithContact: $resetAsleepWithContact | cV.contains(open): ${!cV.contains(open)}"
+		if (resetAsleepWithContact && !cV.contains(open))
+			removeSchedule("resetAsleep", state.scheduled.isExecuting)
 	}
 	else if (['checking', 'vacant'].contains(rSt))	{
 		if (hasOccupiedDevice())
 			"${(isRoomOccupied() ? occupied : checking)}"()
-		else if ((contactSensorOutsideDoor && cV.contains(open)) || (!contactSensorOutsideDoor && !cV.contains(open)))
+		else if (((!contactEngagedRequiresMotion || !motionSensors) && (contactSensorOutsideDoor && cV.contains(open)) || (!contactSensorOutsideDoor && !cV.contains(open))) && !contactEngagedRequiresMotion)
 			engaged()
+		else if (rSt == vacant)
+			checking()
 	}
 	else if (rSt == occupied)	{
 	 	if (!contactSensorNotTriggersEngaged && (contactSensorOutsideDoor || !cV.contains(open)))	{
 			def motionActive = ((!motionSensors || (whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active))) || (!accelSensors || accelSensors.currentAcceleration.contains(active)))
-			if (motionActive)		engaged();
+			if (motionActive && !contactEngagedRequiresMotion)		engaged();
 		}
 	}
 }
@@ -2945,14 +3330,10 @@ private contactEngaged(fromOpened)	{
 	if (personsPresence && presenceActionContinuous && personsPresence.currentPresence.contains(present))
 		unscheduleAll("contact closed handler")
 	else if (resetEngagedWithContact)	{
-		if (fromOpened)		{
-			updateChildTimer((resetEngagedWithContact as Integer) * 60)
-			runIn((resetEngagedWithContact as Integer) * 60, resetEngaged)
-		}
-		else	{
-			unschedule('resetEngaged')
-			restoreTimer(engaged)
-		}
+		if (fromOpened)
+			addSchedule("resetEngaged", ((resetEngagedWithContact as Integer) * 60), state.scheduled.isExecuting)
+		else
+			removeSchedule("resetEngaged", state.scheduled.isExecuting)
 	}
 	else
 		refreshEngagedTimer()
@@ -2960,23 +3341,19 @@ private contactEngaged(fromOpened)	{
 
 private contactAnnounce(dev, cV, opened)		{
 	if (announceDoor)	{
-		if (announceDoorColor)	{
-//			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceDoorColor][1])
+		if (announceDoorColor)
 			setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceDoorColor][1]))
-		}
 		if (announceDoorSpeaker)
 			speakIt(dev.displayName + (opened ? ' opened. ' : ' closed. '))
 	}
 	if (announceContact)
-		if (cV.contains(open))		{
-			def aC = announceContact as Integer
-			runIn(aC * 60, contactStaysOpen)
-		}
+		if (cV.contains(open))
+			addSchedule("contactStaysOpen", ((announceContact as Integer) * 60), state.scheduled.isExecuting)
 		else
-			unschedule("contactStaysOpen");
+			removeSchedule("contactStaysOpen", state.scheduled.isExecuting)
 }
 
-def contactStaysOpen()	{
+def contactStaysOpen()		{
 	ifDebug("contactStaysOpen", 'info')
 	if (contactSensor.currentContact.contains(open))	{
 		def cO = '', cOCount = 0
@@ -2987,13 +3364,13 @@ def contactStaysOpen()	{
 			}
 		if (cOCount > 0 && announceContact)	{
 			cO = addAnd(cO)
-			if (announceContactColor)	{
-//				state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactColor][1])
+			if (announceContactColor)
 				setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceContactColor][1]))
-			}
-			if (announceContactSpeaker)		speakIt('Contacts ' + cO + " ${(cOCount == 1 ? 'is' : 'are')} open. ");
+			if (announceContactSpeaker)
+				speakIt('Contacts ' + cO + " ${(cOCount == 1 ? 'is' : 'are')} open. ")
 		}
-		runIn(announceContact.toInteger() * 60, contactStaysOpen)
+		addSchedule("contactStaysOpen", announceContact.toInteger() * 60, state.scheduled.isExecuting)
+
 	}
 }
 
@@ -3002,43 +3379,24 @@ private addAnd(str)	{
 	return (lio == -1 ? str : (str.substring(0, lio) + " and " + str.substring(lio + 1)))
 }
 
-private restoreTimer(rS)	{
-	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-	def childTimer = 0
-	if (rSt == rS)		childTimer = calculateTimerLeft(rS);
-	updateChildTimer(childTimer)
-}
-
-private calculateTimerLeft(rs)	{
-	def eM = 0
-	if (state.previousState.state == rs)	{
-		eM = ((now() - state.previousState.date) / 1000l).toInteger()
-		switch(rs)	{
-			case occupied:	eM = (state.noMotion ? state.noMotion - eM : 0);				break
-			case engaged:	eM = (state.noMotionEngaged ? state.noMotionEngaged - eM : 0);	break
-			case asleep:	eM = (state.noAsleep ? state.noAsleep - eM : 0);				break
-			case locked:	eM = (state.unLocked ? state.unLocked - eM : 0);				break
-			default:		break
-		}
-	}
-	return eM
-}
-
 def resetEngaged()		{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == engaged)	roomVacant();
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == engaged)
+		roomVacant()
 }
 
-def resetAsleep()	{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == asleep)		{  unschedule('roomAwake'); roomAwake()  }
+private resetAsleep()	{
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == asleep)		{
+		removeSchedule("roomAwake", state.scheduled.isExecuting)
+		roomAwake()
+	}
 }
 
 def	contactsRTEventHandler(evt)	{
 	ifDebug("contactsRTEventHandler", 'info')
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateContactRTIndC(contactSensorsRT.currentContact.contains(open) ? 0 : 1);
+	updateContactInd(contactSensorsRT.currentContact.contains(open) ? 0 : 1, true)
 	if (announceContactRT)	{
 		if (announceContactRTColor)	{
-//			state.colorNotificationColor = convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1])
 			setupColorNotification(convertRGBToHueSaturation(colorsRGB[announceContactRTColor][1]))
 		}
 		if (announceContactRTSpeaker)	speakIt(evt.device.displayName + ' ' + evt.value.toString() + '.');
@@ -3049,6 +3407,7 @@ def	contactsRTEventHandler(evt)	{
 def musicPlayingEventHandler(evt)	{
 	ifDebug("musicPlayingEventHandler", 'info')
 	def child = getChildDevice(getRoom())
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides)	return;
@@ -3078,25 +3437,27 @@ def musicStoppedEventHandler(evt)	{
 }
 
 def temperatureEventHandler(evt)	{
-	def child = getChildDevice(getRoom())
 	def temperature = getAvgTemperature()
-	boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
-	if (state.hT != _Hubitat)		child.updateTemperatureInd(temperature);
-	if (!checkPauseModesAndDoW())		processCoolHeat(null, true);
+//	boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
+	updateTemperatureInd(temperature);
+	scheduleRunEvery5()
+	if (checkPauseModesAndDoW() && state.maintainRoomTemp)		processCoolHeat(null, true);
 }
 
 def	lockedEventHandler(evt)		{
 	ifDebug("lockedSwitchOnEventHandler", 'info')
-	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateLSwitchInd(isAnyLSwitchOn());
+	updateSwitchInd(isAnyLSwitchOn(), 'L');
 	if (!checkPauseModesAndDoW())	return;
-	def evtVal
-	if (evt.name == 'switch')
-		evtVal = (lockedSwitchCmd ? lockedSwitch.currentSwitch.contains(on) : !lockedSwitch.currentSwitch.contains(on))
-	else
-		evtVal = (lockedContactCmd ? lockedContact.currentContact.contains(closed) : !lockedSwitch.currentSwitch.contains(closed))
-	def rSt = child?.currentValue(occupancy)
-	if (evtVal)	{
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+
+	def evtVal = (evt.name == 'switch' ? (lockedSwitchCmd ? lockedSwitch.currentSwitch.contains(on) : !lockedSwitch.currentSwitch.contains(on)) : 	(lockedContactCmd ? lockedContact.currentContact.contains(closed) : !lockedSwitch.currentSwitch.contains(closed)))
+//	if (evt.name == 'switch')
+//		evtVal = (lockedSwitchCmd ? lockedSwitch.currentSwitch.contains(on) : !lockedSwitch.currentSwitch.contains(on))
+//	else
+//		evtVal = (lockedContactCmd ? lockedContact.currentContact.contains(closed) : !lockedSwitch.currentSwitch.contains(closed))
+	def rSt = child.currentValue(occupancy)
+	if (evtVal)		{
 		if (rSt != locked)		locked();
 	}
 	else if (rSt == locked)		{
@@ -3107,13 +3468,14 @@ def	lockedEventHandler(evt)		{
 
 def checkSwitchEventHandler(evt)	{
 	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
+	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))
+		switchesOnOrOff()
 }
 
 def roomThermostatEventHandler(evt)	{
 	if (!state.roomThermoTurnedOn)	{
 		state.thermoOverride = true
-		runIn(thermoOverride * 60, thermoUnOverride)
+		addSchedule("thermoUnOverride", thermoOverride * 60, state.scheduled.isExecuting)
 		updateThermoOverrideIndP()
 	}
 	else
@@ -3123,7 +3485,7 @@ def roomThermostatEventHandler(evt)	{
 def roomCoolSwitchOnEventHandler(evt)	{
 	if (!state.roomCoolTurnedOn)	{
 		state.thermoOverride = true
-		runIn(thermoOverride * 60, thermoUnOverride)
+		addSchedule("thermoUnOverride", thermoOverride * 60, state.scheduled.isExecuting)
 		updateThermoOverrideIndP()
 	}
 	else
@@ -3133,7 +3495,7 @@ def roomCoolSwitchOnEventHandler(evt)	{
 def roomHeatSwitchOnEventHandler(evt)	{
 	if (!state.roomHeatTurnedOn)	{
 		state.thermoOverride = true
-		runIn(thermoOverride * 60, thermoUnOverride)
+		addSchedule("thermoUnOverride", thermoOverride * 60, state.scheduled.isExecuting)
 		updateThermoOverrideIndP()
 	}
 	else
@@ -3141,9 +3503,10 @@ def roomHeatSwitchOnEventHandler(evt)	{
 }
 
 def roomCoolHeatSwitchOffEventHandler(evt)		{
-	unschedule('thermoUnOverride')
+	removeSchedule("thermoUnOverride", state.scheduled.isExecuting)
 	state.thermoOverride = false
 	updateThermoOverrideIndP()
+	updateCoolHeatInd(getAvgTemperature(), null, [:])
 }
 
 def thermoUnOverride()		{
@@ -3154,17 +3517,20 @@ def thermoUnOverride()		{
 
 private updateThermoOverrideIndP()		{
 	if (state.hT == _Hubitat)		return;
-	getChildDevice(getRoom())?.updateThermoOverrideIndC((state.processCoolHeat ? (state.thermoOverride ? on : off) : '--'))
+	def child = getChildDevice(getRoom())
+	if (child)
+		child.sendEvent(name: 'thermoOverrideInd', value: (state.processCoolHeat ? (state.thermoOverride ? on : off) : '--'), descriptionText: "indicate thermo override minutes")
 }
 
 def processCoolHeat(rSt = null, canSkip = false)	{
 	ifDebug("processCoolHeat", 'info')
 	if (!state.maintainRoomTemp || state.thermoOverride)	return;
+
 	def nowTime = now()
 	if (canSkip && ((nowTime - (state.lastProcessedCH ?: 0L)) < _ProcessCHEvery))	return;
 	state.lastProcessedCH = nowTime
-	def child = getChildDevice(getRoom())
-	if (!rSt)	rSt = child?.currentValue(occupancy);
+//	def child = getChildDevice(getRoom())
+	if (!rSt)	rSt = getChildDevice(getRoom())?.currentValue(occupancy);
 //    ifDebug("rSt: $rSt")
 	def temperature = getAvgTemperature()
 //	def updateMaintainInd = true
@@ -3176,14 +3542,20 @@ def processCoolHeat(rSt = null, canSkip = false)	{
 	}
 
 	ifDebug("processCoolHeat: rule: $turnOn")
+//log.debug "processCoolHeat: rule: $turnOn"
 
-	if (turnOn && maintainRoomTemp != '4' && (!contactSensorsRTCheck || (!contactSensorsRT || !contactSensorsRT.currentContact.contains(open))))	{
-		if (['1', '3', '5'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomCoolSwitch)))
+	def turnOff = true
+	if (turnOn && maintainRoomTemp != '4')		{
+		if (['1', '3', '5'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomCoolSwitch)) && (!contactSensorsRTCheck || (!contactSensorsRT || !contactSensorsRT.currentContact.contains(open))))		{
 			coolIt(thisRule, temperature)
-		if (['2', '3', '5'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomHeatSwitch)))
+			turnOff = false
+		}
+		else if (['2', '3', '5'].contains(maintainRoomTemp) && ((useThermostat && roomThermostat) || (!useThermostat && roomHeatSwitch)) && (!contactSensorsRTCheckHeat || (!contactSensorsRT || !contactSensorsRT.currentContact.contains(open))))		{
 			heatIt(thisRule, temperature)
+			turnOff = false
+		}
 	}
-	else    {
+	if (turnOff)    {
 		state.roomThermoTurnedOn = false
 		state.roomCoolTurnedOn = false
 		state.roomHeatTurnedOn = false
@@ -3308,45 +3680,114 @@ private heatIt(thisRule, temperature)	{
 private updateCoolHeatInd(temperature, turnOn, thisRule)		{
 	if (state.hT == _Hubitat)	return;
 	def child = getChildDevice(getRoom())
-	if (child)
-		child.updateMaintainIndC(maintainRoomTemp, turnOn, temperature, thisRule?.coolTemp, thisRule?.heatTemp, outTempSensor, outTempSensor?.currentTemperature, autoAdjustWithOutdoor)
+	if (!child)		return;
+
+	def temp = 999
+	if (turnOn)		{
+		boolean isFarenheit = (location.temperatureScale == 'F' ? true : false)
+		def coolTemp = thisRule?.coolTemp
+		def heatTemp = thisRule?.heatTemp
+		if (outTempSensor && autoAdjustWithOutdoor)		{
+			def outTemp = outTempSensor?.currentTemperature
+			if (outTemp > (isFarenheit ? 90 : 26.7))	coolTemp = coolTemp - (isFarenheit ? 0.5 : 0.28);
+			if (outTemp < (isFarenheit ? 32 : 0))		heatTemp = heatTemp + (isFarenheit ? 0.5 : 0.28);
+		}
+		if (maintainRoomTemp == '1')
+			temp = coolTemp
+		else if (maintainRoomTemp == '2')
+			temp = heatTemp
+		else if (maintainRoomTemp == '3' || maintainRoomTemp == '5')
+			temp = (Math.abs(temperature - coolTemp) >= Math.abs(temperature - heatTemp) ? heatTemp : coolTemp)
+		else
+			temp = -1
+		if (temp != 999)	{
+			def tS = (location.temperatureScale ?: 'F')
+			child.sendEvent(name: 'maintainInd', value: (temp == -1 ? '--' : temp + '°' + tS), unit: tS, descriptionText: (temp == -1 ? "indicate no maintain temperature" : "indicate maintain temperature value"))
+		}
+	}
 	updateThermostatIndP()
 }
 
 private updateThermostatIndP()	{
 	if (state.hT == _Hubitat)	return;
 	def child = getChildDevice(getRoom())
-	if (child)
-		child.updateThermostatIndC((personsPresence ? personsPresence.currentPresence : ''), maintainRoomTemp, useThermostat, roomThermostat?.currentThermostatOperatingState, roomCoolSwitch?.currentSwitch, roomHeatSwitch?.currentSwitch)
+	if (!child)		return;
+
+	def currentPresence = (personsPresence ? personsPresence.currentPresence : '')
+	def currentThermostatOperatingState = roomThermostat?.currentThermostatOperatingState
+	def thermo = 9
+	def isHere = currentPresence.contains('present')
+	if ((useThermostat && currentThermostatOperatingState == 'cooling') || (!useThermostat && roomCoolSwitch?.currentSwitch == on))
+		thermo = 4
+	else if ((useThermostat && currentThermostatOperatingState == 'heating') || (!useThermostat && roomHeatSwitch?.currentSwitch == on))
+		thermo = 5
+	else if (!isHere && ['1', '2', '3'].contains(maintainRoomTemp))
+		thermo = 0
+	else if (maintainRoomTemp == '3')
+		thermo = 1
+	else if (maintainRoomTemp == '1')
+		thermo = 2
+	else if (maintainRoomTemp == '2')
+		thermo = 3
+	ifDebug("updateThermostatIndC: thermo: $thermo")
+	def vV = '--'
+	def dD = "indicate no thermostat setting"
+	switch(thermo)	{
+		case 0:		vV = 'off';			dD = "indicate thermostat not auto";	break
+		case 1:		vV = 'auto';		dD = "indicate thermostat auto";		break
+		case 2:		vV = 'autoCool';	dD = "indicate thermostat auto cool";	break
+		case 3:		vV = 'autoHeat';	dD = "indicate thermostat auto heat";	break
+		case 4:		vV = 'cooling';		dD = "indicate thermostat cooling";		break
+		case 5:		vV = 'heating';		dD = "indicate thermostat heating";		break
+	}
+	child.sendEvent(name: 'thermostatInd', value: vV, descriptionText: dD)
 }
 
 def updateFanIndP(evt)	{
 	if (state.hT == _Hubitat)	return;
 	def child = getChildDevice(getRoom())
-	if (child)	{
-		def cL = roomFanSwitch?.currentLevel
-		child.updateFanIndC((!roomFanSwitch ? -1 : (roomFanSwitch.currentSwitch == 'off' ? 0 : (cL <= fanLow ? 1 : (cL <= fanMedium ? 2 : 3)))))
+	if (!child)		return;
+
+	def cL = roomFanSwitch?.currentLevel
+	def vV = '--'
+	def dD = "indicate no fan setting"
+	switch((!roomFanSwitch ? -1 : (roomFanSwitch.currentSwitch == 'off' ? 0 : (cL <= fanLow ? 1 : (cL <= fanMedium ? 2 : 3)))))		{
+		case 0:		vV = 'off';		dD = "indicate fan off";				break
+		case 1:		vV = 'low';		dD = "indicate fan on at low speed";	break
+		case 2:		vV = 'medium';	dD = "indicate fan on at medium speed";	break
+		case 3:		vV = 'high';	dD = "indicate fan on at high speed";	break
 	}
+	child.sendEvent(name: 'fanInd', value: vV, descriptionText: dD)
 }
 
 def updateVentIndP(evt)	{
 	if (state.hT == _Hubitat)	return;
 	def child = getChildDevice(getRoom())
-	if (child)		child.updateVentIndC(!roomVents ? -1 : (roomVents.currentSwitch.contains(on) ? 1 : 0));
+	if (!child)		return;
+
+	def vent = (!roomVents ? -1 : (roomVents.currentSwitch.contains(on) ? 1 : 0))
+	def vL, dD
+	switch(vent)	{
+		case -1:	vL = 'none';		dD = "indicate no vents";		break
+		case 0:		vL = 'closed';		dD = "indicate vents closed";	break
+		default:	vL = 'open';		dD = "indicate vent open";		break
+	}
+	child.sendEvent(name: 'ventInd', value: vL, descriptionText: dD)
 }
 
 private delayedVentOff()	{
 	if (roomVents)
-		if (delayedVentOffBy)	runIn(delayedVentOffBy, ventsOff)
-		else					ventsOff()
+		(delayedVentOff ? addSchedule("ventsOff", delayedVentOff * 60, state.scheduled.isExecuting) : ventsOff())
 }
 
-def ventsOff()	{
-	if (!cmdOpt || roomVents.currentSwitch == on)		roomVents.off();
+private ventsOff()		{
+	if (!cmdOpt || roomVents.currentSwitch == on)
+		roomVents.off()
 }
 
 private ventsOn(lvl)	{
-	unschedule('ventsOff'); roomVents.setLevel(lvl)
+	removeSchedule("ventsOff", state.scheduled.isExecuting)
+	roomVents.setLevel(lvl)
 }
 
 private checkForRules(ruleType, rSt = null)		{
@@ -3364,8 +3805,9 @@ private checkForRules(ruleType, rSt = null)		{
 		for (def i = 1; i <= maxRules; i++)	{
 			def ruleHasTime = false
 			def ruleNo = String.valueOf(i)
-			if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
-			else							thisRule = getNextRule(ruleNo, ruleType, true, true);
+//			if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
+//			else							thisRule = getNextRule(ruleNo, ruleType, true, true);
+			thisRule = (turnOnRules[(ruleNo)] ? turnOnRules[(ruleNo)] : getNextRule(ruleNo, ruleType, true, true))
 			if (thisRule.ruleNo == 'EOR')	break;
 			if (!turnOnRules[(thisRule.ruleNo)])		turnOnRules << [(thisRule.ruleNo):thisRule];
 			i = thisRule.ruleNo as Integer
@@ -3397,7 +3839,7 @@ def humidityEventHandler(evt)	{
 	def child = getChildDevice(getRoom())
 	def avgHumidity = getAvgHumidity()
 	state.humidity.lastReading = avgHumidity
-	if (state.hT != _Hubitat)		child.updateHumidityInd(avgHumidity);
+	updateHumidityInd(avgHumidity)
 	if (!state.avgHumidity)		state.avgHumidity = [:]
 	def thisDay = (new Date(now())).getDay()
 	def intCurrentHH = (new Date(now())).format("HH", location.timeZone) as Integer
@@ -3435,21 +3877,24 @@ def humidityEventHandler(evt)	{
 			state.humidity.hour = intCurrentHH
 		}
 	}
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
+
 	def rSt = child?.currentValue(occupancy)
-	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
+	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))
+		switchesOnOrOff()
 	processHumidity()
-//log.debug "\tperf humidityEventHandler: ${now() - nowTime} ms"
 }
 
 def processHumidity(rSt = null)	{
 	ifDebug("processHumidity", 'info')
+	if (!state.maintainRoomHumi || state.humidity.override || state.humidity.offIn)		return;
 
 	def nowTime = now()
-	if (!rSt)		rSt = getChildDevice(getRoom())?.currentValue(occupancy);
-	if (rSt == checking)	return;
+	if (!rSt)
+		rSt = getChildDevice(getRoom())?.currentValue(occupancy)
+	if (rSt == checking)		return;
 
-	if (!state.maintainRoomHumi || state.humidity.override || state.humidity.offIn)		return;
 	def humidity = getAvgHumidity()
 	if (state.humidity.offAt)	{
 		def humiOffAt
@@ -3464,21 +3909,27 @@ def processHumidity(rSt = null)	{
 				mapKey = ''
 			humiOffAt = (state.avgHumidity["rAH$mapKey"] ?: (state.avgHumidity["rAH"] ?: humidity))
 		}
-		if ((roomDehumidifierSwitch && roomDehumidifierSwitch.currentSwitch == on && humidity <= humiOffAt) ||
-			(roomHumidifierSwitch && roomHumidifierSwitch.currentSwitch == on && humidity >= humiOffAt))
+		if ((roomDehumidifierSwitch?.currentSwitch == on && humidity <= humiOffAt) ||
+			(roomHumidifierSwitch?.currentSwitch == on && humidity >= humiOffAt))
 			state.humidity.offAt = false
-		if (state.humidity.offAt ? true : false)	return;
+		if (state.humidity.offAt)		return;
 	}
 
 	def thisRule = [:]
 	def turnOn = null
 	def postProcessing = false
 
-	if (['engaged', 'occupied', 'asleep', 'vacant'].contains(rSt))		turnOn = checkForRules(_HRule, rSt);
-	if (turnOn)		thisRule = getRule(turnOn, _HRule);
-	if (turnOn && thisRule.state)	{
-		if (thisRule.state.contains(engaged) || thisRule.state.contains(asleep) || (thisRule.state.contains(occupied) && state.humidity.lastState == vacant))
-			state.humidity.lastRule = null
+	if ([engaged, occupied, asleep, vacant].contains(rSt))		{
+		turnOn = checkForRules(_HRule, rSt)
+		if (turnOn)		{
+			thisRule = getRule(turnOn, _HRule)
+//			if (turnOn && thisRule.state)	{
+			if (thisRule.state)	{
+//			if (thisRule.state.contains(engaged) || thisRule.state.contains(asleep) || (thisRule.state.contains(occupied) && state.humidity.lastState == vacant))
+				if ([engaged, asleep, occupied].contains(thisRule.state) && state.humidity.lastState == vacant)
+					state.humidity.lastRule = null
+			}
+		}
 	}
 // 	ifDebug("$state.humidity.lastRule | $state.humidity.lastState | $rSt | $state.humidity.minsInState")
 
@@ -3487,12 +3938,14 @@ def processHumidity(rSt = null)	{
 		if (state.humidity.minsInState > 0)		{
 			def tDiff = (((now() - (state.humidity.lastStateAt ?: 0)) % _SecondsInDay) / 60000f).trunc(0)
 //			ifDebug("state.humidity.minsInState: $state.humidity.minsInState | tDiff: $tDiff")
-			if (tDiff < state.humidity.minsInState)		getOldRule = false;
+			if (tDiff < state.humidity.minsInState)
+				getOldRule = false
 		}
 		if (getOldRule)		{
 			turnOn = state.humidity.lastRule
 			thisRule = getRule(turnOn, _HRule)
-			if (thisRule.humiCmp || thisRule.humiMinRun || thisRule.humiMaxRun)			postProcessing = true;
+			if (thisRule.humiCmp || thisRule.humiMinRun || thisRule.humiMaxRun)
+				postProcessing = true
 		}
 	}
 
@@ -3526,8 +3979,10 @@ def processHumidity(rSt = null)	{
 
 	def turnOff = true
 	state.humidity.forceOffIn = false
-	if (thisRule.humiMinRun)	state.humidity.offIn = thisRule.humiMinRun;
-	if (thisRule.humiMaxRun)	state.humidity.forceOffIn = thisRule.humiMaxRun;
+	if (thisRule.humiMinRun)
+		state.humidity.offIn = thisRule.humiMinRun
+	if (thisRule.humiMaxRun)
+		state.humidity.forceOffIn = thisRule.humiMaxRun
 	if (cmpHumidity)	{
 		def humiPercented = ((cmpHumidity * thisRule.humiPercent) / 100f).round(1)
 		def humiIncrease = cmpHumidity + humiPercented
@@ -3545,8 +4000,10 @@ def processHumidity(rSt = null)	{
 		}
 	}
 	ifDebug("$state.humidity.offIn | $state.humidity.forceOffIn")
-	if (turnOff)	turnOffHumiSwitches();
-	if (state.humidity.offIn || state.humidity.forceOffIn)		humidityTimer();
+	if (turnOff)
+		turnOffHumiSwitches()
+	if (state.humidity.offIn || state.humidity.forceOffIn)
+		humidityTimer()
 //log.debug "\tperf processHumidity: ${now() - nowTime} ms"
 }
 
@@ -3563,13 +4020,13 @@ private getHumiCmp(thisRule)	{
 			break
 		case '2':
 			cmpHumidity = (state.avgHumidity["rAH${String.format("%02dh", intCurrentHH)}"] ?: (state.avgHumidity["rAH"] ?: (state.humidity.previous ?: false)))
-			break;
+			break
 		case '3':
 			cmpHumidity = (state.avgHumidity["rAH${String.format("%02dd", thisDay)}"] ?: (state.avgHumidity["rAH"] ?: (state.humidity.previous ?: false)))
-			break;
+			break
 		case '4':
 			cmpHumidity = (state.avgHumidity["rAH"] ?: (state.humidity.previous ?: false))
-			break;
+			break
 	}
 	return cmpHumidity
 }
@@ -3596,25 +4053,21 @@ private turnOffHumiSwitches()		{
 	ifDebug("turnOffHumiSwitches", 'info')
 	if (roomDehumidifierSwitch && (!cmdOpt || roomDehumidifierSwitch.currentSwitch == on))		roomDehumidifierSwitch.off();
 	if (roomHumidifierSwitch && (!cmdOpt || roomHumidifierSwitch.currentSwitch == on))			roomHumidifierSwitch.off();
-	unschedule('humidityTimer2')
-	unschedule('humidityTimer3')
-	state.humidity.offIn = false
-	state.humidity.forceOffIn = false
-	state.humidity.offAt = false
+	removeSchedule(["humidityTimer2", "humidityTimer3"], state.scheduled.isExecuting)
+	state.humidity.offIn = state.humidity.forceOffIn = state.humidity.offAt = false
 	state.humidity.lastRule = null
 }
 
 private humidityTimer()		{
 	ifDebug("humidityTimer", 'info')
-	unschedule('humidityTimer2')
-	unschedule('humidityTimer3')
+	removeSchedule(["humidityTimer2", "humidityTimer3"], state.scheduled.isExecuting)
 	if (roomDehumidifierSwitch?.currentSwitch == on || roomHumidifierSwitch?.currentSwitch == on)	{
 		if (state.humidity.offIn)
-			runIn(state.humidity.offIn * 60, humidityTimer2)
-		else	{
-			if (state.humidity.forceOffIn)		humidityTimer2();
-			else if (!state.humidity.offAt)		turnOffHumiSwitches();
-		}
+			addSchedule("humidityTimer2", state.humidity.offIn * 60, state.scheduled.isExecuting)
+		else if (state.humidity.forceOffIn)
+			humidityTimer2()
+		else if (!state.humidity.offAt)
+			turnOffHumiSwitches()
 	}
 	else
 		turnOffHumiSwitches()
@@ -3622,18 +4075,17 @@ private humidityTimer()		{
 
 def humidityTimer2()	{
 	ifDebug("humidityTimer2", 'info')
-	unschedule('humidityTimer3')
+	removeSchedule("humidityTimer3", state.scheduled.isExecuting)
 	if (roomDehumidifierSwitch?.currentSwitch == on || roomHumidifierSwitch?.currentSwitch == on)	{
 		def offIn = state.humidity.offIn
 		state.humidity.offIn = false
 		state.humidity.lastRule = null
 		processHumidity()
 		if (state.humidity.forceOffIn && (roomDehumidifierSwitch?.currentSwitch == on || roomHumidifierSwitch?.currentSwitch == on))
-			runIn((state.humidity.forceOffIn -  (offIn ?: 0)) * 60, humidityTimer3)
+			addSchedule("humidityTimer3", (state.humidity.forceOffIn - (offIn ?: 0)) * 60, state.scheduled.isExecuting)
 	}
 	else	{
-		state.humidity.offIn = false
-		state.humidity.offAt = false
+		state.humidity.offIn = state.humidity.offAt = false
 	}
 	state.humidity.forceOffIn = false
 }
@@ -3645,40 +4097,33 @@ def humidityTimer3()	{
 
 def roomDehumidifierSwitchOnEventHandler(evt)	{
 	ifDebug("roomDehumidifierSwitchOnEventHandler $state.humidity.dehumidifierTurnedOn", 'info')
-	if (state.humidity.dehumidifierTurnedOn)	{
-		state.humidity.dehumidifierTurnedOn = false; state.humidity.override = false
-	}
+	if (state.humidity.dehumidifierTurnedOn)
+		state.humidity.dehumidifierTurnedOn = state.humidity.override = false
 	else
 		resetHumiAuto()
 }
 
 def roomDehumiAndHumiSwitchOffEventHandler(evt)		{
 	ifDebug("roomDehumiAndHumiSwitchOffEventHandler", 'info')
-	unschedule('humiUnOverride')
+	removeSchedule("humiUnOverride", state.scheduled.isExecuting)
 	state.humidity.override = false
 }
 
 def roomHumidifierSwitchOnEventHandler(evt)		{
 	ifDebug("roomHumidifierSwitchOnEventHandler $state.roomHumidifierTurnedOn", 'info')
-	if (state.humidity.humidifierTurnedOn)	{
-		state.humidity.humidifierTurnedOn = false; state.humidity.override = false
-	}
+	if (state.humidity.humidifierTurnedOn)
+		state.humidity.humidifierTurnedOn = state.humidity.override = false
 	else
 		resetHumiAuto()
 }
 
 private resetHumiAuto()		{
 	state.humidity.override = true
-	unschedule('humidityTimer2')
-	unschedule('humidityTimer3')
-	state.humidity.offIn = false
-	state.humidity.forceOffIn = false
-//		humidityTimer()
-	state.humidity.offAt = false
+	removeSchedule(["humidityTimer2", "humidityTimer3"], state.scheduled.isExecuting)
+	state.humidity.offIn = state.humidity.forceOffIn = state.humidity.offAt = false
 	state.humidity.lastRule = null
-	state.humidity.minsInState = 0
-	state.humidity.lastStateAt = 0
-	runIn(humiOverride * 60, humiUnOverride)
+	state.humidity.minsInState = state.humidity.lastStateAt = 0
+	addSchedule("humiUnOverride", humiOverride * 60, state.scheduled.isExecuting)
 }
 
 def humiUnOverride()	{
@@ -3691,48 +4136,55 @@ def luxEventHandler(evt)	{
 	ifDebug("luxEventHandler", 'info')
 	def child = getChildDevice(getRoom())
 	int currentLux = getIntfromStr((String) evt.value)
-	if (state.hT != _Hubitat)		child.updateLuxInd(currentLux);
+	updateLuxInd(currentLux)
+	scheduleRunEvery5()
 	if (!checkPauseModesAndDoW())	return;
+
 	def rSt = child?.currentValue(occupancy)
-	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))		switchesOnOrOff();
+	if (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt)))
+		switchesOnOrOff()
 }
 
 private getIntfromStr(String str)	{
-	int intValue
-	if (!str)							intValue = 0;
-	else if (str.indexOf('.') >= 0)		intValue = str.substring(0, str.indexOf('.')) as Integer;
-	else								intValue = str.toInteger();
-	return intValue
+//	int intValue = 0
+//	if (!str)
+//		intValue = 0
+//	else if (str.indexOf('.') >= 0)
+//		intValue = str.substring(0, str.indexOf('.')) as Integer
+//	else
+//		intValue = str.toInteger();
+	return (!str ? 0 : (str.indexOf('.') >= 0 ? str.substring(0, str.indexOf('.')) as Integer : str.toInteger()))
 }
 
-private formatNumber(number)	{
-	int n = number as Integer
-	return (n > 0 ? String.format("%,d", n) : '')
+private formatNumber(num)	{
+	return String.format("%,d", num as Integer)
 }
 
 def powerEventHandler(evt)		{
 	def nowTime = now()
 	def child = getChildDevice(getRoom())
 	def currentPower = getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower))
-	if (state.hT != _Hubitat)		{
-//		child.updatePowerInd(currentPower);
-		child.sendEvent(name: 'powerInd', value: (currentPower <= 100 ? currentPower : formatNumber(currentPower)), descriptionText: (power == -1 ? "indicate no power sensor" : "indicate power value"))
-	}
+	updatePowerInd(currentPower)
+	scheduleRunEvery5()
+	storePowerForLastMins(currentPower)
 	if (!checkPauseModesAndDoW())	return;
 	if (state.previousPower == currentPower)	return;
+
 	def rSt = child?.currentValue(occupancy)
 	if ((rSt == locked && lockedOverrides && !powerValueLocked) || (rSt == asleep && asleepOverrides && !powerValueAsleep) ||
 		(rSt == engaged && engagedOverrides && !powerValueEngaged))
 		return
+
 	def timeOK = (powerValueEngaged || powerValueAsleep || powerValueLocked ? true : false)
 	if (timeOK && (powerFromTimeType && (powerFromTimeType != _timeTime || powerFromTime)) &&
 				  (powerToTimeType && (powerToTimeType != _timeTime || powerToTime)))				{
 		def sunRiseAndSet = sunRiseAndSet()
 		if (!sunRiseAndSet)		return;
 		def x = compareRuleTime(sunRiseAndSet, [ruleNo:'power', fromTimeType:powerFromTimeType, fromTime:powerFromTime, fromTimeOffset:powerFromTimeOffset, toTimeType:powerToTimeType, toTime:powerToTime, toTimeOffset:powerToTimeOffset])
-		if (!x.inBetween)		timeOK = false;
+		if (!x.inBetween)
+			timeOK = false
 	}
-	if (timeOK)
+	if (timeOK)		{
 		if (powerValueEngaged)		{
 			if (currentPower >= powerValueEngaged && state.previousPower < powerValueEngaged &&
 				(powerTriggerFromVacant ?
@@ -3740,169 +4192,201 @@ def powerEventHandler(evt)		{
 						['engaged', 'occupied', 'checking', 'vacant'].contains(rSt) : ['engaged', 'checking', 'vacant'].contains(rSt)) :
 							(powerTriggerFromOccupied ? ['engaged', 'occupied', 'checking'].contains(rSt) :
 								['engaged', 'checking'].contains(rSt))))	{
-				unschedule('powerStaysBelowEngaged')
-				engaged()
+				removeSchedule("powerStaysBelowEngaged", state.scheduled.isExecuting)
+				if (powerStaysAbove)
+					addSchedule("powerStaysAboveEngaged", powerStaysAbove, state.scheduled.isExecuting)
+				else
+					engaged()
 			}
-			else if (currentPower < powerValueEngaged && state.previousPower >= powerValueEngaged && rSt == engaged)
-				runIn(powerStays, powerStaysBelowEngaged)
+			else if (currentPower < powerValueEngaged && state.previousPower >= powerValueEngaged && rSt == engaged)	{
+				removeSchedule("powerStaysAboveEngaged", true)
+				addSchedule("powerStaysBelowEngaged", powerStays, state.scheduled.isExecuting)
+			}
 		}
 		else if (powerValueAsleep)		{
 			if (currentPower >= powerValueAsleep && state.previousPower < powerValueAsleep &&
 				['engaged', 'occupied', 'checking', 'vacant'].contains(rSt) && (powerTriggerFromVacant || rSt != vacant))	{
-				unschedule('powerStaysBelowAsleep')
+				removeSchedule("powerStaysBelowAsleep", state.scheduled.isExecuting)
 				asleep()
 			}
 			else if (currentPower < powerValueAsleep && state.previousPower >= powerValueAsleep && rSt == asleep)
-				runIn(powerStays, powerStaysBelowAsleep)
+				addSchedule("powerStaysBelowAsleep", powerStays, state.scheduled.isExecuting)
 		}
 		else if (powerValueLocked)		{
 			if (currentPower >= powerValueLocked && state.previousPower < powerValueLocked &&
 				['engaged', 'occupied', 'checking', 'vacant'].contains(rSt) && (powerTriggerFromVacant || rSt != vacant))	{
-				unschedule('powerStaysBelowLocked')
+				removeSchedule("powerStaysBelowLocked", state.scheduled.isExecuting)
 				locked()
 			}
 			else if (currentPower < powerValueLocked && state.previousPower >= powerValueLocked && rSt == locked)
-				runIn(powerStays, powerStaysBelowLocked)
+				addSchedule("powerStaysBelowLocked", powerStays, state.scheduled.isExecuting)
 		}
-	if (state.powerCheck && (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt))))		switchesOnOrOff();
+	}
+	if (state.powerCheck && (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt))))
+		switchesOnOrOff()
 	state.previousPower = currentPower
-//log.debug "powerEventHandler perf: ${now() - nowTime} ms"
 }
 
-def powerStaysBelowEngaged()	{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == engaged && !isRoomEngaged())	roomVacant();
+private powerStaysAboveEngaged()	{
+	if (getChildDevice(getRoom())?.currentValue(occupancy) != engaged && isRoomEngaged())
+		engaged()
 }
 
-def powerStaysBelowAsleep()		{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == asleep)	roomAwake();
+private powerStaysBelowEngaged()	{
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == engaged && !isRoomEngaged())
+		roomVacant()
 }
 
-def powerStaysBelowLocked()		{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == locked)	roomVacant();
+private powerStaysBelowAsleep()		{
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == asleep)
+		roomAwake()
+}
+
+private powerStaysBelowLocked()		{
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == locked)
+		roomVacant()
+}
+
+private storePowerForLastMins(cPwr)		{
+	if (!powerStaysAbove)		return;
+	def nowTime = now()
+	def nowTime2 = nowTime - (powerStaysAbove.toInteger() * 1000l)
+	if (!state?.powerLastMins)
+		state.powerLastMins = [:]
+	else	{
+		def rmvPwr = []
+		for (def pwr : state.powerLastMins)
+			if (Long.valueOf(pwr.key) < nowTime2)
+				rmvPwr << pwr.key
+		for (def rP : rmvPwr)
+			state.powerLastMins.remove(rP)
+	}
+	state.powerLastMins << [(nowTime):cPwr]
 }
 
 def roomVacant(forceVacant = false)		{
 	ifDebug("roomVacant", 'info')
-	def newState
+	def newState = vacant
 	if (!forceVacant)	{
 		def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
 		def motionActive = ((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active)))
 		if (['engaged', 'occupied', 'checking', 'vacant', 'asleep'].contains(rSt) && motionActive)
 			newState = (isRoomEngaged() ? engaged : occupied)
 		else
-			if ((rSt == engaged && resetEngagedDirectly) || rSt == checking)
-				newState = vacant
-			else
+			if ((rSt != engaged || !resetEngagedDirectly) && rSt != checking)
 				newState = (state.dimTimer ? checking : vacant)
 	}
-	else
-		newState = vacant
-	"$newState"();
+	"$newState"()
 }
 
 def roomAwake()		{
 	ifDebug("roomAwake", 'info')
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == asleep)
-		"${(isRoomEngaged() ? engaged : (((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active))) ? occupied : (!resetAsleepDirectly && state.dimTimer ? checking : vacant)))}"()
+	if (getChildDevice(getRoom())?.currentValue(occupancy) != asleep)		return;
+
+	def nS = vacant
+	if (isRoomEngaged())
+		nS = engaged
+	else if ((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active)))
+		nS = occupied
+	else if (!resetAsleepDirectly && state.dimTimer)
+		nS = checking
+	"$nS"()
+
+///		"${(isRoomEngaged() ? engaged : (((motionSensors && whichNoMotion == lastMotionInactive && motionSensors.currentMotion.contains(active)) || (accelSensors && accelSensors.currentAcceleration.contains(active))) ? occupied : (!resetAsleepDirectly && state.dimTimer ? checking : vacant)))}"()
 }
 
 def roomUnlocked()		{
-	if (getChildDevice(getRoom())?.currentValue(occupancy) == locked)	roomVacant();
+	if (getChildDevice(getRoom())?.currentValue(occupancy) == locked)
+		roomVacant()
 }
 
-def handleSwitches(oldState, newState, returnTimer = false, vacationMode = false)	{
+//def handleSwitches(oldState, newState, returnTimer = false, vacationMode = false)	{
+private handleSwitches(oldState, newState, vacationMode = false)	{
 	ifDebug("${app.label} handleSwitches: room state - old: ${oldState} new: ${newState}", 'info')
 	def nowTime = now()
 	if (debugLogging && state.debugOffTime < nowTime)		app.updateSetting('debugLogging', [type: 'bool', value: false]);
 	if (oldState == newState)	return false;
-	state.previousState = ['state':newState, 'date':nowTime]
-	previousStateStack(state.previousState)
+
+	previousStateStack(['state':newState, 'date':nowTime])
 	state.motiontraffic = 0
 	if (!vacationMode && !checkPauseModesAndDoW())		return;
 	def child = getChildDevice(getRoom())
 	if (oldState == vacant)		{
-		if (nightSwitches && nightTurnOn && nightTurnOn.contains('3'))		unschedule('nightSwitchesOff');
+		if (nightSwitches && nightTurnOn && nightTurnOn.contains('3'))
+			removeSchedule("nightSwitchesOff", state.scheduled.isExecuting)
 		if (state.maintainRoomHumi && !state.humidity.previous)		state.humidity.previous = getAvgHumidity();
 	}
-	def timer = null
+//	def timer = null
 	if (oldState == asleep)		{
-		unschedule('roomAwake'); unschedule('resetAsleep'); unschedule('nightSwitchesOff');
-		(returnTimer ? timer = 0 : updateChildTimer(0))
+		removeSchedule(["roomAwake", "resetAsleep", "nightSwitchesOff"], state.scheduled.isExecuting)
 		if (nightSwitches && !nightTurnOn.contains('3'))	nightSwitchesOff();		// state changed away from asleep and night switches to turn off
 	}
 	else if (oldState == locked)
-		unschedule('roomUnlocked')
+		removeSchedule("roomUnlocked", state.scheduled.isExecuting)
 	else		{
 		unscheduleAll("handle switches")
 		if (oldState == checking)		unDimLights(newState);
 	}
+
 	if (['engaged', 'occupied', 'asleep', 'vacant'].contains(newState))		{
-		if (newState != vacant || state.vacant)		{
-//log.debug "is vacant"
+		if (newState != vacant || state.vacant)
 			processRules(newState, false, vacationMode)
-		}
 		else		{
 			switches2Off()
 			if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')		musicDevice.pause();
 		}
 	}
+
 	if (newState == asleep)		{
 		if (nightSwitches)	{
 			if ((motionSensors && motionSensors.currentMotion.contains(active)) || nightTurnOn.contains('2'))		{
 				dimNightLights()
-				if (state.noMotionAsleep && ((motionSensors && !motionSensors.currentMotion.contains(active)) || whichNoMotion != lastMotionInactive))		{
-					(returnTimer ? timer = state.noMotionAsleep : updateChildTimer(state.noMotionAsleep))
-					runIn(state.noMotionAsleep, nightSwitchesOff)
-				}
+				if (state.noMotionAsleep && ((motionSensors && !motionSensors.currentMotion.contains(active)) || whichNoMotion != lastMotionInactive))
+					addSchedule("nightSwitchesOff", state.noMotionAsleep, state.scheduled.isExecuting)
 			}
 			else
 				nightSwitchesOff()
 		}
-		if (state.noAsleep)		{
-			(returnTimer ? timer = state.noAsleep : updateChildTimer(state.noAsleep))
-			runIn(state.noAsleep, roomAwake)
-		}
+		if (state.noAsleep)
+			addSchedule("roomAwake", state.noAsleep, state.scheduled.isExecuting)
 		if (resetAsleepWithContact)		{
 			def cV = (contactSensor ? contactSensor.currentContact : '')
-			if (cV.contains(open))	{
-				(returnTimer ? timer = (resetAsleepWithContact as Integer) * 60 : updateChildTimer((resetAsleepWithContact as Integer) * 60))
-				runIn((resetAsleepWithContact as Integer) * 60, resetAsleep)
-			}
+			if (cV.contains(open))
+				addSchedule("resetAsleep", (resetAsleepWithContact as Integer) * 60, state.scheduled.isExecuting)
 		}
 	}
 	else if (newState == engaged)	{
-		if (state.noMotionEngaged)		timer = refreshEngagedTimer(returnTimer);
+		if (state.noMotionEngaged)
+			refreshEngagedTimer()
 	}
 	else if (newState == occupied)		{
 		state.motionTraffic = 1
 		def motionInactive = ((!motionSensors || whichNoMotion == lastMotionActive || (whichNoMotion == lastMotionInactive && !motionSensors.currentMotion.contains(active))) || (!accelSensors || !accelSensors.currentAcceleration.contains(active)))
-		if (state.noMotion && motionInactive)
-			timer = refreshOccupiedTimer(returnTimer)
+		if (state.noMotion && motionInactive)		refreshOccupiedTimer();
 	}
 	else if (newState == checking)		{
 		dimLights()
-		if (state.dimTimer > 5)
-			(returnTimer ? timer = state.dimTimer : updateChildTimer(state.dimTimer))
-		runIn(state.dimTimer, roomVacant)
+		addSchedule("roomVacant", state.dimTimer, state.scheduled.isExecuting)
 	}
 	else if (newState == locked)		{
 		if (lockedTurnOff)		switches2Off();
-		if (state.unLocked)		runIn(state.unLocked, roomUnlocked);
+		if (state.unLocked)
+			addSchedule("roomUnlocked", state.unLocked, state.scheduled.isExecuting)
 	}
-	if (oldState == asleep && newState == vacant && nightSwitches && nightTurnOn.contains('3'))	{
+
+////log.debug "\tperf handleSwitches mid: ${now() - nowTime} ms"
+
+	if (oldState == asleep && newState == vacant && nightSwitches && nightTurnOn.contains('3'))		{
 		dimNightLights()
-		if (state.noMotionAsleep)		{
-			(returnTimer ? timer = state.noMotionAsleep : updateChildTimer(state.noMotionAsleep))
-			runIn(state.noMotionAsleep, nightSwitchesOff)
-		}
+		if (state.noMotionAsleep)
+			addSchedule("nightSwitchesOff", state.noMotionAsleep, state.scheduled.isExecuting)
 	}
 	if (!vacationMode && ['engaged', 'occupied', 'asleep', 'vacant'].contains(newState))	{
 		processCoolHeat(newState)
-		if (newState != vacant)		processHumidity(newState);
+		processHumidity(newState)
 	}
-	if (!state.processChild)	scheduleFromToTimes();
-	if (returnTimer)	return timer;
-//log.debug "\tperf handleSwitches: ${now() - nowTime} ms"
+
+////log.debug "\tperf handleSwitches end: ${now() - nowTime} ms"
 }
 
 def switchesOnOrOff(switchesOnly = false)	{
@@ -3910,10 +4394,10 @@ def switchesOnOrOff(switchesOnly = false)	{
 	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
 	if (rSt && ['engaged', 'occupied', 'asleep', 'vacant'].contains(rSt))	{
 		def turnedOn = processRules(rSt, switchesOnly)
-//log.debug "turnedOn: $turnedOn | allSwitchesOff: $allSwitchesOff"
 		if (!turnedOn && allSwitchesOff)	{
 			switches2Off()
-			if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')		musicDevice.pause();
+			if (musicDevice && turnOffMusic && musicDevice.currentStatus == 'playing')
+				musicDevice.pause()
 		}
 	}
 }
@@ -3922,34 +4406,39 @@ private processRules(pRSt = null, switchesOnly = false, vacationMode = false)	{
 	ifDebug("processRules", 'info')
 	if (!state.execute || !state.rules)		return false;
 	def nowTime	= now() + 1000
-	def nowDate = new Date(nowTime)
+	if (state.toUpdateTimeouts)		{
+		state.noMotion = ((noMotionOccupied && noMotionOccupied >= 5) ? noMotionOccupied as Integer : null)
+		state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged as Integer : null)
+		state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer as Integer : 5) // forces minimum of 5 seconds to allow for checking state
+		state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep as Integer : null)
+		updateTimeouts()
+		state.toUpdateTimeouts = false
+	}
 	def child = getChildDevice(getRoom())
+	def rSt = (pRSt ?: child?.currentValue(occupancy))
+	def sunRiseAndSet = sunRiseAndSet()
+	if (!sunRiseAndSet)		return;
+
+	def nowDate = new Date(nowTime)
 	def turnOn = []
 	def turnOnRules = [:]
 	def previousRule = []
 	def previousRuleLux = null
+	def previousRuleLuxCheck = null
 	def previousRulePower = false
 	state.lastRule = null
 	def thisRule = [:]
-	state.noMotion = ((noMotionOccupied && noMotionOccupied >= 5) ? noMotionOccupied as Integer : null)
-	state.noMotionEngaged = ((noMotionEngaged && noMotionEngaged >= 5) ? noMotionEngaged as Integer : null)
-	state.dimTimer = ((dimTimer && dimTimer >= 5) ? dimTimer as Integer : 5) // forces minimum of 5 seconds to allow for checking state
-	state.noMotionAsleep = ((noMotionAsleep && noMotionAsleep >= 5) ? noMotionAsleep as Integer : null)
-	if (state.toUpdateTimeouts)		{
-		updateTimeouts()
-		state.toUpdateTimeouts = false
-	}
-	def rSt = (pRSt ?: child?.currentValue(occupancy))
-	def sunRiseAndSet = sunRiseAndSet()
-	if (!sunRiseAndSet)		return;
 	def timedRulesOnly = false
-	for (def i = 1; i <= maxRules; i++)	{
+	for (def i = 1; i <= maxRules; i++)		{
 		def ruleHasTime = false
 		def ruleNo = String.valueOf(i)
-		if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
-		else							thisRule = getNextRule(ruleNo, _ERule, true, false);
+////		thisRule = (turnOnRules[(ruleNo)] ?: getNextRule(ruleNo, _ERule, true, false))
+		thisRule = (turnOnRules[(ruleNo)] ?: getNextRule(ruleNo, _ERule, true, true))
+//		if (turnOnRules[(ruleNo)])		thisRule = turnOnRules[(ruleNo)];
+//		else							thisRule = getNextRule(ruleNo, _ERule, true, false);
 		if (thisRule.ruleNo == 'EOR')	break;
-		if (!turnOnRules[(thisRule.ruleNo)])		turnOnRules << [(thisRule.ruleNo):thisRule];
+		if (!turnOnRules[(thisRule.ruleNo)])
+			turnOnRules << [(thisRule.ruleNo):thisRule]
 		i = thisRule.ruleNo as Integer
 		if (thisRule.mode && !vacationMode && !thisRule.mode.contains(location.currentMode.toString()))		continue;
 		if (thisRule.state && !thisRule.state.contains(rSt))			continue;
@@ -3958,12 +4447,38 @@ private processRules(pRSt = null, switchesOnly = false, vacationMode = false)	{
 			if (nowDate.before(new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.fromDate)))		continue;
 			if (nowDate.after(new Date().parse("yyyy-MM-dd'T'HH:mm:ssZ", thisRule.toDate)))			continue;
 		}
-		if (thisRule.luxThreshold != null && getAvgLux() > thisRule.luxThreshold)		continue;
-		if (state.powerCheck && ((previousRulePower && !thisRule.powerThreshold) ||
-			(thisRule.powerThreshold && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) < thisRule.powerThreshold)))
-			continue;
+		if (thisRule.luxThreshold != null)		{
+			def lux = getAvgLux()
+			def luxThreshold = thisRule.luxThreshold.toInteger()
+			boolean luxC = (thisRule.luxCheck == 'true' ? true : false)
+//log.debug "ruleNo: $i | lux: $lux | thisRule.luxThreshold: $thisRule.luxThreshold | thisRule.luxCheck: $thisRule.luxCheck"
+//log.debug "ruleNo: $i | lux: $lux | luxThreshold: $luxThreshold | thisRule.luxCheck: $thisRule.luxCheck"
+//			if (luxC)	{
+//				if (lux <= luxThreshold)		continue;
+//log.debug "luxCheck: true | ${(lux <= luxThreshold)}"
+//			}
+//			else	{
+//				if (lux > luxThreshold)		continue;
+//log.debug "luxCheck: false | ${(lux > luxThreshold)}"
+//			}
+ 			if ((!luxC && lux > luxThreshold) || (luxC && lux <= luxThreshold))		continue;
+//log.debug "${(lux > thisRule.luxThreshold)} | ${(lux <= thisRule.luxThreshold)}"
+		}
+		if (state.powerCheck)		{
+			boolean powerC = (thisRule.powerCheck == 'true' ? true : false)
+			if (powerC)	{
+				if ((previousRulePower && !thisRule.powerThreshold) ||
+					(thisRule.powerThreshold && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) >= thisRule.powerThreshold))
+					continue
+			}
+			else	{
+				if ((previousRulePower && !thisRule.powerThreshold) ||
+					(thisRule.powerThreshold && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) < thisRule.powerThreshold))
+					continue
+			}
+		}
 		if (thisRule.presence && !vacationMode && !personsPresence.findAll { thisRule.presence.contains(it.id) && it.currentPresence == present })
-			continue;
+			continue
 		if (thisRule.fromHumidity && thisRule.toHumidity)	{
 			def humidity = getAvgHumidity()
 			if (humidity < thisRule.fromHumidity || humidity > thisRule.toHumidity)		continue;
@@ -3994,15 +4509,16 @@ private processRules(pRSt = null, switchesOnly = false, vacationMode = false)	{
 			continue
 		}
 		if (thisRule.luxThreshold != null)	{
-			if (previousRuleLux == thisRule.luxThreshold)	{
+			if (previousRuleLux == thisRule.luxThreshold && previousRuleLuxCheck == thisRule.luxCheck)	{
 				turnOn << thisRule.ruleNo
 				previousRule << thisRule.ruleNo
 			}
-			else if (!previousRuleLux || thisRule.luxThreshold < previousRuleLux)	{
+			else if (!previousRuleLux || ((!thisRule.luxCheck && !previousRuleLuxCheck && thisRule.luxThreshold < previousRuleLux) || (thisRule.luxCheck && previousRuleLuxCheck && thisRule.luxThreshold >= previousRuleLux)))	{
 				for (def prv : previousRule)		turnOn.remove(prv);
 				turnOn << thisRule.ruleNo
 				previousRule << thisRule.ruleNo
 				previousRuleLux = thisRule.luxThreshold
+				previousRuleLuxCheck = thisRule.luxCheck
 			}
 		}
 		else
@@ -4019,55 +4535,69 @@ private processRules(pRSt = null, switchesOnly = false, vacationMode = false)	{
 			state.holidayLights = false
 		}
 	if (turnOn)		{
+		def turnOnRulesFull = [:]
 		state.switchesPreventToggle = []
 		for (def trn : turnOn)	{
-			thisRule = turnOnRules[(trn)]
+////			thisRule = turnOnRules[(trn)]
+//log.debug "trn: $trn | turnOnRules[(trn)].ruleNo: ${turnOnRules[(trn)].ruleNo}"
+			thisRule = getRule(trn, _ERule, true, false)
+			turnOnRulesFull << [(thisRule.ruleNo):thisRule]
 			for (def tR : thisRule.switchesOn)		{
 				def itID = tR.getId()
 				if (!state.switchesPreventToggle.contains(itID))	state.switchesPreventToggle << itID;
 			}
 		}
 //log.debug "\tperf processRules pre execute: ${now() - nowTime + 1000} ms"
-		for (def trn : turnOn)		executeRule(turnOnRules[(trn)], switchesOnly);
+		for (def trn : turnOn)
+			executeRule(turnOnRulesFull[(trn)], switchesOnly)
 		state.switchesPreventToggle = []
 		ret = true
 	}
 	else
 	{
-		if (state.hT != _Hubitat)		child.updateLastRuleInd(-1);
+		updateLastRuleInd(-1);
 		ret = false
 	}
-//log.debug "\tperf processRules: ${now() - nowTime + 1000} ms"
+
+////log.debug "\tperf processRules: ${now() - nowTime + 1000} ms"
 	return ret
 }
 
 private compareRuleTime(sunRiseAndSet, thisRule)		{
 	def nowDate = new Date(now())
 	def fTime, tTime
+
 	if (thisRule.fromTimeType == _timeSunrise)
-		fTime = (thisRule.fromTimeOffset ? new Date(sunRiseAndSet.rise.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunRiseAndSet.rise)
+		fTime = new Date(sunRiseAndSet.rise.getTime() + ((thisRule.fromTimeOffset ?: 0) * 60000L))
 	else if (thisRule.fromTimeType == _timeSunset)
-		fTime = (thisRule.fromTimeOffset ? new Date(sunRiseAndSet.set.getTime() + (thisRule.fromTimeOffset * 60000L)) : sunRiseAndSet.set)
+		fTime = new Date(sunRiseAndSet.set.getTime() + ((thisRule.fromTimeOffset ?: 0) * 60000L))
 	else
 		fTime = timeToday(thisRule.fromTime, location.timeZone)
+
 	if (thisRule.toTimeType == _timeSunrise)
-		tTime = (thisRule.toTimeOffset ? new Date(sunRiseAndSet.rise.getTime() + (thisRule.toTimeOffset * 60000L)) : sunRiseAndSet.rise)
+		tTime = new Date(sunRiseAndSet.rise.getTime() + ((thisRule.toTimeOffset ?: 0) * 60000L))
 	else if (thisRule.toTimeType == _timeSunset)
-		tTime = (thisRule.toTimeOffset ? new Date(sunRiseAndSet.set.getTime() + (thisRule.toTimeOffset * 60000L)) : sunRiseAndSet.set)
+		tTime = new Date(sunRiseAndSet.set.getTime() + ((thisRule.toTimeOffset ?: 0) * 60000L))
 	else
 		tTime = timeToday(thisRule.toTime, location.timeZone)
+
+	def fTimeX = fTime
+	def tTimeX = tTime
+
 	while (fTime > tTime)		tTime = tTime.plus(1);
+
+	while (tTime - fTime > _SecondsInDay)		tTime = tTime.minus(1);
+
 	while (tTime.getTime() - nowDate.getTime() > _SecondsInDay)		{
 		fTime = fTime.minus(1)
 		tTime = tTime.minus(1)
 	}
-//log.debug "ruleNo: $thisRule.ruleNo | fromTime: $thisRule.fromTime | fTime: $fTime | toTime: $thisRule.toTime | tTime: $tTime | nowDate: $nowDate | timeOfDayIsBetween: ${timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)}"
-	def x = timeOfDayIsBetween(fTime, tTime, nowDate, location.timeZone)
+
+	def x = nowDate.after(fTime) && nowDate.before(tTime)
 	return [inBetween:x, fTime:fTime, tTime:tTime]
 }
 
 private executeRule(thisRule, switchesOnly = false)	{
-	def nowTime = now()
 	turnSwitchesOnAndOff(thisRule)
 	if (!switchesOnly)	{
 		runDeviceCmds(thisRule)
@@ -4090,15 +4620,15 @@ private executeRule(thisRule, switchesOnly = false)	{
 		state.noMotionAsleep = thisRule.noMotionAsleep as Integer
 		state.toUpdateTimeouts = true
 	}
-	if (state.toUpdateTimeouts)		updateTimeouts();
-//log.debug "\tperf executeRule: ${now() - nowTime} ms"
+	if (state.toUpdateTimeouts)
+		updateTimeouts()
 }
 
 private turnSwitchesOnAndOff(thisRule)	{
 	def nowTime = now()
 	ifDebug("turnSwitchesOnAndOff", 'info')
 	state.lastRule = (state.lastRule ? state.lastRule + ',' : '') + thisRule.ruleNo
-	if (state.hT != _Hubitat)		getChildDevice(getRoom()).updateLastRuleInd(state.lastRule);
+	updateLastRuleInd(state.lastRule);
 	if (thisRule.switchesOn)	{
 		if (thisRule.level?.startsWith('HL'))	{
 			if (!state.holidayLights || state.holiRuleNo != thisRule.ruleNo)	{
@@ -4132,38 +4662,38 @@ private turnSwitchesOnAndOff(thisRule)	{
 }
 
 private	turnSwitchesOn(thisRule)	{
-	def nowTime = now()
 	def colorTemperature = null
 	def level = null
 	for (def swt : thisRule.switchesOn)		{
-		def turnOn = true
+///		def turnOn = true
 		def itID = swt.getId()
-		if (thisRule.color && state.switchesHasColor[itID])	{
+		if (thisRule.color && state.switchesHasColor[itID])		{
 			swt.setColor(thisRule.hue)
-			turnOn = false
+///			turnOn = false
 		}
 		else if ((thisRule.colorTemperature || (thisRule.level == 'AL' && autoColorTemperature)) && state.switchesHasColorTemperature[itID])	{
 			if (!colorTemperature)
 				colorTemperature = (thisRule.level == 'AL' ? calculateLevelOrKelvin(true) : thisRule.colorTemperature) as Integer
 			if (colorTemperature)	{
 				swt.setColorTemperature(colorTemperature)
-				turnOn = false
+///				turnOn = false
 			}
 		}
-		if (thisRule.level && state.switchesHasLevel[itID])	{
-			if (!level)		level = (thisRule.level == 'AL' ? calculateLevelOrKelvin(false) : thisRule.level) as Integer;
+		if (thisRule.level && state.switchesHasLevel[itID])		{
+			if (!level)
+				level = (thisRule.level == 'AL' ? calculateLevelOrKelvin(false) : thisRule.level) as Integer
 			if (level)	{
 				(state.hT == _Hubitat ? (dimOver ? swt.setLevel(level, dimOver.toInteger()) : swt.setLevel(level, 0)) : swt.setLevel(level))
-				turnOn = false
+///				turnOn = false
 			}
 		}
-		if (turnOn && (!cmdOpt || swt.currentSwitch == off))		swt.on()
+///		if (turnOn && (!cmdOpt || swt.currentSwitch == off))
+		if (!cmdOpt || swt.currentSwitch == off)
+			swt.on()
 	}
-//log.debug "\tperf turnSwitchesOn: ${now() - nowTime} ms"
 }
 
-def holidayLights()	{
-	def nowTime = now()
+def holidayLights()		{
 	ifDebug('holidayLights', 'info')
 	if (!state.holidayLights)	return;
 	def switchesOn = settings["switchesOn$state.holiRuleNo"]
@@ -4175,11 +4705,10 @@ def holidayLights()	{
 		state.holiLastTW = (state.holiTW ?: [:])
 		holidayLightsTwinkle(switchesOn)
 	}
-	runIn(state.holiSeconds, holidayLights)
-//log.debug "\tperf holidayLights: ${now() - nowTime} ms"
+	addSchedule("holidayLights", state.holiSeconds, state.scheduled.isExecuting)
 }
 
-private holidayLightsRotate(switchesOn)	{
+private holidayLightsRotate(switchesOn)		{
 	ifDebug('holidayLightsRotate', 'info')
 	def cI = state.holiColorIndex
 	for (def swt : switchesOn)		{
@@ -4222,15 +4751,19 @@ private holidayLightsTwinkle(switchesOn)	{
 }
 
 private runDeviceCmds(thisRule)		{
-	if (thisRule.device && thisRule.commands)		for (def cmds : thisRule.commands)	thisRule.device."$cmds"();
+	if (thisRule.device && thisRule.commands)
+		for (def cmds : thisRule.commands)
+			thisRule.device."$cmds"();
 }
 
 private runActions(thisRule)	{
-	for (def act : thisRule.actions)	location.helloHome?.execute(act);
+	for (def act : thisRule.actions)
+		location.helloHome?.execute(act);
 }
 
 private executePiston(thisRule)		{
-	if (thisRule.piston)	webCoRE_execute(thisRule.piston);
+	if (thisRule.piston)
+		webCoRE_execute(thisRule.piston)
 }
 
 private calculateLevelOrKelvin(kelvin = false)	{
@@ -4270,11 +4803,7 @@ private calculateLK(min, max, fadeW, fadeWB, fadeWA, fadeS, fadeSB, fadeSA)	{
 	wTime = timeToday((useInput ? wakeupTime : "7:00"), location.timeZone)
 	sTime = timeToday((useInput ? sleepTime : "23:00"), location.timeZone)
 	while (wTime > sTime)		sTime = sTime.plus(1);
-
-	if (dateNow > wTime && dateNow > sTime)	{
-		wTime = timeTodayA(dateNow, wTime, location.timeZone)
-		sTime = timeTodayA(dateNow, sTime, location.timeZone)
-	}
+//log.debug "wTime: $wTime | sTime: $sTime"
 
 	long maxMinDiff = max - min
 
@@ -4286,6 +4815,7 @@ private calculateLK(min, max, fadeW, fadeWB, fadeWA, fadeS, fadeSB, fadeSA)	{
 			double cDD = ((dateNow.getTime() - wTimeBefore.getTime()) / (wTimeAfter.getTime() - wTimeBefore.getTime()))
 			cDD = cDD * maxMinDiff
 			int cD = cDD + min
+			cD = (cD > max ? max : cD)
 			return cD
 		}
 	}
@@ -4298,9 +4828,12 @@ private calculateLK(min, max, fadeW, fadeWB, fadeWA, fadeS, fadeSB, fadeSA)	{
 			double cDD = ((sTimeAfter.getTime() - dateNow.getTime()) / (sTimeAfter.getTime() - sTimeBefore.getTime()))
 			cDD = cDD * maxMinDiff
 			int cD = cDD + min
+			cD = (cD > max ? max : cD)
 			return cD
 		}
 	}
+
+//log.debug "(timeOfDayIsBetween($wTime, $sTime, $dateNow, $location.timeZone) ? ($fadeW ? $max : null) : ($fadeS ? $min : null))"
 
 	def x = (timeOfDayIsBetween(wTime, sTime, dateNow, location.timeZone) ? (fadeW ? max : null) : (fadeS ? min : null))
 	return x
@@ -4317,7 +4850,8 @@ private whichSwitchesAreOn(returnAllSwitches = false)	{
 	def switches = getAllSwitches()
 	if (returnAllSwitches)		return switches;
 	def switchesOn = []
-	for (def swt : switches)		if (swt.currentSwitch == on)	switchesOn << swt;
+	for (def swt : switches)
+		if (swt.currentSwitch == on)	switchesOn << swt;
 	return switchesOn
 }
 
@@ -4328,7 +4862,7 @@ def dimLights()		{
 	def switchesThatAreOn = whichSwitchesAreOn()
 	if (switchesThatAreOn && state.dimByLevel)		{
 		for (def swt : switchesThatAreOn)	{
-			if (swt.currentSwitch == 'on')	{
+			if (swt.currentSwitch == 'on')		{
 				def itID = swt.getId()
 				if (state.switchesHasLevel[itID])	{
 					def currentLevel = swt.currentLevel
@@ -4358,20 +4892,19 @@ def dimLights()		{
 	}
 }
 
-private unDimLights(rSt, returnTimer = false)	{
+private unDimLights(rSt)	{
 	ifDebug("unDimLights", 'info')
-	if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel) || !state.preDimLevel)	return;
+	if (!state.dimTimer || (!state.dimByLevel && !state.dimToLevel) || !state.preDimLevel)		return;
 	if (!notRestoreLL || rSt != vacant)		{
 		for (def swt : whichSwitchesAreOn())	{
 			def itID = swt.getId()
 			if (swt.currentSwitch == 'on' && state.switchesHasLevel[itID])		{
 				def newLevel = state.preDimLevel[itID]
 				if (newLevel > 0)
-					(state.hT == _Hubitat ? (dimOver ? swt.setLevel(newLevel, dimOver.toInteger()) : swt.setLevel(newLevel, 0)) : swt.setLevel(newLevel))
+					(state.hT == _SmartThings ? swt.setLevel(newLevel) : swt.setLevel(newLevel, (dimOver ? dimOver.toInteger() : 0)))
 			}
 		}
 	}
-	updateChildTimer(0)
 	state.preDimLevel = [:]
 }
 
@@ -4379,18 +4912,12 @@ def switches2Off()	{
 	if (state.holidayLights)		return;
 	def switches = whichSwitchesAreOn(true)
 	for (def swt : switches)	{
-		def cS = swt.currentSwitch
-//		if (cS == on)	{
-		if (state.hT == _SmartThings || swt.currentLevel == 0 || !state.switchesHasLevel[(swt.getId())])	{
-			if (!cmdOpt || cS == on)		swt.off();
+		if ((state.hT == _SmartThings || swt.currentLevel == 0 || !state.switchesHasLevel[(swt.getId())]) || (state.hT != _SmartThings && !dimOver))		{
+			if (!cmdOpt || swt.currentSwitch == on)
+				swt.off()
 		}
-		else	{
-			if (dimOver)
-				swt.setLevel(0, dimOver.toInteger())
-			else
-				if (!cmdOpt || cS == on)		swt.off();
-		}
-//		}
+		else
+			swt.setLevel(0, dimOver.toInteger())
 	}
 }
 
@@ -4406,17 +4933,6 @@ private previousStateStack(previousState)	{
 	turnOffIsBusy()
 	if (state.stateStack)
 		for (i = 9; i > 0; i--)	{
-			def s = String.valueOf(i)
-			if (state.stateStack[s])	{
-				gapBetween = ((timeIs - (state.stateStack[s])['date']) / 1000)
-				if (gapBetween > removeHowOld)
-					state.stateStack.remove(s)
-				else
-					break
-			}
-		}
-	if (state.stateStack)
-		for (i = 9; i > 0; i--)	{
 			if (state.stateStack[String.valueOf(i-1)])
 				state.stateStack[String.valueOf(i)] = state.stateStack[String.valueOf(i-1)]
 		}
@@ -4427,11 +4943,14 @@ private previousStateStack(previousState)	{
 	if (state.busyCheck)	{
 		howMany = 0
 		gapBetween = 0
-		for (i = 9; i > 0; i--)	{
+		for (i = 9; i > 0; i--)		{
 			def s = String.valueOf(i)
+			if (!state.stateStack[s])		continue;
+			gapBetween = ((timeIs - (state.stateStack[s])['date']) / 1000)
+			if (gapBetween > removeHowOld)		continue;
 			def sM = String.valueOf(i-1)
-			if (state.stateStack[s] && ['occupied', 'checking', 'vacant'].contains((state.stateStack[s])['state']) &&
-									   ['occupied', 'checking', 'vacant'].contains((state.stateStack[sM])['state']))		{
+			if (['occupied', 'checking', 'vacant'].contains((state.stateStack[s])['state']) &&
+					['occupied', 'checking', 'vacant'].contains((state.stateStack[sM])['state']))		{
 				howMany++
 				gapBetween += (((state.stateStack[sM])['date'] - (state.stateStack[s])['date']) / 1000)
 			}
@@ -4440,13 +4959,14 @@ private previousStateStack(previousState)	{
 			ifDebug("busy on")
 			state.isBusy = true
 			state.stateStack = [:]
-			runIn(removeHowOld, turnOffIsBusy)
+			addSchedule("turnOffIsBusy", removeHowOld, state.scheduled.isExecuting)
 		}
 	}
 }
 
 def turnOffIsBusy()		{
-	state.motionTraffic = 0; state.isBusy = false
+	state.motionTraffic = 0
+	state.isBusy = false
 }
 
 private spawnChildDevice(roomName)	{
@@ -4489,7 +5009,9 @@ def uninstalled()	{
 	}
 }
 
-def childUninstalled()		{  ifDebug("uninstalled room device ${app.label}")  }
+def childUninstalled()		{
+	ifDebug("uninstalled room device ${app.label}")
+}
 
 private convertRGBToHueSaturation(setColorTo)	{
 	def str = setColorTo.replaceAll("\\s","").toLowerCase()
@@ -4520,121 +5042,184 @@ private convertRGBToHueSaturation(setColorTo)	{
 
 private unscheduleAll(classNameCalledFrom)		{
 	ifDebug("${app.label} unschedule calling class: $classNameCalledFrom")
-	unschedule('roomVacant')
-	unschedule('resetEngaged')
+	def rS = ["roomVacant", "resetEngaged"]
 	if (powerDevice)
-		if (powerValueEngaged)		unschedule('powerStaysBelowEngaged');
-		else if (powerValueAsleep)	unschedule('powerStaysBelowAsleep');
-		else if (powerValueLocked)	unschedule('powerStaysBelowLocked');
-	updateChildTimer(0)
+		if (powerValueEngaged)	{
+			rS << "powerStaysAboveEngaged"
+			rS << "powerStaysBelowEngaged"
+		}
+		else if (powerValueAsleep)
+			rS << "powerStaysBelowAsleep"
+		else if (powerValueLocked)
+			rS << "powerStaysBelowLocked"
+	removeSchedule(rS, state.scheduled.isExecuting)
 }
 
-private updateChildTimer(timer = 0)		{  (getChildDevice(getRoom())).setupTimer((int) timer)  }
+private addSchedule(String fnc, timer, nest = false)	{
+	def time = now() + (timer * 1000)
+	if (!state.scheduled)		state.scheduled = ['isScheduled':false, 'toRun':'', 'timers':[:]];
+	state.scheduled.timers << [(fnc):time]
+	if (!nest)		executeScheduled();
+}
+
+private executeScheduled(nest = false)		{
+//	if (!state.scheduled.timers)		return;
+	if (state.scheduled.timers)		{
+		def now = now()
+
+//log.debug "${state.scheduled.timers.sort { a, b -> a.value <=> b.value }}"
+		state.scheduled.isExecuting = true
+		def timers = state.scheduled.timers.sort { a, b -> a.value <=> b.value }
+//log.debug "timers: $timers"
+		for (def t : timers)		{
+//log.debug "key: $t.key | value: $t.value | now: $now"
+			if (t.value < (now + 1000l))		{
+				removeSchedule("$t.key", true)
+				"$t.key"()
+			}
+			else
+				break
+		}
+		state.scheduled.isExecuting = false
+	}
+//	if (state.scheduled.toRun)		{
+//		unschedule('scheduled')
+//		state.scheduled.toRun = ''
+//	}
+	if (state.scheduled.timers)		{
+		timerNext()
+		def t = state.scheduled.timers.min { it.value }
+		state.scheduled.toRun = t.key
+		runOnce(new Date(t.value), scheduled)
+		state.scheduled.isScheduled = true
+	}
+	else	{
+		state.scheduled.toRun = ''
+		if (state.scheduled.isScheduled)	{
+			unschedule('scheduled')
+			state.scheduled.isScheduled = false
+		}
+	}
+}
+
+def scheduled()		{
+	if (state.scheduled.toRun)		{
+		def toRun = state.scheduled.toRun
+		removeSchedule(toRun, true)
+		state.scheduled.toRun = ''
+		state.scheduled.isScheduled = false
+		"$toRun"()
+	}
+	executeScheduled()
+}
+
+private removeSchedule(fnc, nest = false)		{
+	if (!state.scheduled.timers)		return;
+	def fncList = []
+	fnc instanceof List ? fncList = fnc : fncList << fnc
+	for (def f : fncList)
+		if (state.scheduled.timers[(f)])
+			state.scheduled.timers = state.scheduled.timers.findAll { it.key != f }
+	if (!nest)
+		executeScheduled()
+}
+
+private timerNext()		{
+	def now = now()
+	def nS = (state.scheduled.timers ? state.scheduled.timers.findAll{ !["timerNext", "holidayLights", "setupColorNotification", "notifyWithColor", "setAnnounceSwitches", "checkAndTurnOnOffSwitchesC", "asleep"].contains(it.key) }.min{ it.value } : [:])
+	def timerLeft = (nS ? (nS.value && now < nS.value ? ((nS.value - now) / 1000).toInteger() : 0) : 0)
+
+	def child = getChildDevice(getRoom())
+	if (child)		{
+		def timerInd = (timerLeft > 3600 ? (timerLeft / 3600f).round(1) + 'h' : (timerLeft > 60 ? (timerLeft / 60f).round(1) + 'm' : timerLeft + 's')).replace(".0","")
+		if (state.hT == _SmartThings)
+			child.sendEvent(name: "timer", value: (timerInd ?: '--'), displayed: true)
+		else
+			child.sendEvent(name: "countdown", value: timerInd, descriptionText: "countdown timer: $timerInd", displayed: true)
+	}
+
+	if (timerLeft > 0)	{
+		int timerUpdate = (timerLeft > 3600 ? 300 : (timerLeft > 300 ? 60 : (timerLeft > 30 ? 30 : (timerLeft < 5 ? timerLeft : 5))))
+		def timerMod = timerLeft % timerUpdate
+		addSchedule("timerNext", (timerMod ?: timerUpdate), true);
+	}
+}
+
 
 def scheduleFromToTimes(evt = [:])	{
 //log.debug "evt: $evt"
+
+	if (!state?.runEvery5)		{
+		scheduleRunEvery5()
+		unsubscribe("scheduleFromToTimes")
+	}
+
 	def nowTime = now()
-	getHubType()
+//	state.nextScheduleFromToTimes = null
+//	state.lastScheduleFromToTimes = nowTime
 	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-//	def evtOK = false
-//	if (!state.processChild || !(evt instanceof Map))	{
-	if (!state.processChild)	{
-		unschedule('timeHandler')
-//		if (!state.processChild)
-			state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + new Random().nextInt(60)) % 60)
-	}
-//	else
-//		evtOK = true
 
-	def nowDate = new Date(now())
-	def cHH = nowDate.format("HH", location.timeZone).toInteger()
-	def cMM = nowDate.format("mm", location.timeZone).toInteger()
-//	cMM = cMM + ((5 - (Math.abs(state.processChild - cMM) % 5)) ?: 5)
-	cMM = cMM + (state.processChild > cMM ? (((state.processChild - cMM) % 5) ?: 5) : (5 - ((cMM - state.processChild) % 5)))
-	if (cMM > 59)    {
-		cMM = cMM % 60
-	    cHH = (cHH > 22 ? 0 : cHH + 1)
-	}
+//	def nowDate = new Date(nowTime)
+//	def cHH = nowDate.format("HH", location.timeZone).toInteger()
+//	def cMM = nowDate.format("mm", location.timeZone).toInteger()
+//	cMM = cMM + (state.processChild > cMM ? (((state.processChild - cMM) % 5) ?: 5) : (5 - ((cMM - state.processChild) % 5)))
+//	if (cMM > 59)    {
+//		cMM = cMM % 60
+//	    cHH = (cHH > 22 ? 0 : cHH + 1)
+//	}
 //log.debug "cHH: $cHH | cMM: $cMM"
-	def pTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", cHH, cMM), location.timeZone), location.timeZone)
-	def process = true
-	def runTime = pTime
+//	def pTime = timeTodayA(nowDate, timeToday(String.format("%02d:%02d", cHH, cMM), location.timeZone), location.timeZone)
+	def process = (checkPauseModesAndDoW() && (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt))))
+	def runTime = new Date(nowTime + 300000l)
 
+//	def nextTime = new Date(nowTime + 300000l)
 	def time = false
-	def sleep = false
-
 	if (state.rules && state.timeCheck)		{
 		def fromTime = scheduleFromTime()
-//log.debug "fromTime: $fromTime"
 		if (fromTime)	{
-			while (fromTime.getTime() < nowTime)	fromTime = fromTime.plus(1);
 			def toTime = scheduleToTime()
-//log.debug "toTime: $toTime"
 			if (toTime)		{
-				while (toTime.getTime() < nowTime)		toTime = toTime.plus(1);
-//log.debug "pTime: $pTime | fromTime: $fromTime | toTime: $toTime"
-//				if (process)	{
-//				if ((fromTime && !toTime) || (fromTime && fromTime <= toTime))	{
 				if (fromTime <= toTime)	{
-					if (runTime.equals(fromTime))			time = true;
-					else if (runTime.after(fromTime))		{  process = false; time = true; runTime = fromTime  }
+					if (runTime.equals(fromTime))			process = true;
+					else if (runTime.after(fromTime))		{  time = true; runTime = fromTime  }
 				}
-//				else if ((toTime && !fromTime) || (toTime && toTime < fromTime))	{
 				else	{
-					if (runTime.equals(toTime))		time = true;
-					else if (runTime.after(toTime))	{  process = false; time = true; runTime = toTime  }
+					if (runTime.equals(toTime))		process = true;
+					else if (runTime.after(toTime))	{  time = true; runTime = toTime  }
 				}
-//				}
-//				else	{
-//					if (fromTime && toTime)		{  time = true; runTime = (fromTime.before(toTime) ? fromTime : toTime)  }
-//					else if (fromTime)			{  time = true; runTime = fromTime  }
-//					else if (toTime)			{  time = true; runTime = toTime  }
-//				}
 			}
 		}
-	}
-//	else
-//		log.debug "pTime: $pTime"
-	if (asleepFromTime && rSt != asleep)		{
-		def aTime = timeTodayA(nowDate, timeToday(asleepFromTime, location.timeZone), location.timeZone)
-		if (aTime.equals(runTime))
-			sleep = true
-		else if (aTime.before(runTime))		{
-			sleep = true
-			process = false
-			time = false
-			runTime = aTime
-		}
+		updateTimeFromToInd()
 	}
 
-	def opt = [];	if (process)  opt << 'process';		if (time)  opt << 'time';		if (sleep)  opt << 'sleep';
-//log.debug "runTime: $runTime | opt: $opt"
-	runOnce(new Date(runTime.getTime() + new Random().nextInt(3000)), scheduleFromToTimes, [data: [option: opt]])
-//	runOnce(runTime, scheduleFromToTimes, [data: [option: opt]])
+//	def opt = []
+//	if (process)  opt << 'process'
+//	if (time)  opt << 'time'
+//	state.nextScheduleFromToTimes = runTime.getTime()
+//	def oldOpt = state?.nextScheduleOpt
+//	state.nextScheduleOpt = opt
 
-//	if (evtOK)	{
-//		def x = null
-		if (evt && evt?.option && evt.option.contains('sleep'))
-			asleep()
-		else if (!evt || !evt?.option || evt.option.contains('time') || evt.option.contains('process'))
-			checkAndTurnOnOffSwitchesC()
-//		else if (evt.option?.contains('time'))
-//			x = processRules()
-//		if (!x && evt.option?.contains('process'))
-//			checkAndTurnOnOffSwitchesC()
+//	if ((!oldOpt || oldOpt.contains('time') || oldOpt.contains('process')) && state.nextScheduleFromToTimes > nowTime)
+
+////log.debug "\tperf scheduleFromToTimes mid: ${(now() - nowTime)} ms"
+
+	if (process)		checkAndTurnOnOffSwitchesC();
+	if (time)
+		addSchedule("checkAndTurnOnOffSwitchesC", ((runTime.getTime() + new Random().nextInt(3000) - nowTime) / 1000).toInteger(), true)
+//		return true
 //	}
+//	else
+//		return false
 
-//log.debug "\tperf scheduleFromToTimes: ${(now() - nowTime)} ms"
+////log.debug "\tperf scheduleFromToTimes end: ${(now() - nowTime)} ms"
 }
 
 private scheduleFromTime()	{
 	ifDebug("scheduleFromTime", 'info')
 	if (!state.rules || !state.timeCheck)	return false;
 	def nextTime = scheduleTime(true)
-	if (nextTime)	{
-		state.fTime = nextTime
-		updateTimeFromToInd()
-	}
+	state.fTime = nextTime
+//	updateTimeFromToInd()
 	return nextTime
 }
 
@@ -4642,10 +5227,8 @@ private scheduleToTime()	{
 	ifDebug("scheduleToTime", 'info')
 	if (!state.rules || !state.timeCheck)	return false;
 	def nextTime = scheduleTime(false)
-	if (nextTime)	{
-		state.tTime = nextTime
-		updateTimeFromToInd()
-	}
+	state.tTime = nextTime
+//	updateTimeFromToInd()
 	return nextTime
 }
 
@@ -4659,7 +5242,7 @@ private scheduleTime(fromTime)	{
 //	sunsetTime = sunRiseAndSet.set
 	def nextTime = null
 //	def sunriseTimeWithOff, sunsetTimeWithOff
-	for (def i = 1; i <= maxRules; i++)	{
+	for (def i = 1; i <= maxRules; i++)		{
 		def ruleNo = String.valueOf(i)
 		def thisRule = getNextRule(ruleNo, _ERule, true, true)
 //log.debug thisRule
@@ -4693,14 +5276,24 @@ private scheduleTime(fromTime)	{
 		if (!nextTime || timeOfDayIsBetween(nowDate, nextTime, cTime, location.timeZone))
 			nextTime = cTime;
 	}
+
+////log.debug "\tperf scheduleTime: ${(now() - nowTime)} ms"
+
 	return nextTime
 }
 
-def timeHandler()		{
-	ifDebug("timeHandler", 'info')
+private checkAndTurnOnOffSwitchesC()	{
+def nowTime = now()
+
 	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-	if (checkPauseModesAndDoW() && (!onlyOnStateChange || (butNotInStates && butNotInStates.contains(rSt))))		switchesOnOrOff();
-	scheduleFromToTimes()
+	if ((onlyOnStateChange && (!butNotInStates || !butNotInStates.contains(rSt))) ||
+		(awayModes && awayModes.contains(location.currentMode.toString())) || !checkPauseModesAndDoW())
+		return false
+	if (state.stateStack && ((now() - state.stateStack['0'].date) / 1000f) < 150)
+		return false
+	switchesOnOrOff(true)
+
+////log.debug "\tperf checkAndTurnOnOffSwitchesC: ${(now() - nowTime)} ms"
 }
 
 private sunRiseAndSet()		{
@@ -4713,25 +5306,23 @@ private sunRiseAndSet()		{
 }
 
 private updateTimeFromToInd()	{
-	if (state.fTime && state.tTime)	{
-		state.timeFromTo =  format24hrTime(state.fTime) + " "
-		state.timeFromTo = state.timeFromTo + format24hrTime(state.tTime)
-		if (state.hT != _Hubitat)	{
-			def child = getChildDevice(getRoom())
-			child.updateTimeInd(state.timeFromTo)
-		}
-	}
+	state.timeFromTo = format24hrTime(state.fTime) + " " + format24hrTime(state.tTime)
+	if (state.hT == _SmartThings)
+		getChildDevice(getRoom())?.sendEvent(name: 'timeInd', value: state.timeFromTo, descriptionText: "indicate time from to")
 }
 
 private updateTimeouts()	{
-	if (state.hT != _Hubitat)	{
-		def child = getChildDevice(getRoom())
-		child.updateTimersInd(state.noMotion, state.dimTimer, state.noMotionEngaged, state.noMotionAsleep)
-	}
+	if (state.hT != _SmartThings)		return;
+	def child = getChildDevice(getRoom())
+	if (!child)		return;
+	child.sendEvent(name: 'noMotionInd', value: (state.noMotion ? formatNumber(state.noMotion) : '--'), descriptionText: (state.noMotion ? "indicate motion timer for occupied state" : "indicate no motion timer for occupied state"))
+	child.sendEvent(name: 'dimTimerInd', value: (state.dimTimer ? formatNumber(state.dimTimer) : '--'), descriptionText: (state.dimTimer ? "indicate timer for checking state" : "indicate no timer for checking state"))
+	child.sendEvent(name: 'noMotionEngagedInd', value: (state.noMotionEngaged ? formatNumber(state.noMotionEngaged) : '--'), descriptionText: (state.noMotionEngaged ? "indicate motion timer for engaged state" : "indicate no motion timer for engaged state"))
+	child.sendEvent(name: 'noMotionAsleepInd', value: (state.noMotionAsleep ? formatNumber(state.noMotionAsleep) : '--'), descriptionText: (state.noMotionAsleep ? "indicate motion timer for asleep state" : "indicate no motion timer for asleep state"))
 }
 
-private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
-	return timeToFormat.format("HH:mm", location.timeZone)
+private format24hrTime(timeToFormat, format = "HH:mm")	{
+	return (timeToFormat ? timeToFormat.format("HH:mm", location.timeZone) : '')
 }
 
 def getAdjMotionSensors()	{
@@ -4743,7 +5334,7 @@ def getAdjRoomsSetting()	{
 }
 
 def getLastStateChild()		{
-	def addRoom = state.previousState
+	def addRoom = state.stateStack[0]
 	addRoom << ['room':app.label]
 	return addRoom
 }
@@ -4756,23 +5347,12 @@ def getChildRoomThermostat()	{
 	return (useThermostat && roomThermostat ? [name: app.label, thermostat: roomThermostat] : null)
 }
 
-private checkAndTurnOnOffSwitchesC()	{
-	def rSt = getChildDevice(getRoom())?.currentValue(occupancy)
-//log.debug "onlyOnStateChange: $onlyOnStateChange | butNotInStates: $butNotInStates | awayModes: $awayModes | currentMode: $location.currentMode | checkPauseModesAndDoW: ${checkPauseModesAndDoW()}"
-	if ((onlyOnStateChange && (!butNotInStates || !butNotInStates.contains(rSt))) ||
-		(awayModes && awayModes.contains(location.currentMode.toString())) || !checkPauseModesAndDoW())
-		return false;
-//log.debug "stateStack: $state.stateStack | diff: ${((now() - state?.stateStack['0'].date) / 1000f)}"
-	if (state.stateStack && ((now() - state.stateStack['0'].date) / 1000f) < 150)		return false;
-//log.debug "to switchesOnOrOff"
-	switchesOnOrOff(true)
-	return true
-}
-
 private checkPauseModesAndDoW()	{
-	if (pauseModes && pauseModes.contains(location.currentMode.toString()))		return false;
-	if (state.dayOfWeek && !(checkRunDay()))	return false;
-	return true
+	if ((pauseModes && pauseModes.contains(location.currentMode.toString())) ||
+		(state.dayOfWeek && !(checkRunDay())))
+		return false
+	else
+		return true
 }
 
 private checkRunDay(dayOfWeek = null)	{
@@ -4812,7 +5392,7 @@ private speakIt(str)	{
 	}
 	if (state.hT == _SmartThings && listOfMQs)
 		sendLocationEvent(name: "AskAlexaMsgQueue", value: "Rooms Occupancy", isStateChange: true,  descriptionText: "$str", data:[queues:listOfMQs, expires: 30, notifyOnly: true, suppressTimeDate: true])
-	if (echoAccessCode)	{
+	else if (state.hT == _Hubitat && echoAccessCode)	{
 		def uri = "https://api.notifymyecho.com/v1/NotifyMe?notification=${URLEncoder.encode(str, 'UTF-8')}&accessCode=${decrypt(echoAccessCode)}"
 		httpPost([uri: uri, requestContentType: 'application/json'])	{ response ->
 			if (response?.status != 200)		ifDebug("echo notify response $response");
@@ -4820,9 +5400,8 @@ private speakIt(str)	{
 	}
 }
 
-def setupColorNotification(color = null)	{
+private setupColorNotification(color = null)	{
 	ifDebug("setupColorNotification", 'info')
-	unschedule('setupColorNotification')
 	def nowDate = new Date(now())
 	def intCurrentHH = nowDate.format("HH", location.timeZone) as Integer
 	def intCurrentMM = nowDate.format("mm", location.timeZone) as Integer
@@ -4832,7 +5411,7 @@ def setupColorNotification(color = null)	{
 		return false
 	}
 	if (!state.colorsRotating && state.colorNotifyTimes <= 0)	{
-		state.colorNotifyTimes = 9
+		state.colorNotifyTimes = (announceSwitches?.hasCommand("setLevel") ? 9 : 3)
 		saveAnnounceSwitches()
 		if (!color)		{
 			if (state.colorNotificationColorStack)		{
@@ -4846,33 +5425,34 @@ def setupColorNotification(color = null)	{
 		}
 	}
 	else	{
-		if (color)		state.colorNotificationColorStack << color;
-		runOnce(new Date(now() + 10000), setupColorNotification)
+		if (color)
+			state.colorNotificationColorStack << color
+		addSchedule("setupColorNotification", 10, state.scheduled.isExecuting)
 	}
 }
 
-def notifyWithColor()	{
-//    ifDebug("notifyWithColor", 'info')
-	if (state.colorNotifyTimes % 2)	{
-		if (!cmdOpt || announceSwitches.currentSwitch == off)		announceSwitches.on();
-		announceSwitches.setColor(state.colorNotificationColor)
+private notifyWithColor()	{
+	if (state.colorNotifyTimes % 2)		{
+		if (!cmdOpt || announceSwitches.currentSwitch.contains(off))		announceSwitches.on();
+		for (def swt : announceSwitches)
+			if (swt.hasCommand("setColor"))		swt.setColor(state.colorNotificationColor);
 	}
 	else
 		if (!cmdOpt || announceSwitches.currentSwitch == on)
 			announceSwitches.off()
-	unschedule('notifyWithColor')
+	removeSchedule("notifyWithColor", state.scheduled.isExecuting)
 	state.colorNotifyTimes = state.colorNotifyTimes - 1
 	if (state.colorNotifyTimes > 0)
-		runOnce(new Date(now() + 1000), notifyWithColor)
+		addSchedule("notifyWithColor", 1, state.scheduled.isExecuting)
 	else	{
 		restoreAnnounceSwitches()
 		if (state.colorNotificationColorStack)
-			runOnce(new Date(now() + (state.hT == _SmartThings ? 500 : 5000)), setupColorNotification)
+			addSchedule("setupColorNotification", (state.hT == _SmartThings ? 1 : 5), state.scheduled.isExecuting)
 	}
 }
 
 private saveAnnounceSwitches()		{
-	unschedule('setAnnounceSwitches')
+	removeSchedule("setAnnounceSwitches", state.scheduled.isExecuting)
 	state.colorSwitchSave = []
 	state.colorColorSave = []
 	state.colorColorTemperatureSave = []
@@ -4902,22 +5482,22 @@ private restoreAnnounceSwitches()	{
 	def i = 0
 	for (def swt : announceSwitches)	{
 		ifDebug("$swt | ${state.colorColorSave[i]} | ${state.colorSwitchSave[(i)]} | ${state.colorColorTemperatureTrueSave[i]} | ${state.colorColorTemperatureSave[i]}")
-		if (state.colorColorTemperatureTrueSave[(i)] == true)
-			swt.setColorTemperature(state.colorColorTemperatureSave[(i)])
-		else
-			swt.setColor(state.colorColorSave[(i)])
-		swt.setLevel(state.colorColorSave[(i)].level)
+		if (state.colorColorTemperatureTrueSave[(i)] == true)	{
+			if (swt.hasCommand("setColorTemperature"))		swt.setColorTemperature(state.colorColorTemperatureSave[(i)])
+		}
+		else	{
+			if (swt.hasCommand("setColor"))		swt.setColor(state.colorColorSave[(i)]);
+		}
+		if (swt.hasCommand("setLevel"))		swt.setLevel(state.colorColorSave[(i)].level);
 		i = i + 1
 	}
-	runOnce(new Date(now() + (state.hT == _SmartThings ? 250 : 2500)), setAnnounceSwitches)
+	addSchedule("setAnnounceSwitches", (state.hT == _SmartThings ? 1 : 3), state.scheduled.isExecuting)
 }
 
 def setAnnounceSwitches()	{
 	def i = 0
-	for (def swt : announceSwitches)	{
-		swt."${(state.colorSwitchSave[(i)] == off ? off : on)}"()
-		i = i + 1
-	}
+	for (def swt : announceSwitches)
+		swt."${(state.colorSwitchSave[(i++)] == off ? off : on)}"()
 }
 
 private presenceActionArrival()		{
@@ -4937,11 +5517,12 @@ private	hasOccupiedDevice()		{
 }
 
 // only called from device handler
-def turnSwitchesAllOnOrOff(turnOn)	{
+def turnSwitchesAllOnOrOff(turnOn)		{
 	def switches = getAllSwitches()
 	if (switches)	{
 		def action = (turnOn ? on : off)
-		for (def swt : switches)		if (swt.currentSwitch != action)	swt."$action"();
+		for (def swt : switches)
+			if (swt.currentSwitch != action)	swt."$action"();
 	}
 }
 
@@ -4959,7 +5540,10 @@ private getAllSwitches()	{
 		i = thisRule.ruleNo as Integer
 		for (def swt : thisRule.switchesOn)		{
 			def itID = swt.getId()
-			if (!switchesID.contains(itID))		{  switches << swt; switchesID << itID  }
+			if (!switchesID.contains(itID))		{
+				switches << swt
+				switchesID << itID
+			}
 		}
 	}
 	return switches
@@ -4968,7 +5552,8 @@ private getAllSwitches()	{
 def	asleepEventHandler(evt)	{
 	ifDebug("asleepEventHandler", 'info')
 	def child = getChildDevice(getRoom())
-	if (state.hT != _Hubitat)		child.updateASwitchInd(isAnyASwitchOn());
+	if (state.hT != _Hubitat && child)
+		updateASwitchInd(child, isAnyASwitchOn(), 'A');
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides)	return;
@@ -4980,10 +5565,10 @@ def	asleepEventHandler(evt)	{
 }
 
 private isRoomAsleep()		{
-	if (asleepSwitch && asleepSwitch.currentSwitch.contains('on'))	return true;
-	if (asleepSensor && asleepSensor.currentSleeping.contains('sleeping'))	return true;
-	if (asleepMode && asleepMode.contains(location.currentMode.toString()))	return true;
-	if (powerDevice && powerValueAsleep && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) >= powerValueAsleep)	return true;
+	if (asleepSwitch && asleepSwitch.currentSwitch.contains('on'))				return true;
+	if (asleepSensor && asleepSensor.currentSleeping.contains('sleeping'))		return true;
+	if (asleepMode && asleepMode.contains(location.currentMode.toString()))		return true;
+	if (powerDevice && powerValueAsleep && getIntfromStr((String) (powerDevice instanceof List ? powerDevice.currentPower.max() : powerDevice.currentPower)) >= powerValueAsleep)						return true;
 	return false
 }
 
@@ -5008,28 +5593,24 @@ def	nightButtonPushedEventHandler(evt)	{
 }
 
 def dimNightLights()	{
-	unschedule('dimNightLights')
-	if (nightSwitches)	{
+	removeSchedule("dimNightLights", state.scheduled.isExecuting)
+	if (nightSwitches)		{
 		if (!state.rules)		state.rules = [:];
 		state.rules << ['NL':[:]]
 		turnSwitchesOn([ruleNo:'NL', type:'e', name:'night lights', disabled:false, switchesOn:nightSwitches, level:state.nightSetLevelTo, color:state.nightSetColorTo, hue:state.nightSetHueTo, colorTemperature:state.nightSetCT])
 		state.rules.remove('NL')
-		if (state.hT != _Hubitat)		getChildDevice(getRoom()).updateNSwitchInd(1);
+		updateSwitchInd(1, 'N');
 	}
 }
 
 def nightSwitchesOff()	{
-	unschedule('nightSwitchesOff')
+	removeSchedule("nightSwitchesOff", state.scheduled.isExecuting)
 	if (nightSwitches)	{
 		if (!cmdOpt || nightSwitches.currentSwitch.contains(on))		nightSwitches.off();
-		if (state.hT != _Hubitat)		getChildDevice(getRoom()).updateNSwitchInd(0);
+		updateSwitchInd(0, 'N');
 	}
-	if (resetAsleepWithContact && (contactSensor ? contactSensor.currentContact : '').contains(open))		{
-		updateChildTimer((resetAsleepWithContact as Integer) * 60)
-//		runIn((resetAsleepWithContact as Integer) * 60, resetAsleep)
-	}
-	else
-		restoreTimer(asleep)
+	if (resetAsleepWithContact && (contactSensor ? contactSensor.currentContact : '').contains(open))
+		addSchedule("resetAsleep", (resetAsleepWithContact as Integer) * 60, state.scheduled.isExecuting)
 }
 
 //------------------------------------------------------------------------------------------------------------------------//

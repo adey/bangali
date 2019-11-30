@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.6"  }
+public static String version()		{  return "v1.0.0"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -1340,7 +1340,7 @@ private addAnd(str)	{
 // for vacation mode only
 def setRoomState(childID)	{
 	def cOD = getChildRoomOccupancyDeviceObject(childID)
-	if (cOD)	cOD."$roomState"(true, true);
+	if (cOD)	cOD."$roomState"(true);
 }
 
 private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))  log."${level ?: 'debug'}" " $app.label: " + msg  }

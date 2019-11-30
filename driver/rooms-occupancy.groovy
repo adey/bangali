@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v0.99.6"  }
+public static String version()		{  return "v1.0.0"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -33,18 +33,22 @@ metadata {
 		namespace: "bangali",
 		author: "bangali")		{
 		capability "Actuator"
+// for hubitat comment the next line and uncomment the one after that is currently commented
+//		capability "Button"
 		capability "PushableButton"		// hubitat changed `Button` to `PushableButton`  2018-04-20
 		capability "Sensor"
 		capability "Switch"
 		capability "Beacon"
 		capability "Health Check"
+// for hubitat comment the next line since this capability is not supported
+//		capability "Lock Only"
 		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
-// for hubitat uncomment the next few lines ONLY if you want to use the icons on dashboard
-//		attribute "occupancyIconS", "String"
-//		attribute "occupancyIconM", "String"
-//		attribute "occupancyIconL", "String"
-//		attribute "occupancyIconXL", "String"
-//		attribute "occupancyIconXXL", "String"
+// for hubitat leave the next few lines uncommented ONLY if you want to use the icons on dashboard
+		attribute "occupancyIconS", "String"
+		attribute "occupancyIconM", "String"
+		attribute "occupancyIconL", "String"
+		attribute "occupancyIconXL", "String"
+		attribute "occupancyIconXXL", "String"
 		attribute "occupancyIconURL", "String"
 		attribute "countdown", "String"
 		command "occupied"
@@ -56,6 +60,7 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+// for hubitat uncomment the next line
 		command "push"		// for use with hubitat useful with dashbooard 2018-04-24
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
@@ -104,7 +109,6 @@ def on()	{
 		default:							break
 	}
 	switchOnOff(true)
-//	sendEvent(name: "switch", value: "on", descriptionText: "$device.displayName is on", displayed: true)
 }
 
 def setOnStateC(e)		{  state.onState = (e ? e.toString() : 'occupied')  }
@@ -112,7 +116,6 @@ def setOnStateC(e)		{  state.onState = (e ? e.toString() : 'occupied')  }
 def	off()		{
 	vacant()
 	switchOnOff(false)
-//	sendEvent(name: "switch", value: "off", descriptionText: "$device.displayName is off", displayed: true)
 }
 
 private switchOnOff(on)	{
@@ -142,126 +145,56 @@ def lock()		{  locked() }
 
 def unlock()	{  vacant()  }
 
-def occupied(hS = true, vM = false)			{  stateUpdateSetup('occupied', hS, vM); 		switchOnOff(true)  }
+def occupied(vM = false)		{  parent.occupied(vM)  }
 
-def checking(hS = true, vM = false)			{  stateUpdateSetup('checking', hS, vM)  }
+def checking(vM = false)		{  parent.checking(vM)  }
 
-def vacant(hS = true, vM = false)			{  stateUpdateSetup('vacant', hS, vM);			switchOnOff(false)  }
+def vacant(vM = false)			{  parent.vacant(vM)  }
 
-def donotdisturb(hS = true, vM = false)		{  stateUpdateSetup('donotdisturb', hS, vM);	switchOnOff(false)  }
+def donotdisturb(vM = false)	{  parent.donotdisturb(vM)  }
 
-def reserved(hS = true, vM = false)			{  stateUpdateSetup('reserved', hS, vM);		switchOnOff(false)  }
+def reserved(vM = false)		{  parent.reserved(vM)  }
 
-def asleep(hS = true, vM = false)			{  stateUpdateSetup('asleep', hS, vM);			switchOnOff(true)  }
+def asleep(vM = false)			{  parent.asleep(vM)  }
 
-def locked(hS = true, vM = false)			{  stateUpdateSetup('locked', hS, vM);			switchOnOff(false)  }
+def locked(vM = false)			{  parent.locked(vM)  }
 
-def engaged(hS = true, vM = false)			{  stateUpdateSetup('engaged', hS, vM);			switchOnOff(true)  }
+def engaged(vM = false)			{  parent.engaged(vM)  }
 
-def kaput(hS = true, vM = false)			{  stateUpdateSetup('kaput', hS, vM);			switchOnOff(false)  }
+def kaput(vM = false)			{  parent.kaput(vM)  }
 
-private stateUpdateSetup(rSt, hS, vM)	{
-	runIn(0, stateUpdate, [data: [newState:rSt, handleSwitches:hS, vacationMode:vM]])
-}
-
-def	stateUpdate(data)		{
-	if (!data)		return;
-	if (state.oldState != data.newState)		{
-        if (data.handleSwitches && parent)
-			setupTimer((int) (parent.handleSwitches(state.oldState, data.newState, true, data.vacationMode) ?: 0))
-		updateOccupancy(state.oldState, data.newState)
-		state.oldState = data.newState
-	}
-	resetTile(newState)
-}
-
-def updateOccupancy(oldOcc, newOcc) 	{
-	newOcc = newOcc?.toLowerCase()
-	def hT = getHubType()
-	def buttonMap = ['occupied':1, 'locked':4, 'vacant':3, 'reserved':5, 'checking':2, 'kaput':6, 'donotdisturb':7, 'asleep':8, 'engaged':9]
-	if (!newOcc || !(buttonMap.containsKey(newOcc)))	{
-		ifDebug("Missing or invalid parameter room occupancy: $newOcc")
-		return
-	}
-	sendEvent(name: "occupancy", value: newOcc, descriptionText: "$device.displayName changed to $newOcc", displayed: true)
-	if (hT == _Hubitat())		{
-		def img = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/rooms${newOcc?.capitalize()}State.png"
-		sendEvent(name: "occupancyIconS", value: "<img src=$img height=25 width=25>", descriptionText: "$device.displayName $newOcc icon small", displayed: true)
-		sendEvent(name: "occupancyIconM", value: "<img src=$img height=50 width=50>", descriptionText: "$device.displayName $newOcc icon medium", displayed: true)
-		sendEvent(name: "occupancyIconL", value: "<img src=$img height=75 width=75>", descriptionText: "$device.displayName $newOcc icon large", displayed: true)
-		sendEvent(name: "occupancyIconXL", value: "<img src=$img height=100 width=100>", descriptionText: "$device.displayName $newOcc icon extra large", displayed: true)
-		sendEvent(name: "occupancyIconXXL", value: "<img src=$img height=150 width=150>", descriptionText: "$device.displayName $newOcc icon extra extra large", displayed: true)
-		sendEvent(name: "occupancyIconURL", value: img, descriptionText: "$device.displayName $newOcc icon URL", displayed: true)
-	}
-	def button = buttonMap[newOcc]
-	if (hT == _SmartThings())
-		sendEvent(name: "button", value: "pushed", data: [buttonNumber: button], descriptionText: "$device.displayName button $button was pushed.")
-	else
-		sendEvent(name:"pushed", value:button, descriptionText: "$device.displayName button $button was pushed.")
-
-	updateRoomStatusMsg()
-}
-
-private updateRoomStatusMsg()		{
-	def formatter = new java.text.SimpleDateFormat("EEE, MMM d yyyy @ h:mm:ss a z")
-	formatter.setTimeZone(location.timeZone)
-	state.statusMsg = formatter.format(now())
-	sendEvent(name: "status", value: state.statusMsg, displayed: false)
-}
-
+/*
 private	resetTile(occupancy)	{
 	sendEvent(name: occupancy, value: occupancy, descriptionText: "$device.displayName reset tile $occupancy", displayed: false)
 }
 
+*/
+
 def turnSwitchesAllOn()		{
-	if (parent)		{
-		parent.turnSwitchesAllOnOrOff(true)
-		if (getHubType() != _Hubitat())		updateSwitchInd(1);
-	}
+	if (parent)		parent.turnSwitchesAllOnOrOff(true);
+//		if (getHubType() != _Hubitat())		updateSwitchInd(1);
 }
 
 def turnSwitchesAllOff()		{
-	if (parent)		{
-		parent.turnSwitchesAllOnOrOff(false)
-		if (getHubType() != _Hubitat())		updateSwitchInd(0);
-	}
+	if (parent)		parent.turnSwitchesAllOnOrOff(false);
+//		if (getHubType() != _Hubitat())		updateSwitchInd(0);
 }
 
 def turnNightSwitchesAllOn()	{
  	ifDebug("turnNightSwitchesAllOn")
-	if (parent)	{
-		parent.dimNightLights()
-		if (getHubType() != _Hubitat())		updateNSwitchInd(1)
-	}
+	if (parent)		parent.dimNightLights();
+//		if (getHubType() != _Hubitat())		updateNSwitchInd(1)
 }
 
 def turnNightSwitchesAllOff()	{
 	ifDebug("turnNightSwitchesAllOff")
-	if (parent)		{
-		parent.nightSwitchesOff()
-		if (getHubType() != _Hubitat())		updateNSwitchInd(0)
-	}
+	if (parent)		parent.nightSwitchesOff();
+//		if (getHubType() != _Hubitat())		updateNSwitchInd(0)
 }
 
 def	turnOnAndOffSwitches()	{
 	if (parent)		parent.switchesOnOrOff();
-	setupTimer(-1)
-}
-
-def setupTimer(int timer)	{
-	if (timer != -1)	state.timerLeft = timer;
-	timerNext()
-}
-
-def timerNext()		{
-	int timerUpdate = (state.timerLeft > 30 ? 30 : (state.timerLeft < 5 ? state.timerLeft : 5))
-	def timerInd = (state.timerLeft > 3600 ? (state.timerLeft / 3600f).round(1) + 'h' : (state.timerLeft > 60 ? (state.timerLeft / 60f).round(1) + 'm' : state.timerLeft + 's')).replace(".0","")
-	if (getHubType() != _Hubitat())
-		sendEvent(name: "timer", value: (timerInd ?: '--'), displayed: false)
-	else
-		sendEvent(name: "countdown", value: timerInd, descriptionText: "countdown timer: $timerInd", displayed: true)
-	state.timerLeft = state.timerLeft - timerUpdate
-	(state.timerLeft > 0 ? runIn(timerUpdate, timerNext) : unschedule('timerNext'))
+//	setupTimer(-1)
 }
 
 private ifDebug(msg = null, level = null)	{  if (msg && (isDebug() || level == 'error'))	log."${level ?: 'debug'}" " $device.displayName device: " + msg  }

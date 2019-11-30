@@ -1,3 +1,26 @@
+Version: 1.0.0
+---------------
+
+DONE:   Over 6 months ending in 11/25/2019
+
+1) device driver code significantly optimized
+2) child app no longer calls driver code at runTime
+3) except 2 timers which serve as "global timers" removed all others timers for better predictability
+4) removed use of unschedule globally and limited to use of single unschedule for use with "global timers"
+- **REQUIRES SAVING ROOMS MANAGER AND ALL ROOMS CHILD APP SETTINGS AFTER UPDATING CODE. REMEMBER TO UPDATE DTH/DRIVER CODE FIRST.**
+5) timer values indicated in the app are now much more reliable because they work with the global timers
+6) added motion requirement to set room to engaged after door closes
+7) added time requirement for power to stay above certain threshold before setting room to engaged
+8) lux check now supports both lower than or equals to and greater than
+9) added separate settings to check window open before cooling and heating respectively
+
+Version: 0.99.7
+---------------
+
+DONE:   5/11/2019
+
+1) re-optimized state change handler for ST
+
 Version: 0.99.6
 ---------------
 
