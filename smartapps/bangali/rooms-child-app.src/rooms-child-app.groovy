@@ -2113,6 +2113,7 @@ log.info "updateRoom $app.label"
 	state.processChild = (((new Date(now())).format("mm", location.timeZone).toInteger() + new Random().nextInt(60)) % 60)
 	subscribe(location, "sunrise", runEvery5)
 	subscribe(location, "sunset", runEvery5)
+	state.scheduled = ['isScheduled':false, 'toRun':'', 'timers':[:], 'isExecuting':false]
 	runEvery5Minutes(runEvery5)
 	state.runEvery5 = now()
 //	state.nextScheduleFromToTimes = null
@@ -5057,7 +5058,7 @@ private unscheduleAll(classNameCalledFrom)		{
 
 private addSchedule(String fnc, timer, nest = false)	{
 	def time = now() + (timer * 1000)
-	if (!state.scheduled)		state.scheduled = ['isScheduled':false, 'toRun':'', 'timers':[:]];
+	if (!state.scheduled)		state.scheduled = ['isScheduled':false, 'toRun':'', 'timers':[:], 'isExecuting':false];
 	state.scheduled.timers << [(fnc):time]
 	if (!nest)		executeScheduled();
 }
@@ -5553,7 +5554,7 @@ def	asleepEventHandler(evt)	{
 	ifDebug("asleepEventHandler", 'info')
 	def child = getChildDevice(getRoom())
 	if (state.hT != _Hubitat && child)
-		updateASwitchInd(child, isAnyASwitchOn(), 'A');
+		updateSwitchInd(isAnyASwitchOn(), 'A');
 	if (!checkPauseModesAndDoW())	return;
 	def rSt = child?.currentValue(occupancy)
 	if (rSt == locked && lockedOverrides)	return;
