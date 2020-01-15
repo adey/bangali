@@ -25,7 +25,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.0"  }
+public static String version()		{  return "v1.0.1"  }
 boolean isDebug()					{  return false  }
 
 definition	(

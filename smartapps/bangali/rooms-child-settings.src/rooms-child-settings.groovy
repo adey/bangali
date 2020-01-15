@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.0"  }
+public static String version()		{  return "v1.0.1"  }
 
 import groovy.transform.Field
 
@@ -334,7 +334,9 @@ private varRuleString(thisRule, anonIt)	{
 	return rD
 }
 
-private varRuleTimeOffset(offset)		{  return String.format( " %+d", offset.toInteger())  }
+private varRuleTimeOffset(offset)		{
+	return String.format(" %+d", (offset ?: "0").toInteger())
+}
 
 private varNightLightOn(nLO, setings, allRules, childCreated, onlyHas, anonIt)		{
 	if (!nLO)	return ''
@@ -346,7 +348,9 @@ private varNightLightOn(nLO, setings, allRules, childCreated, onlyHas, anonIt)		
 	return nLOS + ' '
 }
 
-private varNightButton(nBA, setings, allRules, childCreated, onlyHas, anonIt)		{  return (nBA ? [1:"Turn on",2:"Turn off",3:"Toggle"][nBA] : '')  }
+private varNightButton(nBA, setings, allRules, childCreated, onlyHas, anonIt)		{
+	return (nBA ? [1:"Turn on",2:"Turn off",3:"Toggle"][nBA] : '')
+}
 
 private varMaintainTemp(mRT, setings, allRules, childCreated, onlyHas, anonIt)		{
 	return (mRT ? [1:"Cool room",2:"Heat room",3:"Cool & heat room",4:"No"][mRT] : '')

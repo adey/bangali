@@ -1,6 +1,18 @@
 Version: 1.0.0
 ---------------
 
+DONE:   01/12/2020
+
+1) added option for all motion and acceleration to be simultaneously active to trigger engaged or occupied from vacant
+2) removed option for twinkle under holiday light settings
+3) fix for run every 5 minutes subscription
+4) added option for setting locked state with mode
+5) fix for cooling and heating not triggering when both are set in the same room
+6) bug fixes and optimizations
+
+Version: 1.0.0
+---------------
+
 DONE:   Over 6 months ending in 11/25/2019
 
 1) device driver code significantly optimized
