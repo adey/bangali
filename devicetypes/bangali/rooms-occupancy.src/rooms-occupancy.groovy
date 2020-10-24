@@ -36,6 +36,10 @@ metadata {
         	vid: "bee5a224-2329-37cf-bfce-7d220235c121"
     )
 	{
+		capability "vesseluniverse39541.occupancy"
+        capability "vesseluniverse39541.lastupdated"
+        capability "vesseluniverse39541.rules"
+
 		capability "Actuator"
 // for hubitat comment the next line and uncomment the one after that is currently commented
 		capability "Button"
