@@ -31,7 +31,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.1"  }
+public static String version()		{  return "v1.2.0"  }
 
 import groovy.transform.Field
 
@@ -379,10 +379,15 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["roomButtonStates", "Rotate thru states:", null, false, "or", "roomButton"],
 	["personsPresence", "Presence sensors:", null, true],
 	["luxSensor", "Lux sensor:", null, true],
-	["powerDevice", "Power device:", null, true],
 	["humiditySensor", "Humidity sensor:", null, true],
+	["contactSensor", "Door sensors:", null, true],
+	["contactEngagedRequiresMotion", "Contact motion:", null, false, "and", "contactSensor", "motionSensors"],
+	["contactSensorOutsideDoor", "Outside door:", null, false, "or", "contactSensor"],
+	["contactSensorsRT", "Window sensors:", null, true],
+	["waterSensors", "Water sensors:", null, true],
+	["powerDevice", "Power device:", null, true],
 	["musicDevice", "Music player:", null, true],
-	["windowShades", "Window shades:", null, true],
+//	["windowShades", "Window shades:", null, true],
 
 	["occupied settings:"],
 	["occupiedButtonType", "Occupied button type:", null, false, "or", "occupiedButton"],
@@ -412,12 +417,10 @@ private format24hrTime(timeToFormat = new Date(now()), format = "HH:mm")	{
 	["powerToTimeOffset", "Time to offset:", null, false, "and", "powerDevice", "powerValueEngaged", "powerToTimeType", "powerToTime"],
 	["powerTriggerFromVacant", "From vacant:", null, false, "and", "powerDevice", "powerValueEngaged"],
 	["powerTriggerFromOccupied", "From occupied:", null, false, "and", "powerDevice", "powerValueEngaged"],
+	["powerKeepsEngaged", "From occupied:", null, false, "and", "powerDevice", "powerValueEngaged"],
 	["powerStaysAbove", "Stays above for:", " seconds", false, "and", "powerDevice", "powerValueEngaged"],
 	["powerStays", "Stays below for:", " seconds", false, "and", "powerDevice", "powerValueEngaged"],
 	["resetEngagedWithContact", "Reset engaged state:", " minutes", false, "and", "contactSensor", "powerValueEngaged"],
-	["contactSensor", "Contact sensors:", null, true],
-	["contactEngagedRequiresMotion", "Contact motion:", null, false, "and", "contactSensor", "motionSensors"],
-	["contactSensorOutsideDoor", "Outside door:", null, false, "or", "contactSensor"],
 	["contactSensorNotTriggersEngaged", "Only sets:", null, false, "or", "contactSensor"],
 	["noMotionEngaged", "Require motion:", " seconds"],
 	["anotherRoomEngaged", "Switches:", null, true],

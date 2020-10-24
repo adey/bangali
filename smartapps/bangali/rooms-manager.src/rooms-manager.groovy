@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.1"  }
+public static String version()		{  return "v1.2.0"  }
 private static boolean isDebug()	{  return false  }
 
 import groovy.transform.Field
@@ -230,6 +230,7 @@ def pageAnnouncementColorTimeSettings()	{
 	dynamicPage(name: "pageAnnouncementColorTimeSettings", title: "ANNOUNCE WITH COLOR SETTINGS", install: false, uninstall: false)	{
 		section()	{
 			input "announceSwitches", "capability.switch", title: "Lights for announcement?", required: false, multiple: true, submitOnChange: true
+			input "setLevelTo", "enum", title: 'Set level when turning on?', required: false, multiple: false, defaultValue: null, options: [[1:"1%"],[5:"5%"],[10:"10%"],[15:"15%"],[20:"20%"],[25:"25%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
 		}
 		section()	{
 			if (announceSwitches)	{
@@ -636,6 +637,9 @@ log.debug data
 log.debug state.schedules
 		runOnce(new Date(rTime.getTime() + new Random().nextInt(3000)), scheduleNext, [data: [option: "$rOpts"]])
 	}
+
+	app.updateLabel(app.name + ' - ' + version())
+
 log.debug "perf scheduleNext: ${now() - nowTime} ms"
 }
 
@@ -668,8 +672,10 @@ def unsubscribeChildRoomDevice(appChildDevice)	{
 		ifDebug("Hubitat does not yet support unsubscribing to a single device so removing a room requires a manual step.\n\
                  From Hubitat portal please go to devices and find the corresponding rooms occupancy device and remove it.\n\
                  Once the device is removed, from rooms manager app remove the room to complete uninstallation of the room.")
-	else
+	else	{
+		spawnVacationApp()?.unSubscribeToRoom(appChildDevice)
 		unsubscribe(appChildDevice)
+	}
 }
 
 private announceSetup()	{
@@ -927,7 +933,7 @@ private setupColorRotation()	{
 		saveAnnounceSwitches()
 		state.colorsIndex = 0
 		announceSwitches.on()
-//        announceSwitches.setLevel(99)
+        if (setLevelTo)		announceSwitches.setLevel(setLevelTo.toInteger());
 		rotateColors()
 	}
 }

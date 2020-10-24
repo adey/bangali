@@ -1,4 +1,23 @@
-Version: 1.0.0
+Version: 1.2.0
+---------------
+
+DONE:   10/20/2020
+
+1) updated for SmartThings new DTH capability format
+
+Version: 1.1.0
+---------------
+
+DONE:   Over first 6 months of 2020 COVID-19 Pandemic
+
+1) added option for power value to keep room engaged
+2) added option to check for water leak sensor in rules
+3) added option to issue commands to sensor device under device commands in rules
+4) added button to locked settings
+5) added option for turning switches on and off when room is set to locked
+6) fixed code here and there to remove bugs and added a few too
+
+Version: 1.0.1
 ---------------
 
 DONE:   01/12/2020

@@ -21,7 +21,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.1"  }
+public static String version()		{  return "v1.2.0"  }
 private static boolean isDebug()	{  return false  }
 
 final String _SmartThings()	{ return 'ST' }
@@ -29,9 +29,13 @@ final String _Hubitat()		{ return 'HU' }
 
 metadata {
 	definition (
-		name: "rooms occupancy",
-		namespace: "bangali",
-		author: "bangali")		{
+			name: "rooms occupancy",
+			namespace: "bangali",
+			author: "bangali",
+			mnmn: "SmartThingsCommunity",
+        	vid: "bee5a224-2329-37cf-bfce-7d220235c121"
+    )
+	{
 		capability "Actuator"
 // for hubitat comment the next line and uncomment the one after that is currently commented
 		capability "Button"
@@ -40,9 +44,18 @@ metadata {
 		capability "Switch"
 		capability "Beacon"
 		capability "Health Check"
-// for hubitat comment the next line since this capability is not supported
+		capability "Motion Sensor"
+		capability "Contact Sensor"
+		capability "Presence Sensor"
+		capability "Power Meter"
+		capability "Illuminance Measurement"
+		capability "Temperature Measurement"
+		capability "Relative Humidity Measurement"
+/// for hubitat comment the next line since this capability is not supported
 //		capability "Lock Only"
-		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
+
+//		attribute "occupancy", "enum", ['occupied', 'checking', 'vacant', 'locked', 'reserved', 'kaput', 'donotdisturb', 'asleep', 'engaged']
+
 // for hubitat uncomment the next few lines ONLY if you want to use the icons on dashboard
 //		attribute "occupancyIconS", "String"
 //		attribute "occupancyIconM", "String"
@@ -50,7 +63,9 @@ metadata {
 //		attribute "occupancyIconXL", "String"
 //		attribute "occupancyIconXXL", "String"
 		attribute "occupancyIconURL", "String"
-		attribute "countdown", "String"
+//		attribute "countdown", "String"
+
+/*
 		command "occupied"
 		command "checking"
 		command "vacant"
@@ -60,8 +75,10 @@ metadata {
 		command "donotdisturb"
 		command "asleep"
 		command "engaged"
+*/
+
 // for hubitat uncomment the next line
-//		command "push"		// for use with hubitat useful with dashbooard 2018-04-24
+//			command "push"		// for use with hubitat useful with dashbooard 2018-04-24
 		command "turnOnAndOffSwitches"
 		command "turnSwitchesAllOn"
 		command "turnSwitchesAllOff"
@@ -71,13 +88,12 @@ metadata {
 
 	simulator	{
 	}
-
 	preferences		{
 	}
 
-	//
-	// REMOVE THE FOLLOWING FOR HUBITAT		<<<<<
-	//
+//
+// REMOVE THE FOLLOWING FOR HUBITAT		<<<<<
+//
 
 	tiles(scale: 2)		{
 		standardTile("occupancy", "device.occupancy", width: 2, height: 2, canChangeBackground: true)		{
@@ -414,22 +430,23 @@ metadata {
 
 		main (["occupancy"])
 
-		details ([	"occupancy", "occupied", "engaged",
-					"vacant", "asleep", "locked",
-					"status", "timerL", "timer",
-					"roomMotionL", "motionInd", "adjRoomMotionL", "aMotionInd", "luxL", "luxInd",
-					"roomContactL", "contactInd", "presenceL", "presenceInd", "presenceActionL", "presenceActionInd",
-					"musicL", "musicInd", "dowL", "dowInd", "timeL", "timeInd",
-					"oSwitchL", "oSwitchInd", "eSwitchL", "eSwitchInd", "aSwitchL", "aSwitchInd",
-					"presenceEngagedL", "presenceEngagedInd", "engagedWithBusyL", "busyEngagedInd",  "lSwitchL", "lSwitchInd",
-					"oTimerL", "noMotionInd", "cTimerL", "dimTimerInd", "eTimerL", "noMotionEngagedInd",
-					"turnAllOffL", "turnAllOffInd", "dimByL", "dimByLevelInd", "aTimerL", "noMotionAsleepInd",
-					"switchL", "switchInd", "nSwitchL", "nSwitchInd", "shadeL", "wSSInd",
-					"powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
-					"temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
-					"outTempL", "outTempInd", "ventL", "ventInd", "fanL", "fanInd",
-					"roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "humidityL", "humidityInd",
-					"rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"])
+		details ([
+			"occupancy", "occupied", "engaged", "vacant", "asleep", "locked",
+			"status", "timerL", "timer",
+			"roomMotionL", "motionInd", "adjRoomMotionL", "aMotionInd", "luxL", "luxInd",
+			"roomContactL", "contactInd", "presenceL", "presenceInd", "presenceActionL", "presenceActionInd",
+			"musicL", "musicInd", "dowL", "dowInd", "timeL", "timeInd",
+			"oSwitchL", "oSwitchInd", "eSwitchL", "eSwitchInd", "aSwitchL", "aSwitchInd",
+			"presenceEngagedL", "presenceEngagedInd", "engagedWithBusyL", "busyEngagedInd",  "lSwitchL", "lSwitchInd",
+			"oTimerL", "noMotionInd", "cTimerL", "dimTimerInd", "eTimerL", "noMotionEngagedInd",
+			"turnAllOffL", "turnAllOffInd", "dimByL", "dimByLevelInd", "aTimerL", "noMotionAsleepInd",
+			"switchL", "switchInd", "nSwitchL", "nSwitchInd", "shadeL", "wSSInd",
+			"powerL", "powerInd", "eWattsL", "eWattsInd", "aWattsL", "aWattsInd",
+			"temperatureL", "temperatureInd", "thermostatL", "thermostatInd", "maintainL", "maintainInd",
+			"outTempL", "outTempInd", "ventL", "ventInd", "fanL", "fanInd",
+			"roomWindowsL", "contactRTInd", "thermoOverrideL", "thermoOverrideInd", "humidityL", "humidityInd",
+			"rulesL", "rulesInd", "lastRuleL", "lastRuleInd", "adjRoomsL", "aRoomInd"
+		])
 	}
 
 	// REMOVE TILL HERE FOR HUBITAT		<<<<<
@@ -452,6 +469,33 @@ def	initialize()	{
 		sendEvent(name: "healthStatus", value: "online")
 		sendEvent(name: "DeviceWatch-Enroll", value: [protocol: "cloud", scheme:"untracked"].encodeAsJson(), displayed: false)
 	}
+}
+
+def setOccupancy(occ)		{
+	ifDebug("set occupancy: $occ")
+log.debug "set occupancy: $occ"
+
+	def occX = occ.replaceAll("\\s","").toLowerCase()
+	switch(occX)		{
+		case 'occupied':	occupied();		break
+		case 'engaged':		engaged();		break
+		case 'locked':		locked();		break
+		case 'asleep':		asleep();		break
+		case 'checking':	checking();		break
+		case 'vacant':		vacant();		break
+		case 'kaput':		kaput();		break
+		case 'reserved':	reserved();		break
+		case 'donotdisturb':donotdisturb();	break
+		default:							break
+	}
+}
+
+def setLastUpdated(lu)		{
+	lastUpdated = lu
+}
+
+def setRules(r)		{
+	rules = r
 }
 
 def getHubType()	{

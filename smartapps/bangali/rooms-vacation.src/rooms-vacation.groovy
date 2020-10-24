@@ -25,7 +25,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v1.0.1"  }
+public static String version()		{  return "v1.2.0"  }
 boolean isDebug()					{  return false  }
 
 definition	(
@@ -118,6 +118,10 @@ log.debug "there are ${rDOs.size()} devices."
 		subscribe(rD, "occupancy", roomStateHistory)
 	}
 log.debug "perf subscribeToRooms: ${now() - nowTime} ms"
+}
+
+def unSubscribeToRoom(rD)	{
+	unsubscribe(rD)
 }
 
 // since hubitat does not support timeTodayAfter(...) 2018-04-08
