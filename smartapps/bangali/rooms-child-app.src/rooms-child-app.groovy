@@ -3146,6 +3146,7 @@ def	modeEventHandler(evt)	{
 	}
 	state.prvMode = location.currentMode.toString()
 	scheduleRunEvery5()
+	updateRulesInd()
 }
 
 def	motionActiveEventHandler(evt)	{
