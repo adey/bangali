@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2020-06-22   fixed enabling and disabling WATO (SmartThings BETA)
 *  2020-06-22   updated to support SmartThings (SmartThings BETA)
 *  2019-05-12   added support for contains
 *  2019-05-11   added support for logging received event
@@ -38,7 +39,7 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v6.0.0"  }
+public static String version()		{  return "v6.0.1"  }
 
 // comment the next line for SmartThings
 import hubitat.helper.RMUtils
@@ -181,9 +182,9 @@ def wato()		{
 	dynamicPage(name: "wato", title: "", install: true, uninstall: true)		{
 		section("")		{
 			if (state.watoDisabled)
-            	input "enableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Enable this WATO", required:false
+            	input "enableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Enable this WATO?", required:false
 			else
-				input "disableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Disable this WATO", required:false
+				input "disableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Disable this WATO?", required:false
 			paragraph subHeaders('WHEN any ATTRIBUTE', true)
 			if (state.hT == _SmartThings)
 				input "attrDevCap", "enum", title: "Which capability?", required:true, multiple:false, submitOnChange:true, options:capaList
@@ -323,11 +324,15 @@ def wato()		{
 private subHeaders(str, div = false, opt = false)	{
 	if (str.size() > 50)	str = str.substring(0, 50);
 	str = str.center(50)
-	def divider = (div ? "<hr width='100%' size='10' noshade>" : '');
-	if (opt)
-		return "$divider<div style='text-align:center;background-color:#f9f2ec;color:#999999;'>$str</div>"
+	if (state.hT == _Hubitat)		{
+		def divider = (div ? "<hr width='100%' size='10' noshade>" : '');
+		if (opt)
+			return "$divider<div style='text-align:center;background-color:#f9f2ec;color:#999999;'>$str</div>"
+		else
+			return "$divider<div style='text-align:center;background-color:#0066cc;color:#ffffff;'>$str</div>"
+	}
 	else
-		return "$divider<div style='text-align:center;background-color:#0066cc;color:#ffffff;'>$str</div>"
+		return str
 }
 
 private getHubType()	{
@@ -340,6 +345,11 @@ def installed()		{  initialize()  }
 
 def updated()		{
 	initialize()
+	if (state.hT == _SmartThings)
+		if (enableWATO)
+			state.watoDisabled = false
+		else if (disableWATO)
+			state.watoDisabled = true
 	updLbl()
 	if (!state.watoDisabled)	{
 		for (def d : attrDev)		subscribe(d, "${attr.toString()}", checkAttr);
