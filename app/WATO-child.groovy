@@ -14,6 +14,7 @@
 *
 *  Author: bangali
 *
+*  2020-06-22   updated to support SmartThings (SmartThings BETA)
 *  2019-05-12   added support for contains
 *  2019-05-11   added support for logging received event
 *  2019-01-23   added support for executing RM rule action for both match and unmatched attribute
@@ -37,9 +38,15 @@
 *
 ***********************************************************************************************************************/
 
-public static String version()		{  return "v5.2.0"  }
+public static String version()		{  return "v6.0.0"  }
 
+// comment the next line for SmartThings
 import hubitat.helper.RMUtils
+
+import groovy.transform.Field
+
+@Field final String _SmartThings = 'ST'
+@Field final String _Hubitat     = 'HU'
 
 definition		(
 	name: "WATO child app",
@@ -58,6 +65,7 @@ preferences		{  page(name: "wato", title: "WATO Settings")  }
 def wato()		{
 	def allAttrs = []
 	def attrDevCount = 0
+	getHubType()
 	if (attrDev)	for (def aD : attrDev)		attrDevCount++;
 	state.attrDevCount = attrDevCount
 	if (attrDevCount == 1)
@@ -135,14 +143,30 @@ def wato()		{
 			if (devUnCmd && sC.name == devUnCmd && sCA)		state.unCParam = sCA;
 		}
 
-	if (attrTyp == 'Text')		app.removeSetting("attrMath");
-	else						app.removeSetting("attrCase");
-	if (attrOp && attrOp == '⬆︎⬇︎')		{
-		app.removeSetting("attrTyp")
-		app.removeSetting("attrCase")
-		app.removeSetting("attrMath")
-		app.removeSetting("attrVal")
+	if (state.hT == _Hubitat)		{
+		if (attrTyp == 'Text')		app.removeSetting("attrMath");
+		else						app.removeSetting("attrCase");
+		if (attrOp && attrOp == '⬆︎⬇︎')		{
+			app.removeSetting("attrTyp")
+			app.removeSetting("attrCase")
+			app.removeSetting("attrMath")
+			app.removeSetting("attrVal")
+		}
 	}
+	else	{
+		if (attrTyp == 'Text')
+			app.updateSetting("attrMath", [type: "enum", value: []])
+		else
+			app.updateSetting("attrCase", [type: "bool", value: false])
+		if (attrOp && attrOp == '⬆︎⬇︎')		{
+			app.updateSetting("attrTyp", [type: "enum", value: []])
+			app.updateSetting("attrCase", [type: "bool", value: false])
+			app.updateSetting("attrMath", [type: "enum", value: []])
+			app.updateSetting("attrVal", [type: "text", value: ""])
+		}
+	}
+
+	def rules = (state.hT == _Hubitat ? RMUtils.getRuleList() : null)
 
 	def allCParamAttrs = [:], allUnCParamAttrs = [:]
 	if (devCParamTyp1Dev)
@@ -152,16 +176,18 @@ def wato()		{
 
 	def lS = updLbl()
 
-	def rules = RMUtils.getRuleList()
+//	def optionCapaList = capaList.collect { [(it.key):it.value] }
 
 	dynamicPage(name: "wato", title: "", install: true, uninstall: true)		{
 		section("")		{
 			if (state.watoDisabled)
-            	input "enableWATO", "button", title: "Enable this WATO"
+            	input "enableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Enable this WATO", required:false
 			else
-				input "disableWATO", "button", title: "Disable this WATO"
+				input "disableWATO", "${(state.hT == _SmartThings ? 'bool' : 'button')}", title: "Disable this WATO", required:false
 			paragraph subHeaders('WHEN any ATTRIBUTE', true)
-			input "attrDev", "capability.*", title: "Attribute from devices?", required:true, multiple:true, submitOnChange:true
+			if (state.hT == _SmartThings)
+				input "attrDevCap", "enum", title: "Which capability?", required:true, multiple:false, submitOnChange:true, options:capaList
+			input "attrDev", "capability.${(state.hT == _SmartThings ? attrDevCap : '*')}", title: "Attribute from devices?", required:true, multiple:true, submitOnChange:true
 			if (attrDev)
 				input "attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allAttrs
 			if (attr)
@@ -179,9 +205,12 @@ def wato()		{
 			}
 			if (attrTyp || (attrOp && attrOp == '⬆︎⬇︎'))	{
 				paragraph subHeaders('THEN this command', true)
-				input "cmdOrRM", "enum", title: "Execute command on device or run RM action?", required:true, multiple:false, submitOnChange:true, defaultValue:'', options:[['':"Execute command"], ['RM':'Run RM action']]
-				if (!cmdOrRM)	{
-					input "dev", "capability.*", title: "Command on devices?", required:true, multiple:true, submitOnChange:true
+				if (state.hT == _Hubitat)
+					input "cmdOrRM", "enum", title: "Execute command on device or run RM action?", required:true, multiple:false, submitOnChange:true, defaultValue:'', options:[['':"Execute command"], ['RM':'Run RM action']]
+				if (state.hT == _SmartThings || !cmdOrRM)	{
+					if (state.hT == _SmartThings)
+						input "attrCmdCap", "enum", title: "Which capability?", required:true, multiple:false, submitOnChange:true, options:capaList
+					input "dev", "capability.${(state.hT == _SmartThings ? attrCmdCap : '*')}", title: "Command on devices?", required:true, multiple:true, submitOnChange:true
 					input "devCmd", "enum", title: "Command on match?", required:true, multiple:false, submitOnChange:true, options:allCmds
 					if (state.cParam)		{
 						def i = 1
@@ -190,8 +219,10 @@ def wato()		{
 							if (i == 1)
 								input "devCParamTyp1", "enum", title: "Command param type?", required:true, submitOnChange:true, defaultValue:'', options:[['':"Value"], ['A':"This attribute"], ['D':"Attribute from another device"]]
 							if (i == 1 && devCParamTyp1)	{
+								if (state.hT == _SmartThings)
+									input "devCParamTyp1Cap", "enum", title: "Which capability?", required:true, multiple:false, submitOnChange:true, options:capaList
 								if (devCParamTyp1 == 'D')	{
-									input "devCParamTyp1Dev", "capability.*", title: "Attribute from which device?", required:true, submitOnChange:true
+									input "devCParamTyp1Dev", "capability.${(state.hT == _SmartThings ? devCParamTyp1Cap : '*')}", title: "Attribute from which device?", required:true, submitOnChange:true
 									if (devCParamTyp1Dev)
 										input "devCParamTyp1Attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allCParamAttrs
 
@@ -213,13 +244,19 @@ def wato()		{
 						paragraph "Command does not support param"
 				}
 				else	{
-					app.removeSetting("dev")
-					app.removeSetting("devCmd")
-					input "devRule", "enum", title: "Which rule?", required:(devUnRule ? false : true), multiple:false, options:rules
+					if (state.hT == _Hubitat)		{
+						app.removeSetting("dev")
+						app.removeSetting("devCmd")
+						input "devRule", "enum", title: "Which rule?", required:(devUnRule ? false : true), multiple:false, options:rules
+					}
+					else	{
+						app.updateSetting("dev")
+						app.updateSetting("devCmd", [type: "enum", value: []])
+					}
 				}
 				paragraph subHeaders('OTHERWISE that command', true)
 //				input "devUnWhich", "enum", title: "That command or RM action?", required:true, multiple:false, submitOnChange:true, defaultValue:null, options:[[null:"That command"], ['RM':'That RM action']]
-				if (!cmdOrRM)	{
+				if (state.hT == _SmartThings || !cmdOrRM)	{
 					input "devUnCmd", "enum", title: "Command on unmatch?", required:false, multiple:false, submitOnChange:true, options:allCmds
 					if (state.unCParam)		{
 						def i = 1
@@ -229,7 +266,9 @@ def wato()		{
 								input "devUnCParamTyp1", "enum", title: "Command param type?", required:true, submitOnChange:true, defaultValue:'', options:[['':"Value"], ['A':"This attribute"], ['D':"Attribute from another device"]]
 							if (i == 1 && devUnCParamTyp1)	{
 								if (devUnCParamTyp1 == 'D')	{
-									input "devUnCParamTyp1Dev", "capability.*", title: "Attribute from which device?", required:true, submitOnChange:true
+									if (state.hT == _SmartThings)
+										input "devUnCParamTyp1Cap", "enum", title: "Which capability?", required:true, multiple:false, submitOnChange:true, options:capaList
+									input "devUnCParamTyp1Dev", "capability.${(state.hT == _SmartThings ? devUnCParamTyp1Cap : '*')}", title: "Attribute from which device?", required:true, submitOnChange:true
 									if (devUnCParamTyp1Dev)
 										input "devUnCParamTyp1Attr", "enum", title: "Attribute?", required:true, multiple:false, submitOnChange:true, options:allUnCParamAttrs
 
@@ -251,9 +290,15 @@ def wato()		{
 						paragraph "Command does not support param"
 				}
 				else	{
-					app.removeSetting("dev")
-					app.removeSetting("devUnCmd")
-					input "devUnRule", "enum", title: "Which rule?", required:(devRule ? false : true), multiple:false, options:rules
+					if (state.hT == _Hubitat)		{
+						app.removeSetting("dev")
+						app.removeSetting("devUnCmd")
+						input "devUnRule", "enum", title: "Which rule?", required:(devRule ? false : true), multiple:false, options:rules
+					}
+					else	{
+						app.updateSetting("dev")
+						app.updateSetting("devUnCmd", [type: "enum", value: []])
+					}
 				}
 			}
 		}
@@ -285,6 +330,12 @@ private subHeaders(str, div = false, opt = false)	{
 		return "$divider<div style='text-align:center;background-color:#0066cc;color:#ffffff;'>$str</div>"
 }
 
+private getHubType()	{
+	if (!state.hubId)	state.hubId = location.hubs[0].id.toString()
+	state.hT = (state.hubId.length() > 5 ? _SmartThings : _Hubitat)
+	return state.hT
+}
+
 def installed()		{  initialize()  }
 
 def updated()		{
@@ -301,20 +352,31 @@ def initialize()	{  unsubscribe();	unschedule()  }
 private updLbl()	{
 	state.cParams = null
 	state.unCParams = null
-	if (!cmdOrRM)	{
+	if (state.hT == _SmartThings || !cmdOrRM)	{
 		def cS = (state.cParam ? state.cParam.size() : 0)
 		for (def i = 1; i <= 10; i++)		{
 			if (settings["devCParam$i"] != null || (i == 1 && devCParamTyp1))
-			 	if (i > cS)		app.removeSetting("devCParam$i");
-				else			state.cParams = i;
+			 	if (i > cS)		{
+					if (state.hT == _Hubitat)
+						app.removeSetting("devCParam$i")
+					else
+						app.updateSetting("devCParam$i")
+				}
+				else
+					state.cParams = i
 			else
 				if (state.cParams == null)		state.cParams = i - 1;
 		}
 		def uS = (state.unCParam ? state.unCParam.size() : 0)
 		for (def i = 1; i <= 10; i++)		{
 			if (settings["devUnCParam$i"] != null || (i == 1 && devUnCParamTyp1))
-			 	if (i > uS)		app.removeSetting("devUnCParam$i");
-				else			state.unCParams = i;
+			 	if (i > uS)
+					if (state.hT == _Hubitat)
+						app.removeSetting("devUnCParam$i")
+					else
+						app.updateSetting("devUnCParam$i")
+				else
+					state.unCParams = i
 			else
 				if (state.unCParams == null)		state.unCParams = i - 1;
 		}
@@ -328,7 +390,7 @@ private updLbl()	{
 private lblStr()	{
 	def c = ''
 	def u = ''
-	if (!cmdOrRM)	{
+	if (state.hT == _SmartThings || !cmdOrRM)	{
 		for (def i = 1; i <= (state.cParams ?: 0); i++)		{
 			if (settings["devCParam$i"] != null || (i == 1 && devCParamTyp1))
 				c = c + (c ? ', ' : '') + (i == 1 && devCParamTyp1 ? (devCParamTyp1 == 'D' ? '[' + devCParamTyp1Dev.toString() + ']' + ' : ' + devCParamTyp1Attr : '#') : settings["devCParam$i"])
@@ -347,7 +409,7 @@ private lblStr()	{
 		if (devCmd || devUnCmd)		{
 			l = ((state.watoDisabled ? '<FONT COLOR="ff0000">DISABLED: </FONT>' : '') + 'WHEN ' + attrDev.displayName + ' ATTRIBUTE ' + (state.attrDevCount > 1 && attrMath ? "${attrMath.toLowerCase()}($attr)" : attr) + ' ' + attrOp + ' ' + (attrOp == '⬆︎⬇︎' ? '' : (attrCase ? "${attrVal}.ignoreCase()" : attrVal)) + (devCmd ? ' THEN ' + dev + ' : ' + devCmd + (c ? '(' + c + ')' : '') : '') + (devUnCmd ? ' OTHERWISE ' + (devCmd ? '' : dev + ' : ') + devUnCmd + (u ? '(' + u + ')' : '') : '') + (inModes || (fromTime && toTime) ? ' {' : '') + (inModes ? 'modes: ' + inModes + (fromTime && toTime ? ' & ' : ' ') : '') + (fromTime && toTime ? 'time: ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", fromTime)) + ' - ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", toTime)) : '') + (inModes || (fromTime && toTime) ? '}' : ''))
 		}
-		else if (cmdOrRM)	{
+		else if (state.hT == _Hubitat && cmdOrRM)	{
 			l = ((state.watoDisabled ? '<FONT COLOR="ff0000">DISABLED: </FONT>' : '') + 'WHEN ' + attrDev.displayName + ' ATTRIBUTE ' + (state.attrDevCount > 1 && attrMath ? "${attrMath.toLowerCase()}($attr)" : attr) + ' ' + attrOp + ' ' + (attrOp == '⬆︎⬇︎' ? '' : (attrCase ? "${attrVal}.ignoreCase()" : attrVal)) + (devRule ? ' THEN RM Action' : '') + (devUnRule ? ' OTHERWISE RM Action' : '') + (inModes || (fromTime && toTime) ? ' {' : '') + (inModes ? 'modes: ' + inModes + (fromTime && toTime ? ' & ' : ' ') : '') + (fromTime && toTime ? 'time: ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", fromTime)) + ' - ' + format24hrTime(new Date().parse("yyyy-MM-dd'T'HH:mm:ss.SSSZ", toTime)) : '') + (inModes || (fromTime && toTime) ? '}' : ''))
 
 		}
@@ -414,7 +476,7 @@ def checkAttr(evt)	{
 	state.prvAttrVal = evtVal
 	if (noCmdRun)	return;
 
-	if (!cmdOrRM)	{
+	if (state.hT == _SmartThings || (state.hT == _Hubitat && !cmdOrRM))		{
 		def cmd = (match ? devCmd : devUnCmd)
 		if (!cmd)		return;
 		def paramCnt = (match ? (state.cParams ?: 0) : (state.unCParams ?: 0))
@@ -439,7 +501,7 @@ def checkAttr(evt)	{
 				break
 		}
 	}
-	else	{
+	else if (state.hT == _Hubitat)		{
 		def rule = []
 		rule << (match ? devRule : devUnRule)
 //log.info "execute rule: $rule"
@@ -502,3 +564,55 @@ private checkVal()	{
 private toMap(p)	{  return ((p =~ /^\[(([a-z]+:[0-9]+)[\s|,]*)+\]$/).matches() ? evaluate(p) : p)  }
 
 def appButtonHandler(btn)	{  if (btn == 'enableWATO') state.watoDisabled = false;		else if (btn == 'disableWATO') state.watoDisabled = true;  }
+
+@Field final List    capaList = [
+	['activityLightingMode': "Activity Lighting Mode"],
+	['airConditionerMode': "Air Conditioner Mode"],
+	['alarm': "Alarm"],
+	['audioMute': "Audio Mute"],
+	['audioVolume': "Audio Volume"],
+	['battery': "Battery"],
+	['button': "Button"],
+//	"Color Control"],
+	['colorTemperature': "Color Temperature"],
+	['contactSensor': "Contact Sensor"],
+//	"Dishwasher Mode"],
+	['doorControl': "Door Control"],
+//	"Dryer Mode"],
+	['fanSpeed': "Fan Speed"],
+//	"Filter Status"],
+	['garageDoorControl': "Garage Door Control"],
+//	"Illuminance Measurement"],
+//	"Infrared Level"],
+	['lock': "Lock"],
+//	"Media Input Source"],
+//	"Media Playback Repeat"],
+//	"Media Playback Shuffle"],
+//	"Media Playback"],
+//	"Motion Sensor"],
+//	"Oven Mode"],
+//	"Power Source"],
+	['presenceSensor': "Presence Sensor"],
+//	"Rapid Cooling"],
+//	"Refrigeration Setpoint"],
+//	"Relative Humidity Measurement"],
+//	"Robot Cleaner Cleaning Mode"],
+//	"Robot Cleaner Movement"],
+//	"Robot Cleaner Turbo Mode"],
+//	"Signal Strength"],
+//	"Smoke Detector"],
+//	"Sound Sensor"],
+	['switchLevel': "Switch Level"],
+	['switch': "Switch"],
+//	"Thermostat Cooling Setpoint"],
+//	"Thermostat Fan Mode"],
+//	"Thermostat Heating Setpoint"],
+//	"Thermostat Mode"],
+//	"Thermostat Setpoint"],
+//	"Tone"],
+//	"Tv Channel"],
+//	"Valve"],
+//	"Washer Mode"],
+	['waterSensor': "Water Sensor"]
+//	"Window Shade"]
+]
