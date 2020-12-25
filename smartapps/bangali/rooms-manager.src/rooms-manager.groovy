@@ -1049,7 +1049,7 @@ def batteryCheck(fromUI = [:])	{
 	def cnt = batteryCheckDevices.size()
 	for (def bit : batteryCheckDevices)	{
 		bat = bit.currentBattery
-		if (bat < batteryLevel)		{
+		if (bat < (batteryLevel ?: 0))		{
 			batteryLow = batteryLow + 1
 			batteryNames = batteryNames + (batteryNames ? ', ' : '') + (bit.displayName ?: bit.name) + ":${(bat ?: 0)}"
 		}
